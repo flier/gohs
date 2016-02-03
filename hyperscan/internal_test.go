@@ -232,7 +232,7 @@ func (h *scanHandler) handle(id uint, from, to uint64, flags uint, context inter
 	return h.err
 }
 
-func TestScan(t *testing.T) {
+func TestBlockScan(t *testing.T) {
 	Convey("Given a block database", t, func() {
 		platform, err := hsPopulatePlatform()
 
@@ -280,4 +280,55 @@ func TestScan(t *testing.T) {
 
 		So(hsFreeScratch(s), ShouldBeNil)
 	})
+}
+
+func TestVectorScan(t *testing.T) {
+	Convey("Given a block database", t, func() {
+		platform, err := hsPopulatePlatform()
+
+		So(platform, ShouldNotBeNil)
+		So(platform.info, ShouldNotBeNil)
+		So(err, ShouldBeNil)
+
+		db, err := hsCompile("test", 0, Vectored, platform)
+
+		So(db, ShouldNotBeNil)
+		So(err, ShouldBeNil)
+
+		s, err := hsAllocScratch(db)
+
+		So(s, ShouldNotBeNil)
+		So(err, ShouldBeNil)
+
+		Convey("Scan multi block with pattern", func() {
+			h := &scanHandler{}
+
+			So(hsScanVector(db, [][]byte{[]byte("abctestdef"), []byte("abcdef")}, 0, s, h.handle, nil), ShouldBeNil)
+			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7}})
+		})
+
+		Convey("Scan multi block without pattern", func() {
+			h := &scanHandler{}
+
+			So(hsScanVector(db, [][]byte{[]byte("123456"), []byte("abcdef")}, 0, s, h.handle, nil), ShouldBeNil)
+			So(h.matched, ShouldBeEmpty)
+		})
+
+		Convey("Scan multi block with multi pattern", func() {
+			h := &scanHandler{}
+
+			So(hsScanVector(db, [][]byte{[]byte("abctestdef"), []byte("123test456")}, 0, s, h.handle, nil), ShouldBeNil)
+			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7}, {0, 0, 17}})
+		})
+
+		Convey("Scan multi block with multi pattern but terminated", func() {
+			h := &scanHandler{err: errors.New("terminated")}
+
+			So(hsScanVector(db, [][]byte{[]byte("abctestdef"), []byte("123test456")}, 0, s, h.handle, nil), ShouldEqual, ScanTerminated)
+			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7}})
+		})
+
+		So(hsFreeScratch(s), ShouldBeNil)
+	})
+
 }

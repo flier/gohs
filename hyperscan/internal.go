@@ -17,6 +17,11 @@ static int hs_scan_cgo(const hs_database_t *db, const char *data, unsigned int l
 					   unsigned int flags, hs_scratch_t *scratch, void *context) {
 	return hs_scan(db, data, length, flags, scratch, hsMatchEventCallback, context);
 }
+
+static int hs_scan_vector_cgo(const hs_database_t *db, const char *const *data, const unsigned int *length, unsigned int count,
+					   		  unsigned int flags, hs_scratch_t *scratch, void *context) {
+	return hs_scan_vector(db, data, length, count, flags, scratch, hsMatchEventCallback, context);
+}
 */
 import "C"
 
@@ -358,6 +363,24 @@ func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEve
 	ctxt := &hsMatchEventContext{onEvent, context}
 
 	if ret := C.hs_scan_cgo(db, (*C.char)(unsafe.Pointer(&data[0])), C.uint(len(data)), C.uint(flags), scratch, unsafe.Pointer(ctxt)); ret != C.HS_SUCCESS {
+		return hsError(ret)
+	}
+
+	return nil
+}
+
+func hsScanVector(db hsDatabase, data [][]byte, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
+	cdata := make([]*C.char, len(data))
+	clength := make([]C.uint, len(data))
+
+	for i, d := range data {
+		cdata[i] = (*C.char)(unsafe.Pointer(&d[0]))
+		clength[i] = C.uint(len(d))
+	}
+
+	ctxt := &hsMatchEventContext{onEvent, context}
+
+	if ret := C.hs_scan_vector_cgo(db, (**C.char)(unsafe.Pointer(&cdata[0])), &clength[0], C.uint(len(data)), C.uint(flags), scratch, unsafe.Pointer(ctxt)); ret != C.HS_SUCCESS {
 		return hsError(ret)
 	}
 
