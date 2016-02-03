@@ -133,6 +133,10 @@ func hsPopulatePlatform() (*hsPlatformInfo, error) {
 
 type hsDatabase *C.hs_database_t
 type hsScratch *C.hs_scratch_t
+type hsExprInfo struct {
+	MinWidth, MaxWidth                               uint
+	UnorderedMatches, MatchesAtEod, MatchesOnlyAtEod bool
+}
 
 func hsVersion() string {
 	return C.GoString(C.hs_version())
@@ -290,6 +294,39 @@ func hsCompileMulti(expressions []string, flags []CompileFlag, ids []uint, mode 
 
 	if ret == C.HS_SUCCESS {
 		return db, nil
+	}
+
+	if err != nil {
+		defer C.hs_free_compile_error(err)
+	}
+
+	if ret == C.HS_COMPILER_ERROR && err != nil {
+		return nil, &compileError{C.GoString(err.message), int(err.expression)}
+	}
+
+	return nil, fmt.Errorf("compile error, %d", int(ret))
+}
+
+func hsExpressionInfo(expression string, flags CompileFlag) (*hsExprInfo, error) {
+	var info *C.hs_expr_info_t
+	var err *C.hs_compile_error_t
+
+	expr := C.CString(expression)
+
+	ret := C.hs_expression_info(expr, C.uint(flags), &info, &err)
+
+	C.free(unsafe.Pointer(expr))
+
+	if ret == C.HS_SUCCESS && info != nil {
+		defer C.free(unsafe.Pointer(info))
+
+		return &hsExprInfo{
+			MinWidth:         uint(info.min_width),
+			MaxWidth:         uint(info.max_width),
+			UnorderedMatches: info.unordered_matches != 0,
+			MatchesAtEod:     info.matches_at_eod != 0,
+			MatchesOnlyAtEod: info.matches_only_at_eod != 0,
+		}, nil
 	}
 
 	if err != nil {

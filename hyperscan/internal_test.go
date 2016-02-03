@@ -168,6 +168,51 @@ func TestCompile(t *testing.T) {
 	})
 }
 
+func TestExpression(t *testing.T) {
+	Convey("Given a simple expression", t, func() {
+		info, err := hsExpressionInfo("test", 0)
+
+		So(info, ShouldNotBeNil)
+		So(info, ShouldResemble, &hsExprInfo{
+			MinWidth: 4,
+			MaxWidth: 4,
+		})
+		So(err, ShouldBeNil)
+	})
+
+	Convey("Given a credit card expression", t, func() {
+		info, err := hsExpressionInfo(`(?:`+
+			`4[0-9]{12}(?:[0-9]{3})?|`+ // Visa
+			`5[1-5][0-9]{14}|`+ // MasterCard
+			`3[47][0-9]{13}|`+ // American Express
+			`3(?:0[0-5]|[68][0-9])[0-9]{11}|`+ // Diners Club
+			`6(?:011|5[0-9]{2})[0-9]{12}|`+ // Discover
+			`(?:2131|1800|35\d{3})\d{11}`+ // JCB
+			`)`, 0)
+
+		So(info, ShouldNotBeNil)
+		So(info, ShouldResemble, &hsExprInfo{
+			MinWidth: 13,
+			MaxWidth: 16,
+		})
+		So(err, ShouldBeNil)
+	})
+
+	Convey("Given a expression match eod", t, func() {
+		info, err := hsExpressionInfo("test$", 0)
+
+		So(info, ShouldNotBeNil)
+		So(info, ShouldResemble, &hsExprInfo{
+			MinWidth:         4,
+			MaxWidth:         4,
+			UnorderedMatches: true,
+			MatchesAtEod:     true,
+			MatchesOnlyAtEod: true,
+		})
+		So(err, ShouldBeNil)
+	})
+}
+
 func TestScratch(t *testing.T) {
 	Convey("Given a block database", t, func() {
 		platform, err := hsPopulatePlatform()
