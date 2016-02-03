@@ -161,15 +161,13 @@ func (e *compileError) Error() string { return e.msg }
 // If the error is not specific to an expression, then this value will be less than zero.
 func (e *compileError) Expression() int { return e.expr }
 
-type hsPlatformInfo struct {
-	info C.struct_hs_platform_info
-}
+type hsPlatformInfo *C.hs_platform_info_t
 
-func hsPopulatePlatform() (*hsPlatformInfo, error) {
-	var platform hsPlatformInfo
+func hsPopulatePlatform() (hsPlatformInfo, error) {
+	var platform C.struct_hs_platform_info
 
-	if ret := C.hs_populate_platform(&platform.info); ret != C.HS_SUCCESS {
-		return &platform, hsError(ret)
+	if ret := C.hs_populate_platform(&platform); ret != C.HS_SUCCESS {
+		return nil, hsError(ret)
 	}
 
 	return &platform, nil
@@ -422,13 +420,13 @@ func hsSerializedDatabaseInfo(data []byte) (string, error) {
 	return C.GoString(info), nil
 }
 
-func hsCompile(expression string, flags CompileFlag, mode ModeFlag, platform *hsPlatformInfo) (hsDatabase, error) {
+func hsCompile(expression string, flags CompileFlag, mode ModeFlag, platform hsPlatformInfo) (hsDatabase, error) {
 	var db *C.hs_database_t
 	var err *C.hs_compile_error_t
 
 	expr := C.CString(expression)
 
-	ret := C.hs_compile(expr, C.uint(flags), C.uint(mode), &platform.info, &db, &err)
+	ret := C.hs_compile(expr, C.uint(flags), C.uint(mode), platform, &db, &err)
 
 	C.free(unsafe.Pointer(expr))
 
@@ -447,7 +445,7 @@ func hsCompile(expression string, flags CompileFlag, mode ModeFlag, platform *hs
 	return nil, fmt.Errorf("compile error, %d", int(ret))
 }
 
-func hsCompileMulti(expressions []string, flags []CompileFlag, ids []uint, mode ModeFlag, platform *hsPlatformInfo) (hsDatabase, error) {
+func hsCompileMulti(expressions []string, flags []CompileFlag, ids []uint, mode ModeFlag, platform hsPlatformInfo) (hsDatabase, error) {
 	var db *C.hs_database_t
 	var err *C.hs_compile_error_t
 
@@ -479,7 +477,7 @@ func hsCompileMulti(expressions []string, flags []CompileFlag, ids []uint, mode 
 		cids = &values[0]
 	}
 
-	ret := C.hs_compile_multi(&cexprs[0], cflags, cids, C.uint(len(cexprs)), C.uint(mode), &platform.info, &db, &err)
+	ret := C.hs_compile_multi(&cexprs[0], cflags, cids, C.uint(len(cexprs)), C.uint(mode), platform, &db, &err)
 
 	for _, expr := range cexprs {
 		C.free(unsafe.Pointer(expr))
@@ -500,7 +498,7 @@ func hsCompileMulti(expressions []string, flags []CompileFlag, ids []uint, mode 
 	return nil, fmt.Errorf("compile error, %d", int(ret))
 }
 
-func hsCompileExtMulti(expressions []string, flags []CompileFlag, ids []uint, exts []hsExprExt, mode ModeFlag, platform *hsPlatformInfo) (hsDatabase, error) {
+func hsCompileExtMulti(expressions []string, flags []CompileFlag, ids []uint, exts []hsExprExt, mode ModeFlag, platform hsPlatformInfo) (hsDatabase, error) {
 	var db *C.hs_database_t
 	var err *C.hs_compile_error_t
 
@@ -548,7 +546,7 @@ func hsCompileExtMulti(expressions []string, flags []CompileFlag, ids []uint, ex
 		cexts = &ptrs[0]
 	}
 
-	ret := C.hs_compile_ext_multi(&cexprs[0], cflags, cids, cexts, C.uint(len(cexprs)), C.uint(mode), &platform.info, &db, &err)
+	ret := C.hs_compile_ext_multi(&cexprs[0], cflags, cids, cexts, C.uint(len(cexprs)), C.uint(mode), platform, &db, &err)
 
 	for _, expr := range cexprs {
 		C.free(unsafe.Pointer(expr))

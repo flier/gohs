@@ -27,7 +27,6 @@ func TestAllocator(t *testing.T) {
 		platform, err := hsPopulatePlatform()
 
 		So(platform, ShouldNotBeNil)
-		So(platform.info, ShouldNotBeNil)
 		So(err, ShouldBeNil)
 
 		var memoryUsed int
@@ -151,7 +150,6 @@ func TestDatabase(t *testing.T) {
 		platform, err := hsPopulatePlatform()
 
 		So(platform, ShouldNotBeNil)
-		So(platform.info, ShouldNotBeNil)
 		So(err, ShouldBeNil)
 
 		db, err := hsCompile("test", 0, Stream, platform)
@@ -251,7 +249,6 @@ func TestCompile(t *testing.T) {
 		platform, err := hsPopulatePlatform()
 
 		So(platform, ShouldNotBeNil)
-		So(platform.info, ShouldNotBeNil)
 		So(err, ShouldBeNil)
 
 		Convey("Compile a unsupported expression", func() {
@@ -363,7 +360,6 @@ func TestScratch(t *testing.T) {
 		platform, err := hsPopulatePlatform()
 
 		So(platform, ShouldNotBeNil)
-		So(platform.info, ShouldNotBeNil)
 		So(err, ShouldBeNil)
 
 		db, err := hsCompile("test", 0, Block, platform)
@@ -427,7 +423,6 @@ func TestBlockScan(t *testing.T) {
 		platform, err := hsPopulatePlatform()
 
 		So(platform, ShouldNotBeNil)
-		So(platform.info, ShouldNotBeNil)
 		So(err, ShouldBeNil)
 
 		db, err := hsCompile("test", 0, Block, platform)
@@ -478,7 +473,6 @@ func TestVectorScan(t *testing.T) {
 		platform, err := hsPopulatePlatform()
 
 		So(platform, ShouldNotBeNil)
-		So(platform.info, ShouldNotBeNil)
 		So(err, ShouldBeNil)
 
 		db, err := hsCompile("test", 0, Vectored, platform)
@@ -528,7 +522,6 @@ func TestStreamScan(t *testing.T) {
 		platform, err := hsPopulatePlatform()
 
 		So(platform, ShouldNotBeNil)
-		So(platform.info, ShouldNotBeNil)
 		So(err, ShouldBeNil)
 
 		db, err := hsCompile("test", 0, Stream, platform)
