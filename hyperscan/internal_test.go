@@ -375,5 +375,86 @@ func TestVectorScan(t *testing.T) {
 
 		So(hsFreeScratch(s), ShouldBeNil)
 	})
+}
 
+func TestStreamScan(t *testing.T) {
+	Convey("Given a stream database", t, func() {
+		platform, err := hsPopulatePlatform()
+
+		So(platform, ShouldNotBeNil)
+		So(platform.info, ShouldNotBeNil)
+		So(err, ShouldBeNil)
+
+		db, err := hsCompile("test", 0, Stream, platform)
+
+		So(db, ShouldNotBeNil)
+		So(err, ShouldBeNil)
+
+		s, err := hsAllocScratch(db)
+
+		So(s, ShouldNotBeNil)
+		So(err, ShouldBeNil)
+
+		Convey("Then open a stream", func() {
+			stream, err := hsOpenStream(db, 0)
+
+			So(stream, ShouldNotBeNil)
+			So(err, ShouldBeNil)
+
+			h := &scanHandler{}
+
+			Convey("Then scan a simple stream with first part", func() {
+				So(hsScanStream(stream, []byte("abcte"), 0, s, h.handle, nil), ShouldBeNil)
+				So(h.matched, ShouldBeNil)
+
+				Convey("When scan second part, should be matched", func() {
+					So(hsScanStream(stream, []byte("stdef"), 0, s, h.handle, nil), ShouldBeNil)
+					So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7}})
+				})
+
+				Convey("Then copy the stream", func() {
+					stream2, err := hsCopyStream(stream)
+
+					So(stream2, ShouldNotBeNil)
+					So(err, ShouldBeNil)
+
+					Convey("When copied stream2 scan the second part, should be matched", func() {
+						So(hsScanStream(stream2, []byte("stdef"), 0, s, h.handle, nil), ShouldBeNil)
+						So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7}})
+
+						Convey("When copied stream2 scan the second part again, should not be matched", func() {
+							h.matched = nil
+							So(hsScanStream(stream2, []byte("stdef"), 0, s, h.handle, nil), ShouldBeNil)
+							So(h.matched, ShouldBeNil)
+
+							Convey("When copy and reset stream2", func() {
+								So(hsResetAndCopyStream(stream2, stream, s, h.handle, nil), ShouldBeNil)
+
+								Convey("When copied and reset stream2 scan the second part again, should be matched", func() {
+									h.matched = nil
+									So(hsScanStream(stream2, []byte("stdef"), 0, s, h.handle, nil), ShouldBeNil)
+									So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7}})
+								})
+							})
+						})
+					})
+
+					So(hsCloseStream(stream2, s, h.handle, nil), ShouldBeNil)
+				})
+
+				Convey("Then reset the stream", func() {
+					So(hsResetStream(stream, 0, s, h.handle, nil), ShouldBeNil)
+
+					Convey("When scan the second part, should not be matched", func() {
+						So(hsScanStream(stream, []byte("stdef"), 0, s, h.handle, nil), ShouldBeNil)
+						So(h.matched, ShouldBeNil)
+					})
+				})
+			})
+
+			So(hsCloseStream(stream, s, h.handle, nil), ShouldBeNil)
+		})
+
+		So(hsFreeScratch(s), ShouldBeNil)
+	})
 }
