@@ -203,11 +203,11 @@ func TestExpression(t *testing.T) {
 
 		So(info, ShouldNotBeNil)
 		So(info, ShouldResemble, &hsExprInfo{
-			MinWidth:         4,
-			MaxWidth:         4,
-			UnorderedMatches: true,
-			MatchesAtEod:     true,
-			MatchesOnlyAtEod: true,
+			MinWidth:  4,
+			MaxWidth:  4,
+			Unordered: true,
+			AtEod:     true,
+			OnlyAtEod: true,
 		})
 		So(err, ShouldBeNil)
 	})

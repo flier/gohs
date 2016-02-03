@@ -133,9 +133,11 @@ func hsPopulatePlatform() (*hsPlatformInfo, error) {
 
 type hsDatabase *C.hs_database_t
 type hsScratch *C.hs_scratch_t
+type hsStream *C.hs_stream_t
+
 type hsExprInfo struct {
-	MinWidth, MaxWidth                               uint
-	UnorderedMatches, MatchesAtEod, MatchesOnlyAtEod bool
+	MinWidth, MaxWidth          uint
+	Unordered, AtEod, OnlyAtEod bool
 }
 
 func hsVersion() string {
@@ -321,11 +323,11 @@ func hsExpressionInfo(expression string, flags CompileFlag) (*hsExprInfo, error)
 		defer C.free(unsafe.Pointer(info))
 
 		return &hsExprInfo{
-			MinWidth:         uint(info.min_width),
-			MaxWidth:         uint(info.max_width),
-			UnorderedMatches: info.unordered_matches != 0,
-			MatchesAtEod:     info.matches_at_eod != 0,
-			MatchesOnlyAtEod: info.matches_only_at_eod != 0,
+			MinWidth:  uint(info.min_width),
+			MaxWidth:  uint(info.max_width),
+			Unordered: info.unordered_matches != 0,
+			AtEod:     info.matches_at_eod != 0,
+			OnlyAtEod: info.matches_only_at_eod != 0,
 		}, nil
 	}
 
