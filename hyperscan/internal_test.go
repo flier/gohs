@@ -1,6 +1,7 @@
 package hyperscan
 
 import (
+	"regexp"
 	"testing"
 	"unsafe"
 
@@ -29,11 +30,12 @@ func TestDatabase(t *testing.T) {
 		So(db, ShouldNotBeNil)
 		So(err, ShouldBeNil)
 
+		regexInfo := regexp.MustCompile(`^Version: \d\.\d\.\d Features: (NO)?AVX2 Mode: STREAM`)
+
 		Convey("Get the database info", func() {
 			info, err := hsDatabaseInfo(db)
 
-			So(info, ShouldStartWith, "Version: 4.")
-			So(info, ShouldEndWith, "Features:  AVX2 Mode: STREAM")
+			So(regexInfo.MatchString(info), ShouldBeTrue)
 			So(err, ShouldBeNil)
 		})
 
@@ -73,8 +75,7 @@ func TestDatabase(t *testing.T) {
 			Convey("Get the database info", func() {
 				info, err := hsSerializedDatabaseInfo(data)
 
-				So(info, ShouldStartWith, "Version: 4.")
-				So(info, ShouldEndWith, "Features:  AVX2 Mode: STREAM")
+				So(regexInfo.MatchString(info), ShouldBeTrue)
 				So(err, ShouldBeNil)
 			})
 
@@ -94,8 +95,7 @@ func TestDatabase(t *testing.T) {
 				Convey("Get the database info", func() {
 					info, err := hsDatabaseInfo(db)
 
-					So(info, ShouldStartWith, "Version: 4.")
-					So(info, ShouldEndWith, "Features:  AVX2 Mode: STREAM")
+					So(regexInfo.MatchString(info), ShouldBeTrue)
 					So(err, ShouldBeNil)
 				})
 			})
@@ -109,8 +109,7 @@ func TestDatabase(t *testing.T) {
 				Convey("Get the database info", func() {
 					info, err := hsDatabaseInfo(db)
 
-					So(info, ShouldStartWith, "Version: 4.")
-					So(info, ShouldEndWith, "Features:  AVX2 Mode: STREAM")
+					So(regexInfo.MatchString(info), ShouldBeTrue)
 					So(err, ShouldBeNil)
 				})
 			})
