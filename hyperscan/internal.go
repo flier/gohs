@@ -115,6 +115,7 @@ func hsPopulatePlatform() (*hsPlatformInfo, error) {
 }
 
 type hsDatabase *C.hs_database_t
+type hsScratch *C.hs_scratch_t
 
 func hsVersion() string {
 	return C.GoString(C.hs_version())
@@ -221,11 +222,104 @@ func hsCompile(expression string, flags CompileFlag, mode ModeFlag, platform *hs
 		return db, nil
 	}
 
-	if ret == C.HS_COMPILER_ERROR && err != nil {
+	if err != nil {
 		defer C.hs_free_compile_error(err)
+	}
 
+	if ret == C.HS_COMPILER_ERROR && err != nil {
 		return nil, &compileError{C.GoString(err.message), int(err.expression)}
 	}
 
 	return nil, fmt.Errorf("compile error, %d", int(ret))
+}
+
+func hsCompileMulti(expressions []string, flags []CompileFlag, ids []uint, mode ModeFlag, platform *hsPlatformInfo) (hsDatabase, error) {
+	var db *C.hs_database_t
+	var err *C.hs_compile_error_t
+
+	cexprs := make([]*C.char, len(expressions))
+
+	for i, expr := range expressions {
+		cexprs[i] = C.CString(expr)
+	}
+
+	var cflags, cids *C.uint
+
+	if flags != nil {
+		values := make([]C.uint, len(flags))
+
+		for i, flag := range flags {
+			values[i] = C.uint(flag)
+		}
+
+		cflags = &values[0]
+	}
+
+	if ids != nil {
+		values := make([]C.uint, len(ids))
+
+		for i, id := range ids {
+			values[i] = C.uint(id)
+		}
+
+		cids = &values[0]
+	}
+
+	ret := C.hs_compile_multi(&cexprs[0], cflags, cids, C.uint(len(cexprs)), C.uint(mode), &platform.info, &db, &err)
+
+	for _, expr := range cexprs {
+		C.free(unsafe.Pointer(expr))
+	}
+
+	if ret == C.HS_SUCCESS {
+		return db, nil
+	}
+
+	if err != nil {
+		defer C.hs_free_compile_error(err)
+	}
+
+	if ret == C.HS_COMPILER_ERROR && err != nil {
+		return nil, &compileError{C.GoString(err.message), int(err.expression)}
+	}
+
+	return nil, fmt.Errorf("compile error, %d", int(ret))
+}
+
+func hsAllocScratch(db hsDatabase) (hsScratch, error) {
+	var scratch *C.hs_scratch_t
+
+	if ret := C.hs_alloc_scratch(db, &scratch); ret != C.HS_SUCCESS {
+		return nil, hsError(ret)
+	}
+
+	return scratch, nil
+}
+
+func hsCloneScratch(scratch hsScratch) (hsScratch, error) {
+	var clone *C.hs_scratch_t
+
+	if ret := C.hs_clone_scratch(scratch, &clone); ret != C.HS_SUCCESS {
+		return nil, hsError(ret)
+	}
+
+	return clone, nil
+}
+
+func hsScratchSize(scratch hsScratch) (int, error) {
+	var size C.size_t
+
+	if ret := C.hs_scratch_size(scratch, &size); ret != C.HS_SUCCESS {
+		return 0, hsError(ret)
+	}
+
+	return int(size), nil
+}
+
+func hsFreeScratch(scratch hsScratch) error {
+	if ret := C.hs_free_scratch(scratch); ret != C.HS_SUCCESS {
+		return hsError(ret)
+	}
+
+	return nil
 }

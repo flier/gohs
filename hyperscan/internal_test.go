@@ -8,6 +8,10 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+var (
+	regexInfo = regexp.MustCompile(`^Version: \d\.\d\.\d Features: (NO)?AVX2 Mode: STREAM`)
+)
+
 func TestVersion(t *testing.T) {
 	Convey("Given a HyperScan version", t, func() {
 		ver := hsVersion()
@@ -29,8 +33,6 @@ func TestDatabase(t *testing.T) {
 
 		So(db, ShouldNotBeNil)
 		So(err, ShouldBeNil)
-
-		regexInfo := regexp.MustCompile(`^Version: \d\.\d\.\d Features: (NO)?AVX2 Mode: STREAM`)
 
 		Convey("Get the database info", func() {
 			info, err := hsDatabaseInfo(db)
@@ -120,31 +122,89 @@ func TestDatabase(t *testing.T) {
 }
 
 func TestCompile(t *testing.T) {
-	Convey("Compile a unsupported expression", t, func() {
+	Convey("Given a host platform", t, func() {
 		platform, err := hsPopulatePlatform()
 
 		So(platform, ShouldNotBeNil)
 		So(platform.info, ShouldNotBeNil)
 		So(err, ShouldBeNil)
 
-		db, err := hsCompile(`\R`, 0, Stream, platform)
+		Convey("Compile a unsupported expression", func() {
+			db, err := hsCompile(`\R`, 0, Stream, platform)
 
-		So(db, ShouldBeNil)
-		So(err, ShouldNotBeNil)
-		So(err.Error(), ShouldEqual, `\R at index 0 not supported.`)
+			So(db, ShouldBeNil)
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldEqual, `\R at index 0 not supported.`)
+		})
+
+		Convey("Compile an empty expression", func() {
+			db, err := hsCompile("", 0, Stream, platform)
+
+			So(db, ShouldBeNil)
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldEqual, "Pattern matches empty buffer; use HS_FLAG_ALLOWEMPTY to enable support.")
+		})
+
+		Convey("Compile multi expressions", func() {
+			db, err := hsCompileMulti([]string{`^\w+`, `\d+`, `\s+`}, nil, []uint{1, 2, 3}, Stream, platform)
+
+			So(db, ShouldNotBeNil)
+			So(err, ShouldBeNil)
+
+			Convey("Get the database info", func() {
+				info, err := hsDatabaseInfo(db)
+
+				So(regexInfo.MatchString(info), ShouldBeTrue)
+				So(err, ShouldBeNil)
+			})
+		})
 	})
+}
 
-	Convey("Compile an empty expression", t, func() {
+func TestScratch(t *testing.T) {
+	Convey("Given a block database", t, func() {
 		platform, err := hsPopulatePlatform()
 
 		So(platform, ShouldNotBeNil)
 		So(platform.info, ShouldNotBeNil)
 		So(err, ShouldBeNil)
 
-		db, err := hsCompile("", 0, Stream, platform)
+		db, err := hsCompile("test", 0, Block, platform)
 
-		So(db, ShouldBeNil)
-		So(err, ShouldNotBeNil)
-		So(err.Error(), ShouldEqual, "Pattern matches empty buffer; use HS_FLAG_ALLOWEMPTY to enable support.")
+		So(db, ShouldNotBeNil)
+		So(err, ShouldBeNil)
+
+		Convey("Allocate a scratch", func() {
+			s, err := hsAllocScratch(db)
+
+			So(s, ShouldNotBeNil)
+			So(err, ShouldBeNil)
+
+			Convey("Get the scratch size", func() {
+				size, err := hsScratchSize(s)
+
+				So(size, ShouldBeGreaterThan, 1024)
+				So(size, ShouldBeLessThan, 4096)
+				So(err, ShouldBeNil)
+
+				Convey("Clone the scratch", func() {
+					s2, err := hsCloneScratch(s)
+
+					So(s2, ShouldNotBeNil)
+					So(err, ShouldBeNil)
+
+					Convey("Cloned scrash should have same size", func() {
+						size2, err := hsScratchSize(s2)
+
+						So(size2, ShouldEqual, size)
+						So(err, ShouldBeNil)
+					})
+
+					So(hsFreeScratch(s2), ShouldBeNil)
+				})
+			})
+
+			So(hsFreeScratch(s), ShouldBeNil)
+		})
 	})
 }
