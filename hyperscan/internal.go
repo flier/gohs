@@ -5,9 +5,19 @@ import (
 	"unsafe"
 )
 
-// #cgo LDFLAGS: -lstdc++
-// #cgo pkg-config: libhs
-// #include <hs.h>
+/*
+#cgo LDFLAGS: -lstdc++
+#cgo pkg-config: libhs
+
+#include <hs.h>
+
+extern int hsMatchEventCallback(unsigned int id, unsigned long long from, unsigned long long to, unsigned int flags, void *context);
+
+static int hs_scan_cgo(const hs_database_t *db, const char *data, unsigned int length,
+					   unsigned int flags, hs_scratch_t *scratch, void *context) {
+	return hs_scan(db, data, length, flags, scratch, hsMatchEventCallback, context);
+}
+*/
 import "C"
 
 type CompileFlag uint
@@ -49,6 +59,8 @@ const (
 	Stream            = C.HS_MODE_STREAM   // Streaming database.
 	Vectored          = C.HS_MODE_VECTORED // Vectored scanning database.
 )
+
+type ScanFlag uint
 
 type hsError int
 
@@ -318,6 +330,34 @@ func hsScratchSize(scratch hsScratch) (int, error) {
 
 func hsFreeScratch(scratch hsScratch) error {
 	if ret := C.hs_free_scratch(scratch); ret != C.HS_SUCCESS {
+		return hsError(ret)
+	}
+
+	return nil
+}
+
+type hsMatchEventHandler func(id uint, from, to uint64, flags uint, context interface{}) error
+
+type hsMatchEventContext struct {
+	handler hsMatchEventHandler
+	context interface{}
+}
+
+//export hsMatchEventCallback
+func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, context unsafe.Pointer) C.int {
+	ctxt := (*hsMatchEventContext)(context)
+
+	if err := ctxt.handler(uint(id), uint64(from), uint64(to), uint(flags), ctxt.context); err != nil {
+		return -1
+	}
+
+	return 0
+}
+
+func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
+	ctxt := &hsMatchEventContext{onEvent, context}
+
+	if ret := C.hs_scan_cgo(db, (*C.char)(unsafe.Pointer(&data[0])), C.uint(len(data)), C.uint(flags), scratch, unsafe.Pointer(ctxt)); ret != C.HS_SUCCESS {
 		return hsError(ret)
 	}
 

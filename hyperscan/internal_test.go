@@ -1,6 +1,7 @@
 package hyperscan
 
 import (
+	"errors"
 	"regexp"
 	"testing"
 	"unsafe"
@@ -135,6 +136,8 @@ func TestCompile(t *testing.T) {
 			So(db, ShouldBeNil)
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldEqual, `\R at index 0 not supported.`)
+
+			So(hsFreeDatabase(db), ShouldBeNil)
 		})
 
 		Convey("Compile an empty expression", func() {
@@ -143,6 +146,8 @@ func TestCompile(t *testing.T) {
 			So(db, ShouldBeNil)
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldEqual, "Pattern matches empty buffer; use HS_FLAG_ALLOWEMPTY to enable support.")
+
+			So(hsFreeDatabase(db), ShouldBeNil)
 		})
 
 		Convey("Compile multi expressions", func() {
@@ -157,6 +162,8 @@ func TestCompile(t *testing.T) {
 				So(regexInfo.MatchString(info), ShouldBeTrue)
 				So(err, ShouldBeNil)
 			})
+
+			So(hsFreeDatabase(db), ShouldBeNil)
 		})
 	})
 }
@@ -206,5 +213,71 @@ func TestScratch(t *testing.T) {
 
 			So(hsFreeScratch(s), ShouldBeNil)
 		})
+	})
+}
+
+type matchEvent struct {
+	id       uint
+	from, to uint64
+}
+
+type scanHandler struct {
+	matched []matchEvent
+	err     error
+}
+
+func (h *scanHandler) handle(id uint, from, to uint64, flags uint, context interface{}) error {
+	h.matched = append(h.matched, matchEvent{id, from, to})
+
+	return h.err
+}
+
+func TestScan(t *testing.T) {
+	Convey("Given a block database", t, func() {
+		platform, err := hsPopulatePlatform()
+
+		So(platform, ShouldNotBeNil)
+		So(platform.info, ShouldNotBeNil)
+		So(err, ShouldBeNil)
+
+		db, err := hsCompile("test", 0, Block, platform)
+
+		So(db, ShouldNotBeNil)
+		So(err, ShouldBeNil)
+
+		s, err := hsAllocScratch(db)
+
+		So(s, ShouldNotBeNil)
+		So(err, ShouldBeNil)
+
+		Convey("Scan block with pattern", func() {
+			h := &scanHandler{}
+
+			So(hsScan(db, []byte("abctestdef"), 0, s, h.handle, nil), ShouldBeNil)
+			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7}})
+		})
+
+		Convey("Scan block without pattern", func() {
+			h := &scanHandler{}
+
+			So(hsScan(db, []byte("abcdef"), 0, s, h.handle, nil), ShouldBeNil)
+			So(h.matched, ShouldBeEmpty)
+		})
+
+		Convey("Scan block with multi pattern", func() {
+			h := &scanHandler{}
+
+			So(hsScan(db, []byte("abctestdeftest"), 0, s, h.handle, nil), ShouldBeNil)
+			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7}, {0, 0, 14}})
+		})
+
+		Convey("Scan block with multi pattern but terminated", func() {
+			h := &scanHandler{err: errors.New("terminated")}
+
+			So(hsScan(db, []byte("abctestdeftest"), 0, s, h.handle, nil), ShouldEqual, ScanTerminated)
+			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7}})
+		})
+
+		So(hsFreeScratch(s), ShouldBeNil)
 	})
 }
