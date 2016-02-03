@@ -22,6 +22,130 @@ func TestVersion(t *testing.T) {
 	})
 }
 
+func TestAllocator(t *testing.T) {
+	Convey("Given the host platform", t, func() {
+		platform, err := hsPopulatePlatform()
+
+		So(platform, ShouldNotBeNil)
+		So(platform.info, ShouldNotBeNil)
+		So(err, ShouldBeNil)
+
+		var memoryUsed int
+		var memoryFreed []unsafe.Pointer
+
+		alloc := func(size uint) unsafe.Pointer {
+			memoryUsed += int(size)
+
+			return hsDefaultAlloc(size)
+		}
+
+		free := func(ptr unsafe.Pointer) {
+			memoryFreed = append(memoryFreed, ptr)
+
+			hsDefaultFree(ptr)
+		}
+
+		Convey("Given a simple expression with allocator", func() {
+			So(hsSetMiscAllocator(alloc, free), ShouldBeNil)
+
+			info, err := hsExpressionInfo("test", 0)
+
+			So(info, ShouldNotBeNil)
+			So(info, ShouldResemble, &hsExprInfo{
+				MinWidth: 4,
+				MaxWidth: 4,
+			})
+			So(err, ShouldBeNil)
+
+			So(memoryUsed, ShouldBeGreaterThanOrEqualTo, 12)
+
+			So(hsSetMiscAllocator(nil, nil), ShouldBeNil)
+		})
+
+		Convey("Then create a stream database with allocator", func() {
+			So(hsSetDatabaseAllocator(alloc, free), ShouldBeNil)
+
+			db, err := hsCompile("test", 0, Stream, platform)
+
+			So(db, ShouldNotBeNil)
+			So(err, ShouldBeNil)
+
+			Convey("Get the database size", func() {
+				size, err := hsDatabaseSize(db)
+
+				So(memoryUsed, ShouldBeGreaterThanOrEqualTo, size)
+				So(err, ShouldBeNil)
+			})
+
+			Convey("Then create a scratch with allocator", func() {
+				So(hsSetScratchAllocator(alloc, free), ShouldBeNil)
+
+				memoryUsed = 0
+
+				s, err := hsAllocScratch(db)
+
+				So(s, ShouldNotBeNil)
+				So(err, ShouldBeNil)
+
+				Convey("Get the scratch size", func() {
+					size, err := hsScratchSize(s)
+
+					So(memoryUsed, ShouldBeGreaterThanOrEqualTo, size)
+					So(err, ShouldBeNil)
+				})
+
+				Convey("Then open a stream", func() {
+					So(hsSetStreamAllocator(alloc, free), ShouldBeNil)
+
+					memoryUsed = 0
+
+					stream, err := hsOpenStream(db, 0)
+
+					So(stream, ShouldNotBeNil)
+					So(err, ShouldBeNil)
+
+					Convey("Get the stream size", func() {
+						size, err := hsStreamSize(db)
+
+						So(memoryUsed, ShouldBeGreaterThanOrEqualTo, size)
+						So(err, ShouldBeNil)
+					})
+
+					h := &scanHandler{}
+
+					Convey("Then close stream with allocator", func() {
+						memoryFreed = nil
+
+						So(hsCloseStream(stream, s, h.handle, nil), ShouldBeNil)
+
+						So(hsSetStreamAllocator(nil, nil), ShouldBeNil)
+					})
+				})
+
+				Convey("Then free scratch with allocator", func() {
+					memoryFreed = nil
+
+					So(hsFreeScratch(s), ShouldBeNil)
+
+					So(memoryFreed, ShouldResemble, []unsafe.Pointer{unsafe.Pointer(s)})
+
+					So(hsSetScratchAllocator(nil, nil), ShouldBeNil)
+				})
+			})
+
+			Convey("Then free database with allocator", func() {
+				memoryFreed = nil
+
+				So(hsFreeDatabase(db), ShouldBeNil)
+
+				So(memoryFreed, ShouldResemble, []unsafe.Pointer{unsafe.Pointer(db)})
+
+				So(hsSetDatabaseAllocator(nil, nil), ShouldBeNil)
+			})
+		})
+	})
+}
+
 func TestDatabase(t *testing.T) {
 	Convey("Given a stream database", t, func() {
 		platform, err := hsPopulatePlatform()
@@ -324,6 +448,7 @@ func TestBlockScan(t *testing.T) {
 		})
 
 		So(hsFreeScratch(s), ShouldBeNil)
+		So(hsFreeDatabase(db), ShouldBeNil)
 	})
 }
 

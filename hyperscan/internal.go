@@ -11,32 +11,51 @@ import (
 
 #include <hs.h>
 
+#define DEFINE_ALLOCTOR(ID, TYPE) \
+	extern void *hs ## ID ## Alloc(size_t size); \
+	extern void hs ## ID ## Free(void *ptr); \
+	static inline void *hs ## ID ## Alloc_cgo(size_t size) { return hs ## ID ## Alloc(size); } \
+	static inline void hs ## ID ## Free_cgo(void *ptr) { hs ## ID ## Free(ptr); } \
+	static inline hs_error_t hs_set_ ## TYPE ## _allocator_cgo(void *alloc, void *free) \
+	{ return hs_set_ ## TYPE ## _allocator(alloc ? hs ## ID ## Alloc_cgo : NULL, free ? hs ## ID ## Free_cgo : NULL); }
+
+DEFINE_ALLOCTOR(Db, database);
+DEFINE_ALLOCTOR(Misc, misc);
+DEFINE_ALLOCTOR(Scratch, scratch);
+DEFINE_ALLOCTOR(Stream, stream);
+
 extern int hsMatchEventCallback(unsigned int id, unsigned long long from, unsigned long long to, unsigned int flags, void *context);
 
-static hs_error_t hs_scan_cgo(const hs_database_t *db, const char *data, unsigned int length,
-					   		  unsigned int flags, hs_scratch_t *scratch, void *context) {
+static inline
+hs_error_t hs_scan_cgo(const hs_database_t *db, const char *data, unsigned int length,
+					   unsigned int flags, hs_scratch_t *scratch, void *context) {
 	return hs_scan(db, data, length, flags, scratch, hsMatchEventCallback, context);
 }
 
-static hs_error_t hs_scan_vector_cgo(const hs_database_t *db, const char *const *data, const unsigned int *length, unsigned int count,
-					   		  		 unsigned int flags, hs_scratch_t *scratch, void *context) {
+static inline
+hs_error_t hs_scan_vector_cgo(const hs_database_t *db, const char *const *data, const unsigned int *length, unsigned int count,
+					   		  unsigned int flags, hs_scratch_t *scratch, void *context) {
 	return hs_scan_vector(db, data, length, count, flags, scratch, hsMatchEventCallback, context);
 }
 
-static hs_error_t hs_scan_stream_cgo(hs_stream_t *id, const char *data, unsigned int length,
-								     unsigned int flags, hs_scratch_t *scratch, void *context) {
+static inline
+hs_error_t hs_scan_stream_cgo(hs_stream_t *id, const char *data, unsigned int length,
+							  unsigned int flags, hs_scratch_t *scratch, void *context) {
 	return hs_scan_stream(id, data, length, flags, scratch, hsMatchEventCallback, context);
 }
 
-static hs_error_t hs_close_stream_cgo(hs_stream_t *id, hs_scratch_t *scratch, void *context) {
+static inline
+hs_error_t hs_close_stream_cgo(hs_stream_t *id, hs_scratch_t *scratch, void *context) {
 	return hs_close_stream(id, scratch, hsMatchEventCallback, context);
 }
 
-static hs_error_t hs_reset_stream_cgo(hs_stream_t *id, unsigned int flags, hs_scratch_t *scratch, void *context) {
+static inline
+hs_error_t hs_reset_stream_cgo(hs_stream_t *id, unsigned int flags, hs_scratch_t *scratch, void *context) {
 	return hs_reset_stream(id, flags, scratch, hsMatchEventCallback, context);
 }
 
-static hs_error_t hs_reset_and_copy_stream_cgo(hs_stream_t *to_id, const hs_stream_t *from_id, hs_scratch_t *scratch, void *context) {
+static inline
+hs_error_t hs_reset_and_copy_stream_cgo(hs_stream_t *to_id, const hs_stream_t *from_id, hs_scratch_t *scratch, void *context) {
 	return hs_reset_and_copy_stream(to_id, from_id, scratch, hsMatchEventCallback, context);
 }
 */
@@ -155,6 +174,148 @@ type hsStream *C.hs_stream_t
 type hsExprInfo struct {
 	MinWidth, MaxWidth          uint
 	Unordered, AtEod, OnlyAtEod bool
+}
+
+type hsAllocFunc func(uint) unsafe.Pointer
+type hsFreeFunc func(unsafe.Pointer)
+
+type hsAllocator struct {
+	Alloc hsAllocFunc
+	Free  hsFreeFunc
+}
+
+var (
+	defaultAllocator hsAllocator
+	dbAllocator      hsAllocator
+	miscAllocator    hsAllocator
+	scratchAllocator hsAllocator
+	streamAllocator  hsAllocator
+)
+
+func hsDefaultAlloc(size uint) unsafe.Pointer {
+	var ptr unsafe.Pointer
+
+	if ret := C.posix_memalign(&ptr, 64, C.size_t(size)); ret == 0 {
+		return ptr
+	}
+
+	return nil
+}
+
+func hsDefaultFree(ptr unsafe.Pointer) {
+	C.free(ptr)
+}
+
+//export hsDbAlloc
+func hsDbAlloc(size C.size_t) unsafe.Pointer {
+	if dbAllocator.Alloc != nil {
+		return dbAllocator.Alloc(uint(size))
+	}
+
+	return hsDefaultAlloc(uint(size))
+}
+
+//export hsDbFree
+func hsDbFree(ptr unsafe.Pointer) {
+	if dbAllocator.Free != nil {
+		dbAllocator.Free(ptr)
+	} else {
+		hsDefaultFree(ptr)
+	}
+}
+
+func hsSetDatabaseAllocator(allocFunc hsAllocFunc, freeFunc hsFreeFunc) error {
+	dbAllocator = hsAllocator{allocFunc, freeFunc}
+
+	if ret := C.hs_set_database_allocator_cgo(unsafe.Pointer(&dbAllocator.Alloc), unsafe.Pointer(&dbAllocator.Free)); ret != C.HS_SUCCESS {
+		return hsError(ret)
+	}
+
+	return nil
+}
+
+//export hsMiscAlloc
+func hsMiscAlloc(size C.size_t) unsafe.Pointer {
+	if miscAllocator.Alloc != nil {
+		return miscAllocator.Alloc(uint(size))
+	}
+
+	return hsDefaultAlloc(uint(size))
+}
+
+//export hsMiscFree
+func hsMiscFree(ptr unsafe.Pointer) {
+	if miscAllocator.Free != nil {
+		miscAllocator.Free(ptr)
+	} else {
+		hsDefaultFree(ptr)
+	}
+}
+
+func hsSetMiscAllocator(allocFunc hsAllocFunc, freeFunc hsFreeFunc) error {
+	miscAllocator = hsAllocator{allocFunc, freeFunc}
+
+	if ret := C.hs_set_misc_allocator_cgo(unsafe.Pointer(&miscAllocator.Alloc), unsafe.Pointer(&miscAllocator.Free)); ret != C.HS_SUCCESS {
+		return hsError(ret)
+	}
+
+	return nil
+}
+
+//export hsScratchAlloc
+func hsScratchAlloc(size C.size_t) unsafe.Pointer {
+	if scratchAllocator.Alloc != nil {
+		return scratchAllocator.Alloc(uint(size))
+	}
+
+	return hsDefaultAlloc(uint(size))
+}
+
+//export hsScratchFree
+func hsScratchFree(ptr unsafe.Pointer) {
+	if scratchAllocator.Free != nil {
+		scratchAllocator.Free(ptr)
+	} else {
+		hsDefaultFree(ptr)
+	}
+}
+
+func hsSetScratchAllocator(allocFunc hsAllocFunc, freeFunc hsFreeFunc) error {
+	scratchAllocator = hsAllocator{allocFunc, freeFunc}
+
+	if ret := C.hs_set_scratch_allocator_cgo(unsafe.Pointer(&scratchAllocator.Alloc), unsafe.Pointer(&scratchAllocator.Free)); ret != C.HS_SUCCESS {
+		return hsError(ret)
+	}
+
+	return nil
+}
+
+//export hsStreamAlloc
+func hsStreamAlloc(size C.size_t) unsafe.Pointer {
+	if streamAllocator.Alloc != nil {
+		return streamAllocator.Alloc(uint(size))
+	}
+
+	return hsDefaultAlloc(uint(size))
+}
+
+//export hsStreamFree
+func hsStreamFree(ptr unsafe.Pointer) {
+	if streamAllocator.Free != nil {
+		streamAllocator.Free(ptr)
+	} else {
+		hsDefaultFree(ptr)
+	}
+}
+
+func hsSetStreamAllocator(allocFunc hsAllocFunc, freeFunc hsFreeFunc) error {
+	streamAllocator = hsAllocator{allocFunc, freeFunc}
+
+	if ret := C.hs_set_stream_allocator_cgo(unsafe.Pointer(&streamAllocator.Alloc), unsafe.Pointer(&streamAllocator.Free)); ret != C.HS_SUCCESS {
+		return hsError(ret)
+	}
+
+	return nil
 }
 
 func hsVersion() string {
@@ -337,7 +498,7 @@ func hsExpressionInfo(expression string, flags CompileFlag) (*hsExprInfo, error)
 	C.free(unsafe.Pointer(expr))
 
 	if ret == C.HS_SUCCESS && info != nil {
-		defer C.free(unsafe.Pointer(info))
+		defer hsMiscFree(unsafe.Pointer(info))
 
 		return &hsExprInfo{
 			MinWidth:  uint(info.min_width),
