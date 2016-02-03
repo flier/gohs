@@ -101,6 +101,14 @@ const (
 	Vectored          = C.HS_MODE_VECTORED // Vectored scanning database.
 )
 
+type ExtFlag uint
+
+const (
+	MinOffset ExtFlag = C.HS_EXT_FLAG_MIN_OFFSET
+	MaxOffset         = C.HS_EXT_FLAG_MAX_OFFSET
+	MinLength         = C.HS_EXT_FLAG_MIN_LENGTH
+)
+
 type ScanFlag uint
 
 type hsError int
@@ -174,6 +182,11 @@ type hsStream *C.hs_stream_t
 type hsExprInfo struct {
 	MinWidth, MaxWidth          uint
 	Unordered, AtEod, OnlyAtEod bool
+}
+
+type hsExprExt struct {
+	Flags                           ExtFlag
+	MinOffset, MaxOffset, MinLength uint64
 }
 
 type hsAllocFunc func(uint) unsafe.Pointer
@@ -467,6 +480,75 @@ func hsCompileMulti(expressions []string, flags []CompileFlag, ids []uint, mode 
 	}
 
 	ret := C.hs_compile_multi(&cexprs[0], cflags, cids, C.uint(len(cexprs)), C.uint(mode), &platform.info, &db, &err)
+
+	for _, expr := range cexprs {
+		C.free(unsafe.Pointer(expr))
+	}
+
+	if ret == C.HS_SUCCESS {
+		return db, nil
+	}
+
+	if err != nil {
+		defer C.hs_free_compile_error(err)
+	}
+
+	if ret == C.HS_COMPILER_ERROR && err != nil {
+		return nil, &compileError{C.GoString(err.message), int(err.expression)}
+	}
+
+	return nil, fmt.Errorf("compile error, %d", int(ret))
+}
+
+func hsCompileExtMulti(expressions []string, flags []CompileFlag, ids []uint, exts []hsExprExt, mode ModeFlag, platform *hsPlatformInfo) (hsDatabase, error) {
+	var db *C.hs_database_t
+	var err *C.hs_compile_error_t
+
+	cexprs := make([]*C.char, len(expressions))
+
+	for i, expr := range expressions {
+		cexprs[i] = C.CString(expr)
+	}
+
+	var cflags, cids *C.uint
+	var cexts **C.hs_expr_ext_t
+
+	if flags != nil {
+		values := make([]C.uint, len(flags))
+
+		for i, flag := range flags {
+			values[i] = C.uint(flag)
+		}
+
+		cflags = &values[0]
+	}
+
+	if ids != nil {
+		values := make([]C.uint, len(ids))
+
+		for i, id := range ids {
+			values[i] = C.uint(id)
+		}
+
+		cids = &values[0]
+	}
+
+	if exts != nil {
+		values := make([]C.hs_expr_ext_t, len(exts))
+		ptrs := make([]*C.hs_expr_ext_t, len(exts))
+
+		for i, ext := range exts {
+			values[i].flags = C.ulonglong(ext.Flags)
+			values[i].min_offset = C.ulonglong(ext.MinOffset)
+			values[i].max_offset = C.ulonglong(ext.MaxOffset)
+			values[i].min_length = C.ulonglong(ext.MinLength)
+			ptrs[i] = &values[i]
+		}
+
+		cexts = &ptrs[0]
+	}
+
+	ret := C.hs_compile_ext_multi(&cexprs[0], cflags, cids, cexts, C.uint(len(cexprs)), C.uint(mode), &platform.info, &db, &err)
 
 	for _, expr := range cexprs {
 		C.free(unsafe.Pointer(expr))

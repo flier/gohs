@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	regexInfo = regexp.MustCompile(`^Version: \d\.\d\.\d Features: (NO)?AVX2 Mode: STREAM`)
+	regexInfo = regexp.MustCompile(`^Version: \d\.\d\.\d Features: (NO|\s)AVX2 Mode: STREAM`)
 )
 
 func TestVersion(t *testing.T) {
@@ -276,6 +276,27 @@ func TestCompile(t *testing.T) {
 
 		Convey("Compile multi expressions", func() {
 			db, err := hsCompileMulti([]string{`^\w+`, `\d+`, `\s+`}, nil, []uint{1, 2, 3}, Stream, platform)
+
+			So(db, ShouldNotBeNil)
+			So(err, ShouldBeNil)
+
+			Convey("Get the database info", func() {
+				info, err := hsDatabaseInfo(db)
+
+				So(regexInfo.MatchString(info), ShouldBeTrue)
+				So(err, ShouldBeNil)
+			})
+
+			So(hsFreeDatabase(db), ShouldBeNil)
+		})
+
+		Convey("Compile multi expressions with extension", func() {
+			exts := []hsExprExt{
+				{Flags: MinOffset, MinOffset: 10},
+				{Flags: MaxOffset, MaxOffset: 10},
+				{Flags: MinLength, MinLength: 10},
+			}
+			db, err := hsCompileExtMulti([]string{`^\w+`, `\d+`, `\s+`}, nil, []uint{1, 2, 3}, exts, Stream, platform)
 
 			So(db, ShouldNotBeNil)
 			So(err, ShouldBeNil)
