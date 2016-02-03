@@ -161,16 +161,31 @@ func (e *compileError) Error() string { return e.msg }
 // If the error is not specific to an expression, then this value will be less than zero.
 func (e *compileError) Expression() int { return e.expr }
 
-type hsPlatformInfo *C.hs_platform_info_t
+type hsPlatformInfo struct {
+	platform C.struct_hs_platform_info
+}
 
-func hsPopulatePlatform() (hsPlatformInfo, error) {
+func (i *hsPlatformInfo) Tune() TuneFlag { return TuneFlag(i.platform.tune) }
+
+func (i *hsPlatformInfo) CpuFeatures() CpuFeature { return CpuFeature(i.platform.cpu_features) }
+
+func newPlatformInfo(tune TuneFlag, cpu CpuFeature) *hsPlatformInfo {
+	var platform C.struct_hs_platform_info
+
+	platform.tune = C.uint(tune)
+	platform.cpu_features = C.ulonglong(cpu)
+
+	return &hsPlatformInfo{platform}
+}
+
+func hsPopulatePlatform() (*hsPlatformInfo, error) {
 	var platform C.struct_hs_platform_info
 
 	if ret := C.hs_populate_platform(&platform); ret != C.HS_SUCCESS {
 		return nil, hsError(ret)
 	}
 
-	return &platform, nil
+	return &hsPlatformInfo{platform}, nil
 }
 
 type hsDatabase *C.hs_database_t
@@ -420,9 +435,14 @@ func hsSerializedDatabaseInfo(data []byte) (string, error) {
 	return C.GoString(info), nil
 }
 
-func hsCompile(expression string, flags CompileFlag, mode ModeFlag, platform hsPlatformInfo) (hsDatabase, error) {
+func hsCompile(expression string, flags CompileFlag, mode ModeFlag, info *hsPlatformInfo) (hsDatabase, error) {
 	var db *C.hs_database_t
 	var err *C.hs_compile_error_t
+	var platform *C.hs_platform_info_t
+
+	if info != nil {
+		platform = &info.platform
+	}
 
 	expr := C.CString(expression)
 
@@ -445,9 +465,14 @@ func hsCompile(expression string, flags CompileFlag, mode ModeFlag, platform hsP
 	return nil, fmt.Errorf("compile error, %d", int(ret))
 }
 
-func hsCompileMulti(expressions []string, flags []CompileFlag, ids []uint, mode ModeFlag, platform hsPlatformInfo) (hsDatabase, error) {
+func hsCompileMulti(expressions []string, flags []CompileFlag, ids []uint, mode ModeFlag, info *hsPlatformInfo) (hsDatabase, error) {
 	var db *C.hs_database_t
 	var err *C.hs_compile_error_t
+	var platform *C.hs_platform_info_t
+
+	if info != nil {
+		platform = &info.platform
+	}
 
 	cexprs := make([]*C.char, len(expressions))
 
@@ -498,9 +523,14 @@ func hsCompileMulti(expressions []string, flags []CompileFlag, ids []uint, mode 
 	return nil, fmt.Errorf("compile error, %d", int(ret))
 }
 
-func hsCompileExtMulti(expressions []string, flags []CompileFlag, ids []uint, exts []hsExprExt, mode ModeFlag, platform hsPlatformInfo) (hsDatabase, error) {
+func hsCompileExtMulti(expressions []string, flags []CompileFlag, ids []uint, exts []hsExprExt, mode ModeFlag, info *hsPlatformInfo) (hsDatabase, error) {
 	var db *C.hs_database_t
 	var err *C.hs_compile_error_t
+	var platform *C.hs_platform_info_t
+
+	if info != nil {
+		platform = &info.platform
+	}
 
 	cexprs := make([]*C.char, len(expressions))
 
@@ -638,7 +668,15 @@ func hsFreeScratch(scratch hsScratch) error {
 	return nil
 }
 
-type hsMatchEventHandler func(id uint, from, to uint64, flags uint, context interface{}) error
+type hsMatchEventHandler interface {
+	handle(id uint, from, to uint64, flags uint, context interface{}) error
+}
+
+type hsMatchEventHandleFunc func(id uint, from, to uint64, flags uint, context interface{}) error
+
+func (fn hsMatchEventHandleFunc) handle(id uint, from, to uint64, flags uint, context interface{}) error {
+	return fn(id, from, to, flags, context)
+}
 
 type hsMatchEventContext struct {
 	handler hsMatchEventHandler
@@ -649,7 +687,7 @@ type hsMatchEventContext struct {
 func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, context unsafe.Pointer) C.int {
 	ctxt := (*hsMatchEventContext)(context)
 
-	if err := ctxt.handler(uint(id), uint64(from), uint64(to), uint(flags), ctxt.context); err != nil {
+	if err := ctxt.handler.handle(uint(id), uint64(from), uint64(to), uint(flags), ctxt.context); err != nil {
 		return -1
 	}
 
