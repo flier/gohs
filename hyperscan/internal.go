@@ -1,7 +1,10 @@
 package hyperscan
 
 import (
+	"errors"
 	"fmt"
+	"sort"
+	"strings"
 	"unsafe"
 )
 
@@ -64,16 +67,56 @@ import "C"
 type CompileFlag uint
 
 const (
-	Caseless    CompileFlag = C.HS_FLAG_CASELESS     // Set case-insensitive matching.
-	DotAll                  = C.HS_FLAG_DOTALL       // Matching a `.` will not exclude newlines.
-	MultiLine               = C.HS_FLAG_MULTILINE    // Set multi-line anchoring.
-	SingleMatch             = C.HS_FLAG_SINGLEMATCH  // Set single-match only mode.
-	AllowEmpty              = C.HS_FLAG_ALLOWEMPTY   // Allow expressions that can match against empty buffers.
-	Utf8                    = C.HS_FLAG_UTF8         // Enable UTF-8 mode for this expression.
-	Ucp                     = C.HS_FLAG_UCP          // Enable Unicode property support for this expression.
-	Prefilter               = C.HS_FLAG_PREFILTER    // Enable prefiltering mode for this expression.
-	SomLeftMost             = C.HS_FLAG_SOM_LEFTMOST // Enable leftmost start of match reporting.
+	Caseless        CompileFlag = C.HS_FLAG_CASELESS     // Set case-insensitive matching.
+	DotAll                      = C.HS_FLAG_DOTALL       // Matching a `.` will not exclude newlines.
+	MultiLine                   = C.HS_FLAG_MULTILINE    // Set multi-line anchoring.
+	SingleMatch                 = C.HS_FLAG_SINGLEMATCH  // Set single-match only mode.
+	AllowEmpty                  = C.HS_FLAG_ALLOWEMPTY   // Allow expressions that can match against empty buffers.
+	Utf8Mode                    = C.HS_FLAG_UTF8         // Enable UTF-8 mode for this expression.
+	UnicodeProperty             = C.HS_FLAG_UCP          // Enable Unicode property support for this expression.
+	PrefilterMode               = C.HS_FLAG_PREFILTER    // Enable prefiltering mode for this expression.
+	SomLeftMost                 = C.HS_FLAG_SOM_LEFTMOST // Enable leftmost start of match reporting.
 )
+
+var compileFlags = map[rune]CompileFlag{
+	'i': Caseless,
+	's': DotAll,
+	'm': MultiLine,
+	'o': SingleMatch,
+	'e': AllowEmpty,
+	'u': Utf8Mode,
+	'p': UnicodeProperty,
+	'f': PrefilterMode,
+	'l': SomLeftMost,
+}
+
+func ParseCompileFlag(s string) (CompileFlag, error) {
+	var flags CompileFlag
+
+	for _, c := range s {
+		if flag, exists := compileFlags[c]; exists {
+			flags |= flag
+		} else {
+			return 0, fmt.Errorf("unknown flag `%c`", c)
+		}
+	}
+
+	return flags, nil
+}
+
+func (flags CompileFlag) String() string {
+	var values []string
+
+	for c, flag := range compileFlags {
+		if (flags & flag) == flag {
+			values = append(values, string(c))
+		}
+	}
+
+	sort.Sort(sort.StringSlice(values))
+
+	return strings.Join(values, "")
+}
 
 type CpuFeature int
 
@@ -100,6 +143,34 @@ const (
 	Stream            = C.HS_MODE_STREAM   // Streaming database.
 	Vectored          = C.HS_MODE_VECTORED // Vectored scanning database.
 )
+
+var modeFlags = map[string]ModeFlag{
+	"STREAM":   Stream,
+	"NOSTREAM": Block,
+	"VECTORED": Vectored,
+	"BLOCK":    Block,
+}
+
+func ParseModeFlag(s string) (ModeFlag, error) {
+	if mode, exists := modeFlags[strings.ToUpper(s)]; exists {
+		return mode, nil
+	}
+
+	return Block, errors.New("Unknown Mode: " + s)
+}
+
+func (m ModeFlag) String() string {
+	switch m {
+	case Block:
+		return "BLOCK"
+	case Stream:
+		return "STREAM"
+	case Vectored:
+		return "VECTORED"
+	default:
+		panic(fmt.Sprintf("unknown mode: %v", m))
+	}
+}
 
 type ExtFlag uint
 
@@ -192,7 +263,7 @@ type hsDatabase *C.hs_database_t
 type hsScratch *C.hs_scratch_t
 type hsStream *C.hs_stream_t
 
-type hsExprInfo struct {
+type ExprInfo struct {
 	MinWidth, MaxWidth          uint
 	Unordered, AtEod, OnlyAtEod bool
 }
@@ -597,7 +668,7 @@ func hsCompileExtMulti(expressions []string, flags []CompileFlag, ids []uint, ex
 	return nil, fmt.Errorf("compile error, %d", int(ret))
 }
 
-func hsExpressionInfo(expression string, flags CompileFlag) (*hsExprInfo, error) {
+func hsExpressionInfo(expression string, flags CompileFlag) (*ExprInfo, error) {
 	var info *C.hs_expr_info_t
 	var err *C.hs_compile_error_t
 
@@ -610,7 +681,7 @@ func hsExpressionInfo(expression string, flags CompileFlag) (*hsExprInfo, error)
 	if ret == C.HS_SUCCESS && info != nil {
 		defer hsMiscFree(unsafe.Pointer(info))
 
-		return &hsExprInfo{
+		return &ExprInfo{
 			MinWidth:  uint(info.min_width),
 			MaxWidth:  uint(info.max_width),
 			Unordered: info.unordered_matches != 0,

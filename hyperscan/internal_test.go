@@ -2,15 +2,10 @@ package hyperscan
 
 import (
 	"errors"
-	"regexp"
 	"testing"
 	"unsafe"
 
 	. "github.com/smartystreets/goconvey/convey"
-)
-
-var (
-	regexInfo = regexp.MustCompile(`^Version: \d\.\d\.\d Features: (NO|\s)AVX2 Mode: STREAM`)
 )
 
 func TestVersion(t *testing.T) {
@@ -19,6 +14,28 @@ func TestVersion(t *testing.T) {
 
 		So(ver, ShouldNotBeEmpty)
 		So(ver, ShouldStartWith, "4.")
+	})
+}
+
+func TestCompileFlag(t *testing.T) {
+	Convey("Given a compile flags", t, func() {
+		flags := Caseless | DotAll | MultiLine | SingleMatch | AllowEmpty | Utf8Mode | UnicodeProperty | PrefilterMode
+
+		So(flags.String(), ShouldEqual, "efimopsu")
+
+		Convey("When parse valid flags", func() {
+			f, err := ParseCompileFlag("ifemopus")
+
+			So(f, ShouldEqual, flags)
+			So(err, ShouldBeNil)
+		})
+
+		Convey("When parse invalid flags", func() {
+			f, err := ParseCompileFlag("abc")
+
+			So(f, ShouldEqual, 0)
+			So(err, ShouldNotBeNil)
+		})
 	})
 }
 
@@ -50,7 +67,7 @@ func TestAllocator(t *testing.T) {
 			info, err := hsExpressionInfo("test", 0)
 
 			So(info, ShouldNotBeNil)
-			So(info, ShouldResemble, &hsExprInfo{
+			So(info, ShouldResemble, &ExprInfo{
 				MinWidth: 4,
 				MaxWidth: 4,
 			})
@@ -244,7 +261,7 @@ func TestDatabase(t *testing.T) {
 	})
 }
 
-func TestCompile(t *testing.T) {
+func TestCompileAPI(t *testing.T) {
 	Convey("Given a host platform", t, func() {
 		platform, err := hsPopulatePlatform()
 
@@ -315,7 +332,7 @@ func TestExpression(t *testing.T) {
 		info, err := hsExpressionInfo("test", 0)
 
 		So(info, ShouldNotBeNil)
-		So(info, ShouldResemble, &hsExprInfo{
+		So(info, ShouldResemble, &ExprInfo{
 			MinWidth: 4,
 			MaxWidth: 4,
 		})
@@ -323,17 +340,10 @@ func TestExpression(t *testing.T) {
 	})
 
 	Convey("Given a credit card expression", t, func() {
-		info, err := hsExpressionInfo(`(?:`+
-			`4[0-9]{12}(?:[0-9]{3})?|`+ // Visa
-			`5[1-5][0-9]{14}|`+ // MasterCard
-			`3[47][0-9]{13}|`+ // American Express
-			`3(?:0[0-5]|[68][0-9])[0-9]{11}|`+ // Diners Club
-			`6(?:011|5[0-9]{2})[0-9]{12}|`+ // Discover
-			`(?:2131|1800|35\d{3})\d{11}`+ // JCB
-			`)`, 0)
+		info, err := hsExpressionInfo(CreditCard, 0)
 
 		So(info, ShouldNotBeNil)
-		So(info, ShouldResemble, &hsExprInfo{
+		So(info, ShouldResemble, &ExprInfo{
 			MinWidth: 13,
 			MaxWidth: 16,
 		})
@@ -344,7 +354,7 @@ func TestExpression(t *testing.T) {
 		info, err := hsExpressionInfo("test$", 0)
 
 		So(info, ShouldNotBeNil)
-		So(info, ShouldResemble, &hsExprInfo{
+		So(info, ShouldResemble, &ExprInfo{
 			MinWidth:  4,
 			MaxWidth:  4,
 			Unordered: true,
