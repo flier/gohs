@@ -1,13 +1,19 @@
 package hyperscan
 
-func Version() string { return hsVersion() }
+import (
+	"regexp"
+)
 
 type Database interface {
-	Size() int
+	Version() string
 
-	StreamSize() int
+	Mode() ModeFlag
 
 	Info() string
+
+	DatabaseSize() int
+
+	StreamSize() int
 
 	Close() error
 
@@ -15,6 +21,12 @@ type Database interface {
 
 	Unmarshal([]byte) error
 }
+
+var (
+	regexInfo = regexp.MustCompile(`^Version: (\d+\.\d+\.\d+) Features: ([\w\s]+) Mode: (\w+)$`)
+)
+
+func EngineVersion() string { return hsVersion() }
 
 type database struct {
 	db hsDatabase
@@ -34,20 +46,42 @@ func DatabaseSize(data []byte) (int, error) { return hsSerializedDatabaseSize(da
 
 func DatabaseInfo(data []byte) (string, error) { return hsSerializedDatabaseInfo(data) }
 
-func (d *database) Size() int {
-	size, _ := hsDatabaseSize(d.db)
+func (d *database) DatabaseSize() int {
+	size, err := hsDatabaseSize(d.db)
+
+	if err != nil {
+		panic(err)
+	}
 
 	return size
 }
 
 func (d *database) StreamSize() int {
-	size, _ := hsStreamSize(d.db)
+	size, err := hsStreamSize(d.db)
+
+	if err != nil {
+		panic(err)
+	}
 
 	return size
 }
 
+func (d *database) Version() string {
+	return regexInfo.FindStringSubmatch(d.Info())[1]
+}
+
+func (d *database) Mode() ModeFlag {
+	mode, _ := ParseModeFlag(regexInfo.FindStringSubmatch(d.Info())[3])
+
+	return mode
+}
+
 func (d *database) Info() string {
-	info, _ := hsDatabaseInfo(d.db)
+	info, err := hsDatabaseInfo(d.db)
+
+	if err != nil {
+		panic(err)
+	}
 
 	return info
 }
