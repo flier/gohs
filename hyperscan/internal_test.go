@@ -405,10 +405,28 @@ func TestScratch(t *testing.T) {
 
 					So(hsFreeScratch(s2), ShouldBeNil)
 				})
+
+				Convey("Reallocate the scratch with another database", func() {
+					db2, err := hsCompile(EmailAddress, 0, Block, platform)
+
+					So(db, ShouldNotBeNil)
+					So(err, ShouldBeNil)
+
+					So(hsReallocScratch(db2, &s), ShouldBeNil)
+
+					size2, err := hsScratchSize(s)
+
+					So(size2, ShouldBeGreaterThan, size)
+					So(err, ShouldBeNil)
+
+					So(hsFreeDatabase(db2), ShouldBeNil)
+				})
 			})
 
 			So(hsFreeScratch(s), ShouldBeNil)
 		})
+
+		So(hsFreeDatabase(db), ShouldBeNil)
 	})
 }
 

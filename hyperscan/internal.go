@@ -711,6 +711,14 @@ func hsAllocScratch(db hsDatabase) (hsScratch, error) {
 	return scratch, nil
 }
 
+func hsReallocScratch(db hsDatabase, scratch *hsScratch) error {
+	if ret := C.hs_alloc_scratch(db, (**C.struct_hs_scratch)(scratch)); ret != C.HS_SUCCESS {
+		return hsError(ret)
+	}
+
+	return nil
+}
+
 func hsCloneScratch(scratch hsScratch) (hsScratch, error) {
 	var clone *C.hs_scratch_t
 
