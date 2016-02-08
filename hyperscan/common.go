@@ -1,19 +1,39 @@
 package hyperscan
 
 import (
+	"errors"
 	"regexp"
 )
 
+var (
+	regexInfo = regexp.MustCompile(`^Version: (\d+\.\d+\.\d+) Features: ([\w\s]+) Mode: (\w+)$`)
+)
+
+type DatabaseInfo string
+
+func (i DatabaseInfo) Version() (string, error) {
+	matched := regexInfo.FindStringSubmatch(string(i))
+
+	if len(matched) != 4 {
+		return "", errors.New("invalid database info")
+	}
+
+	return matched[1], nil
+}
+
+func (i DatabaseInfo) Mode() (ModeFlag, error) {
+	matched := regexInfo.FindStringSubmatch(string(i))
+
+	if len(matched) != 4 {
+		return 0, errors.New("invalid database info")
+	}
+	return ParseModeFlag(matched[3])
+}
+
 type Database interface {
-	Version() string
+	Info() (DatabaseInfo, error)
 
-	Mode() ModeFlag
-
-	Info() string
-
-	DatabaseSize() int
-
-	StreamSize() int
+	Size() (int, error)
 
 	Close() error
 
@@ -22,13 +42,23 @@ type Database interface {
 	Unmarshal([]byte) error
 }
 
-var (
-	regexInfo = regexp.MustCompile(`^Version: (\d+\.\d+\.\d+) Features: ([\w\s]+) Mode: (\w+)$`)
-)
+type BlockDatabase interface {
+	Database
+}
+
+type StreamDatabase interface {
+	Database
+
+	StreamSize() (int, error)
+}
+
+type VectoredDatabase interface {
+	Database
+}
 
 func EngineVersion() string { return hsVersion() }
 
-type database struct {
+type baseDatabase struct {
 	db hsDatabase
 }
 
@@ -39,55 +69,41 @@ func UnmarshalDatabase(data []byte) (Database, error) {
 		return nil, err
 	}
 
-	return &database{db}, nil
+	return &baseDatabase{db}, nil
 }
 
-func DatabaseSize(data []byte) (int, error) { return hsSerializedDatabaseSize(data) }
+func Size(data []byte) (int, error) { return hsSerializedDatabaseSize(data) }
 
-func DatabaseInfo(data []byte) (string, error) { return hsSerializedDatabaseInfo(data) }
+func Info(data []byte) (DatabaseInfo, error) {
+	i, err := hsSerializedDatabaseInfo(data)
 
-func (d *database) DatabaseSize() int {
-	size, err := hsDatabaseSize(d.db)
-
-	if err != nil {
-		panic(err)
-	}
-
-	return size
+	return DatabaseInfo(i), err
 }
 
-func (d *database) StreamSize() int {
-	size, err := hsStreamSize(d.db)
+func (d *baseDatabase) Size() (int, error) { return hsDatabaseSize(d.db) }
 
-	if err != nil {
-		panic(err)
-	}
+func (d *baseDatabase) Info() (DatabaseInfo, error) {
+	i, err := hsDatabaseInfo(d.db)
 
-	return size
+	return DatabaseInfo(i), err
 }
 
-func (d *database) Version() string {
-	return regexInfo.FindStringSubmatch(d.Info())[1]
+func (d *baseDatabase) Close() error { return hsFreeDatabase(d.db) }
+
+func (d *baseDatabase) Marshal() ([]byte, error) { return hsSerializeDatabase(d.db) }
+
+func (d *baseDatabase) Unmarshal(data []byte) error { return hsDeserializeDatabaseAt(data, d.db) }
+
+type blockDatabase struct {
+	*baseDatabase
 }
 
-func (d *database) Mode() ModeFlag {
-	mode, _ := ParseModeFlag(regexInfo.FindStringSubmatch(d.Info())[3])
-
-	return mode
+type streamDatabase struct {
+	*baseDatabase
 }
 
-func (d *database) Info() string {
-	info, err := hsDatabaseInfo(d.db)
+func (d *streamDatabase) StreamSize() (int, error) { return hsStreamSize(d.db) }
 
-	if err != nil {
-		panic(err)
-	}
-
-	return info
+type vectoredDatabase struct {
+	*baseDatabase
 }
-
-func (d *database) Close() error { return hsFreeDatabase(d.db) }
-
-func (d *database) Marshal() ([]byte, error) { return hsSerializeDatabase(d.db) }
-
-func (d *database) Unmarshal(data []byte) error { return hsDeserializeDatabaseAt(data, d.db) }

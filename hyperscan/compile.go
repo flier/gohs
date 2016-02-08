@@ -130,7 +130,16 @@ func (b *DatabaseBuilder) Build() (Database, error) {
 		return nil, err
 	}
 
-	return &database{db}, nil
+	switch mode {
+	case Stream:
+		return &streamDatabase{&baseDatabase{db}}, nil
+	case Vectored:
+		return &vectoredDatabase{&baseDatabase{db}}, nil
+	case Block:
+		break
+	}
+
+	return &blockDatabase{&baseDatabase{db}}, nil
 }
 
 func Compile(expr string) (Database, error) {
@@ -140,7 +149,7 @@ func Compile(expr string) (Database, error) {
 		return nil, err
 	}
 
-	return &database{db}, nil
+	return &blockDatabase{&baseDatabase{db}}, nil
 }
 
 func MustCompile(expr string) Database {
@@ -150,7 +159,7 @@ func MustCompile(expr string) Database {
 		panic(`Compile(` + quote(expr) + `): ` + err.Error())
 	}
 
-	return &database{db}
+	return &blockDatabase{&baseDatabase{db}}
 }
 
 func quote(s string) string {

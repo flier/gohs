@@ -107,6 +107,55 @@ func TestDatabaseBuilder(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(db, ShouldNotBeNil)
 
+			info, err := db.Info()
+
+			So(err, ShouldBeNil)
+
+			mode, err := info.Mode()
+
+			So(err, ShouldBeNil)
+			So(mode, ShouldEqual, Block)
+
+			So(db.Close(), ShouldBeNil)
+		})
+
+		Convey("When build stream database with a simple expression", func() {
+			b.Mode = Stream
+
+			db, err := b.AddPatterns("test").Build()
+
+			So(err, ShouldBeNil)
+			So(db, ShouldNotBeNil)
+
+			info, err := db.Info()
+
+			So(err, ShouldBeNil)
+
+			mode, err := info.Mode()
+
+			So(err, ShouldBeNil)
+			So(mode, ShouldEqual, Stream)
+
+			So(db.Close(), ShouldBeNil)
+		})
+
+		Convey("When build vectored database with a simple expression", func() {
+			b.Mode = Vectored
+
+			db, err := b.AddPatterns("test").Build()
+
+			So(err, ShouldBeNil)
+			So(db, ShouldNotBeNil)
+
+			info, err := db.Info()
+
+			So(err, ShouldBeNil)
+
+			mode, err := info.Mode()
+
+			So(err, ShouldBeNil)
+			So(mode, ShouldEqual, Vectored)
+
 			So(db.Close(), ShouldBeNil)
 		})
 	})
