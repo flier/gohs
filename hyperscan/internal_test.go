@@ -81,7 +81,7 @@ func TestAllocator(t *testing.T) {
 		Convey("Then create a stream database with allocator", func() {
 			So(hsSetDatabaseAllocator(alloc, free), ShouldBeNil)
 
-			db, err := hsCompile("test", 0, Stream, platform)
+			db, err := hsCompile("test", 0, StreamMode, platform)
 
 			So(db, ShouldNotBeNil)
 			So(err, ShouldBeNil)
@@ -127,7 +127,7 @@ func TestAllocator(t *testing.T) {
 						So(err, ShouldBeNil)
 					})
 
-					h := &matchHandler{}
+					h := &matchRecorder{}
 
 					Convey("Then close stream with allocator", func() {
 						memoryFreed = nil
@@ -169,7 +169,7 @@ func TestDatabase(t *testing.T) {
 		So(platform, ShouldNotBeNil)
 		So(err, ShouldBeNil)
 
-		db, err := hsCompile("test", 0, Stream, platform)
+		db, err := hsCompile("test", 0, StreamMode, platform)
 
 		So(db, ShouldNotBeNil)
 		So(err, ShouldBeNil)
@@ -196,7 +196,7 @@ func TestDatabase(t *testing.T) {
 		})
 
 		Convey("Get the stream size from a block database", func() {
-			db, err := hsCompile("test", 0, Block, platform)
+			db, err := hsCompile("test", 0, BlockMode, platform)
 
 			So(db, ShouldNotBeNil)
 			So(err, ShouldBeNil)
@@ -204,7 +204,7 @@ func TestDatabase(t *testing.T) {
 			size, err := hsStreamSize(db)
 
 			So(size, ShouldEqual, 0)
-			So(err, ShouldEqual, DatabaseModeError)
+			So(err, ShouldEqual, ErrDatabaseModeError)
 		})
 
 		Convey("When serialize database", func() {
@@ -269,7 +269,7 @@ func TestCompileAPI(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		Convey("Compile a unsupported expression", func() {
-			db, err := hsCompile(`\R`, 0, Stream, platform)
+			db, err := hsCompile(`\R`, 0, StreamMode, platform)
 
 			So(db, ShouldBeNil)
 			So(err, ShouldNotBeNil)
@@ -279,7 +279,7 @@ func TestCompileAPI(t *testing.T) {
 		})
 
 		Convey("Compile an empty expression", func() {
-			db, err := hsCompile("", 0, Stream, platform)
+			db, err := hsCompile("", 0, StreamMode, platform)
 
 			So(db, ShouldBeNil)
 			So(err, ShouldNotBeNil)
@@ -289,7 +289,7 @@ func TestCompileAPI(t *testing.T) {
 		})
 
 		Convey("Compile multi expressions", func() {
-			db, err := hsCompileMulti([]string{`^\w+`, `\d+`, `\s+`}, nil, []uint{1, 2, 3}, Stream, platform)
+			db, err := hsCompileMulti([]string{`^\w+`, `\d+`, `\s+`}, nil, []uint{1, 2, 3}, StreamMode, platform)
 
 			So(db, ShouldNotBeNil)
 			So(err, ShouldBeNil)
@@ -310,7 +310,7 @@ func TestCompileAPI(t *testing.T) {
 				{Flags: MaxOffset, MaxOffset: 10},
 				{Flags: MinLength, MinLength: 10},
 			}
-			db, err := hsCompileExtMulti([]string{`^\w+`, `\d+`, `\s+`}, nil, []uint{1, 2, 3}, exts, Stream, platform)
+			db, err := hsCompileExtMulti([]string{`^\w+`, `\d+`, `\s+`}, nil, []uint{1, 2, 3}, exts, StreamMode, platform)
 
 			So(db, ShouldNotBeNil)
 			So(err, ShouldBeNil)
@@ -355,11 +355,11 @@ func TestExpression(t *testing.T) {
 
 		So(info, ShouldNotBeNil)
 		So(info, ShouldResemble, &ExprInfo{
-			MinWidth:  4,
-			MaxWidth:  4,
-			Unordered: true,
-			AtEod:     true,
-			OnlyAtEod: true,
+			MinWidth:        4,
+			MaxWidth:        4,
+			ReturnUnordered: true,
+			AtEndOfData:     true,
+			OnlyAtEndOfData: true,
 		})
 		So(err, ShouldBeNil)
 	})
@@ -372,7 +372,7 @@ func TestScratch(t *testing.T) {
 		So(platform, ShouldNotBeNil)
 		So(err, ShouldBeNil)
 
-		db, err := hsCompile("test", 0, Block, platform)
+		db, err := hsCompile("test", 0, BlockMode, platform)
 
 		So(db, ShouldNotBeNil)
 		So(err, ShouldBeNil)
@@ -407,7 +407,7 @@ func TestScratch(t *testing.T) {
 				})
 
 				Convey("Reallocate the scratch with another database", func() {
-					db2, err := hsCompile(EmailAddress, 0, Block, platform)
+					db2, err := hsCompile(EmailAddress, 0, BlockMode, platform)
 
 					So(db, ShouldNotBeNil)
 					So(err, ShouldBeNil)
@@ -437,7 +437,7 @@ func TestBlockScan(t *testing.T) {
 		So(platform, ShouldNotBeNil)
 		So(err, ShouldBeNil)
 
-		db, err := hsCompile("test", 0, Block, platform)
+		db, err := hsCompile("test", 0, BlockMode, platform)
 
 		So(db, ShouldNotBeNil)
 		So(err, ShouldBeNil)
@@ -447,11 +447,11 @@ func TestBlockScan(t *testing.T) {
 		So(s, ShouldNotBeNil)
 		So(err, ShouldBeNil)
 
-		h := &matchHandler{}
+		h := &matchRecorder{}
 
 		Convey("Scan block with pattern", func() {
 			So(hsScan(db, []byte("abctestdef"), 0, s, h, nil), ShouldBeNil)
-			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7}})
+			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}})
 		})
 
 		Convey("Scan block without pattern", func() {
@@ -461,14 +461,14 @@ func TestBlockScan(t *testing.T) {
 
 		Convey("Scan block with multi pattern", func() {
 			So(hsScan(db, []byte("abctestdeftest"), 0, s, h, nil), ShouldBeNil)
-			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7}, {0, 0, 14}})
+			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}, {0, 0, 14, 0}})
 		})
 
 		Convey("Scan block with multi pattern but terminated", func() {
 			h.err = errors.New("terminated")
 
-			So(hsScan(db, []byte("abctestdeftest"), 0, s, h, nil), ShouldEqual, ScanTerminated)
-			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7}})
+			So(hsScan(db, []byte("abctestdeftest"), 0, s, h, nil), ShouldEqual, ErrScanTerminated)
+			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}})
 		})
 
 		So(hsFreeScratch(s), ShouldBeNil)
@@ -483,7 +483,7 @@ func TestVectorScan(t *testing.T) {
 		So(platform, ShouldNotBeNil)
 		So(err, ShouldBeNil)
 
-		db, err := hsCompile("test", 0, Vectored, platform)
+		db, err := hsCompile("test", 0, VectoredMode, platform)
 
 		So(db, ShouldNotBeNil)
 		So(err, ShouldBeNil)
@@ -493,11 +493,11 @@ func TestVectorScan(t *testing.T) {
 		So(s, ShouldNotBeNil)
 		So(err, ShouldBeNil)
 
-		h := &matchHandler{}
+		h := &matchRecorder{}
 
 		Convey("Scan multi block with pattern", func() {
 			So(hsScanVector(db, [][]byte{[]byte("abctestdef"), []byte("abcdef")}, 0, s, h, nil), ShouldBeNil)
-			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7}})
+			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}})
 		})
 
 		Convey("Scan multi block without pattern", func() {
@@ -507,14 +507,14 @@ func TestVectorScan(t *testing.T) {
 
 		Convey("Scan multi block with multi pattern", func() {
 			So(hsScanVector(db, [][]byte{[]byte("abctestdef"), []byte("123test456")}, 0, s, h, nil), ShouldBeNil)
-			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7}, {0, 0, 17}})
+			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}, {0, 0, 17, 0}})
 		})
 
 		Convey("Scan multi block with multi pattern but terminated", func() {
 			h.err = errors.New("terminated")
 
-			So(hsScanVector(db, [][]byte{[]byte("abctestdef"), []byte("123test456")}, 0, s, h, nil), ShouldEqual, ScanTerminated)
-			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7}})
+			So(hsScanVector(db, [][]byte{[]byte("abctestdef"), []byte("123test456")}, 0, s, h, nil), ShouldEqual, ErrScanTerminated)
+			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}})
 		})
 
 		So(hsFreeScratch(s), ShouldBeNil)
@@ -528,7 +528,7 @@ func TestStreamScan(t *testing.T) {
 		So(platform, ShouldNotBeNil)
 		So(err, ShouldBeNil)
 
-		db, err := hsCompile("test", 0, Stream, platform)
+		db, err := hsCompile("test", 0, StreamMode, platform)
 
 		So(db, ShouldNotBeNil)
 		So(err, ShouldBeNil)
@@ -544,7 +544,7 @@ func TestStreamScan(t *testing.T) {
 			So(stream, ShouldNotBeNil)
 			So(err, ShouldBeNil)
 
-			h := &matchHandler{}
+			h := &matchRecorder{}
 
 			Convey("Then scan a simple stream with first part", func() {
 				So(hsScanStream(stream, []byte("abcte"), 0, s, h, nil), ShouldBeNil)
@@ -552,7 +552,7 @@ func TestStreamScan(t *testing.T) {
 
 				Convey("When scan second part, should be matched", func() {
 					So(hsScanStream(stream, []byte("stdef"), 0, s, h, nil), ShouldBeNil)
-					So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7}})
+					So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}})
 				})
 
 				Convey("Then copy the stream", func() {
@@ -563,7 +563,7 @@ func TestStreamScan(t *testing.T) {
 
 					Convey("When copied stream2 scan the second part, should be matched", func() {
 						So(hsScanStream(stream2, []byte("stdef"), 0, s, h, nil), ShouldBeNil)
-						So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7}})
+						So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}})
 
 						Convey("When copied stream2 scan the second part again, should not be matched", func() {
 							h.matched = nil
@@ -576,7 +576,7 @@ func TestStreamScan(t *testing.T) {
 								Convey("When copied and reset stream2 scan the second part again, should be matched", func() {
 									h.matched = nil
 									So(hsScanStream(stream2, []byte("stdef"), 0, s, h, nil), ShouldBeNil)
-									So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7}})
+									So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}})
 								})
 							})
 						})

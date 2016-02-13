@@ -9,15 +9,30 @@ import (
 type matchEvent struct {
 	id       uint
 	from, to uint64
+	flags    ScanFlag
 }
 
-type matchHandler struct {
+func (e *matchEvent) Id() uint { return e.id }
+
+func (e *matchEvent) From() uint64 { return e.from }
+
+func (e *matchEvent) To() uint64 { return e.to }
+
+func (e *matchEvent) Flags() ScanFlag { return e.flags }
+
+type matchRecorder struct {
 	matched []matchEvent
 	err     error
 }
 
-func (h *matchHandler) handle(id uint, from, to uint64, flags uint, context interface{}) error {
-	h.matched = append(h.matched, matchEvent{id, from, to})
+func (h *matchRecorder) Handle(ctxt MatchContext, evt MatchEvent) error {
+	h.matched = append(h.matched, *evt.(*matchEvent))
+
+	return h.err
+}
+
+func (h *matchRecorder) handle(id uint, from, to uint64, flags uint, context interface{}) error {
+	h.matched = append(h.matched, matchEvent{id, from, to, ScanFlag(flags)})
 
 	return h.err
 }
@@ -25,13 +40,13 @@ func (h *matchHandler) handle(id uint, from, to uint64, flags uint, context inte
 func Match(pattern string, data []byte) (bool, error) {
 	var result *multierror.Error
 
-	if db, err := hsCompile(pattern, 0, Block, nil); err != nil {
+	if db, err := hsCompile(pattern, 0, BlockMode, nil); err != nil {
 		result = multierror.Append(result, err)
 	} else {
 		if scratch, err := hsAllocScratch(db); err != nil {
 			result = multierror.Append(result, err)
 		} else {
-			h := &matchHandler{}
+			h := &matchRecorder{}
 
 			if err = hsScan(db, data, 0, scratch, h, nil); err != nil {
 				result = multierror.Append(result, err)
@@ -55,7 +70,7 @@ func Match(pattern string, data []byte) (bool, error) {
 func MatchReader(pattern string, reader io.Reader) (bool, error) {
 	var result *multierror.Error
 
-	if db, err := hsCompile(pattern, 0, Stream, nil); err != nil {
+	if db, err := hsCompile(pattern, 0, StreamMode, nil); err != nil {
 		result = multierror.Append(result, err)
 	} else {
 		if scratch, err := hsAllocScratch(db); err != nil {
@@ -66,7 +81,7 @@ func MatchReader(pattern string, reader io.Reader) (bool, error) {
 			} else {
 				buf := make([]byte, 4096)
 
-				h := &matchHandler{}
+				h := &matchRecorder{}
 
 				for result == nil {
 					if read, err := reader.Read(buf); err == io.EOF {

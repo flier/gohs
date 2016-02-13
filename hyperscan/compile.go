@@ -6,12 +6,13 @@ import (
 	"strings"
 )
 
+// The expression of pattern
 type Expression string
 
 type Pattern struct {
-	Expression             // The NULL-terminated expression to parse.
+	Expression             // The expression to parse.
 	Flags      CompileFlag // Flags which modify the behaviour of the expression.
-	Id         int
+	Id         int         // The ID number to be associated with the corresponding pattern
 	info       *ExprInfo
 }
 
@@ -21,6 +22,7 @@ func (p *Pattern) IsValid() bool {
 	return err == nil
 }
 
+// Provides information about a regular expression.
 func (p *Pattern) Info() (*ExprInfo, error) {
 	if p.info == nil {
 		info, err := hsExpressionInfo(string(p.Expression), p.Flags)
@@ -39,6 +41,16 @@ func (p *Pattern) String() string {
 	return "/" + string(p.Expression) + "/" + p.Flags.String()
 }
 
+/*
+	Parse pattern from a formated string
+
+		/<expression>/[flags]
+
+	For example, the following pattern will match `test` in the caseless and multi-lines mode
+
+		/test/im
+
+*/
 func ParsePattern(s string) (*Pattern, error) {
 	var p Pattern
 
@@ -65,29 +77,38 @@ func ParsePattern(s string) (*Pattern, error) {
 	return &p, nil
 }
 
+// A type containing information on the target platform.
 type Platform interface {
+	// Information about the target platform which may be used to guide the optimisation process of the compile.
 	Tune() TuneFlag
 
+	// Relevant CPU features available on the target platform
 	CpuFeatures() CpuFeature
 }
 
 func NewPlatform(tune TuneFlag, cpu CpuFeature) Platform { return newPlatformInfo(tune, cpu) }
 
-func CurrentPlatform() Platform {
+// Populates the platform information based on the current host.
+func PopulatePlatform() Platform {
 	platform, _ := hsPopulatePlatform()
 
 	return platform
 }
 
+// A type to help to build up a database
 type DatabaseBuilder struct {
+	// Array of patterns to compile.
 	Patterns []*Pattern
 
+	// Compiler mode flags that affect the database as a whole. (Default: block mode)
 	Mode ModeFlag
 
+	// If not nil, the platform structure is used to determine the target platform for the database.
+	// If nil, a database suitable for running on the current host platform is produced.
 	Platform Platform
 }
 
-func (b *DatabaseBuilder) AddPatterns(exprs ...Expression) *DatabaseBuilder {
+func (b *DatabaseBuilder) AddExpressions(exprs ...Expression) *DatabaseBuilder {
 	for _, expr := range exprs {
 		b.Patterns = append(b.Patterns, &Pattern{Expression: expr, Id: len(b.Patterns) + 1})
 	}
@@ -95,7 +116,7 @@ func (b *DatabaseBuilder) AddPatterns(exprs ...Expression) *DatabaseBuilder {
 	return b
 }
 
-func (b *DatabaseBuilder) AddPatternWithFlags(expr Expression, flags CompileFlag) *DatabaseBuilder {
+func (b *DatabaseBuilder) AddExpressionWithFlags(expr Expression, flags CompileFlag) *DatabaseBuilder {
 	b.Patterns = append(b.Patterns, &Pattern{Expression: expr, Flags: flags, Id: len(b.Patterns) + 1})
 
 	return b
@@ -119,7 +140,7 @@ func (b *DatabaseBuilder) Build() (Database, error) {
 	mode := b.Mode
 
 	if mode == 0 {
-		mode = Block
+		mode = BlockMode
 	}
 
 	platform, _ := b.Platform.(*hsPlatformInfo)
@@ -131,35 +152,81 @@ func (b *DatabaseBuilder) Build() (Database, error) {
 	}
 
 	switch mode {
-	case Stream:
-		return &streamDatabase{&baseDatabase{db}}, nil
-	case Vectored:
-		return &vectoredDatabase{&baseDatabase{db}}, nil
-	case Block:
-		break
+	case StreamMode:
+		return newStreamDatabase(db)
+	case VectoredMode:
+		return newVectoredDatabase(db)
+	case BlockMode:
+		return newBlockDatabase(db)
 	}
 
-	return &blockDatabase{&baseDatabase{db}}, nil
+	return nil, errors.New("unknown mode")
 }
 
-func Compile(expr string) (Database, error) {
-	db, err := hsCompile(expr, 0, Block, nil)
+func NewBlockDatabase(patterns ...*Pattern) (BlockDatabase, error) {
+	builder := &DatabaseBuilder{Patterns: patterns, Mode: BlockMode}
+
+	db, err := builder.Build()
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &blockDatabase{&baseDatabase{db}}, nil
+	return db.(*blockDatabase), err
 }
 
+func NewStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
+	builder := &DatabaseBuilder{Patterns: patterns, Mode: StreamMode}
+
+	db, err := builder.Build()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return db.(StreamDatabase), err
+}
+
+func NewVectoredDatabase(patterns ...*Pattern) (VectoredDatabase, error) {
+	builder := &DatabaseBuilder{Patterns: patterns, Mode: VectoredMode}
+
+	db, err := builder.Build()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return db.(VectoredDatabase), err
+}
+
+// Compile a regular expression and returns, if successful,
+// a pattern database in the block mode that can be used to match against text.
+func Compile(expr string) (Database, error) {
+	db, err := hsCompile(expr, SomLeftMost, BlockMode, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return newBlockDatabase(db)
+}
+
+// MustCompile is like Compile but panics if the expression cannot be parsed.
+// It simplifies safe initialization of global variables holding compiled regular expressions.
 func MustCompile(expr string) Database {
-	db, err := hsCompile(expr, 0, Block, nil)
+	db, err := hsCompile(expr, SomLeftMost, BlockMode, nil)
 
 	if err != nil {
 		panic(`Compile(` + quote(expr) + `): ` + err.Error())
 	}
 
-	return &blockDatabase{&baseDatabase{db}}
+	bdb, err := newBlockDatabase(db)
+
+	if err != nil {
+		panic(`Compile(` + quote(expr) + `): ` + err.Error())
+	}
+
+	return bdb
 }
 
 func quote(s string) string {

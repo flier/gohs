@@ -12,6 +12,7 @@ import (
 #cgo LDFLAGS: -lstdc++
 #cgo pkg-config: libhs
 
+#include <limits.h>
 #include <hs.h>
 
 #define DEFINE_ALLOCTOR(ID, TYPE) \
@@ -64,6 +65,7 @@ hs_error_t hs_reset_and_copy_stream_cgo(hs_stream_t *to_id, const hs_stream_t *f
 */
 import "C"
 
+// Pattern flags
 type CompileFlag uint
 
 const (
@@ -90,6 +92,19 @@ var compileFlags = map[rune]CompileFlag{
 	'l': SomLeftMost,
 }
 
+/*
+	Parse the compile pattern flags from string
+
+		i 	Caseless
+		s 	DotAll
+		m	MultiLine
+		o 	SingleMatch
+		e 	AllowEmpty
+		u 	Utf8Mode
+		p	UnicodeProperty
+		f 	PrefilterMode
+		l 	SomLeftMost
+*/
 func ParseCompileFlag(s string) (CompileFlag, error) {
 	var flags CompileFlag
 
@@ -118,12 +133,14 @@ func (flags CompileFlag) String() string {
 	return strings.Join(values, "")
 }
 
+// CPU feature support flags
 type CpuFeature int
 
 const (
 	AVX2 CpuFeature = C.HS_CPU_FEATURES_AVX2 // Intel(R) Advanced Vector Extensions 2 (Intel(R) AVX2)
 )
 
+// Tuning flags
 type TuneFlag int
 
 const (
@@ -135,20 +152,24 @@ const (
 	Broadwell            = C.HS_TUNE_FAMILY_BDW     // Intel(R) microarchitecture code name Broadwell
 )
 
+// Compile mode flags
 type ModeFlag uint
 
 const (
-	Block    ModeFlag = C.HS_MODE_BLOCK    // Block scan (non-streaming) database.
-	NoStream          = C.HS_MODE_NOSTREAM // Alias for Block.
-	Stream            = C.HS_MODE_STREAM   // Streaming database.
-	Vectored          = C.HS_MODE_VECTORED // Vectored scanning database.
+	BlockMode            ModeFlag = C.HS_MODE_BLOCK              // Block scan (non-streaming) database.
+	NoStreamMode                  = C.HS_MODE_NOSTREAM           // Alias for Block.
+	StreamMode                    = C.HS_MODE_STREAM             // Streaming database.
+	VectoredMode                  = C.HS_MODE_VECTORED           // Vectored scanning database.
+	SomHorizonLargeMode           = C.HS_MODE_SOM_HORIZON_LARGE  // Use full precision to track start of match offsets in stream state.
+	SomHorizonMediumMode          = C.HS_MODE_SOM_HORIZON_MEDIUM // Use medium precision to track start of match offsets in stream state. (within 2^32 bytes)
+	SomHorizonSmallMode           = C.HS_MODE_SOM_HORIZON_SMALL  // Use limited precision to track start of match offsets in stream state. (within 2^16 bytes)
 )
 
 var modeFlags = map[string]ModeFlag{
-	"STREAM":   Stream,
-	"NOSTREAM": Block,
-	"VECTORED": Vectored,
-	"BLOCK":    Block,
+	"STREAM":   StreamMode,
+	"NOSTREAM": BlockMode,
+	"VECTORED": VectoredMode,
+	"BLOCK":    BlockMode,
 }
 
 func ParseModeFlag(s string) (ModeFlag, error) {
@@ -156,16 +177,16 @@ func ParseModeFlag(s string) (ModeFlag, error) {
 		return mode, nil
 	}
 
-	return Block, errors.New("Unknown Mode: " + s)
+	return BlockMode, errors.New("Unknown Mode: " + s)
 }
 
 func (m ModeFlag) String() string {
 	switch m {
-	case Block:
+	case BlockMode:
 		return "BLOCK"
-	case Stream:
+	case StreamMode:
 		return "STREAM"
-	case Vectored:
+	case VectoredMode:
 		return "VECTORED"
 	default:
 		panic(fmt.Sprintf("unknown mode: %v", m))
@@ -182,23 +203,23 @@ const (
 
 type ScanFlag uint
 
-type hsError int
+type HsError int
 
 const (
-	Success               hsError = C.HS_SUCCESS
-	Invalid                       = C.HS_INVALID
-	NoMemory                      = C.HS_NOMEM
-	ScanTerminated                = C.HS_SCAN_TERMINATED
-	CompileError                  = C.HS_COMPILER_ERROR
-	DatabaseVersionError          = C.HS_DB_VERSION_ERROR
-	DatabasePlatformError         = C.HS_DB_PLATFORM_ERROR
-	DatabaseModeError             = C.HS_DB_MODE_ERROR
-	BadAlign                      = C.HS_BAD_ALIGN
-	BadAlloc                      = C.HS_BAD_ALLOC
+	ErrSuccess               HsError = C.HS_SUCCESS           // The engine completed normally.
+	ErrInvalid                       = C.HS_INVALID           // A parameter passed to this function was invalid.
+	ErrNoMemory                      = C.HS_NOMEM             // A memory allocation failed.
+	ErrScanTerminated                = C.HS_SCAN_TERMINATED   // The engine was terminated by callback.
+	ErrCompileError                  = C.HS_COMPILER_ERROR    // The pattern compiler failed.
+	ErrDatabaseVersionError          = C.HS_DB_VERSION_ERROR  // The given database was built for a different version of Hyperscan.
+	ErrDatabasePlatformError         = C.HS_DB_PLATFORM_ERROR // The given database was built for a different platform (i.e., CPU type).
+	ErrDatabaseModeError             = C.HS_DB_MODE_ERROR     // The given database was built for a different mode of operation.
+	ErrBadAlign                      = C.HS_BAD_ALIGN         // A parameter passed to this function was not correctly aligned.
+	ErrBadAlloc                      = C.HS_BAD_ALLOC         // The memory allocator did not correctly return memory suitably aligned.
 )
 
 var (
-	hsErrorMessages = map[hsError]string{
+	hsErrorMessages = map[HsError]string{
 		C.HS_SUCCESS:           "The engine completed normally.",
 		C.HS_INVALID:           "A parameter passed to this function was invalid.",
 		C.HS_NOMEM:             "A memory allocation failed.",
@@ -212,7 +233,7 @@ var (
 	}
 )
 
-func (e hsError) Error() string {
+func (e HsError) Error() string {
 	if msg, exists := hsErrorMessages[e]; exists {
 		return msg
 	}
@@ -253,7 +274,7 @@ func hsPopulatePlatform() (*hsPlatformInfo, error) {
 	var platform C.struct_hs_platform_info
 
 	if ret := C.hs_populate_platform(&platform); ret != C.HS_SUCCESS {
-		return nil, hsError(ret)
+		return nil, HsError(ret)
 	}
 
 	return &hsPlatformInfo{platform}, nil
@@ -263,10 +284,17 @@ type hsDatabase *C.hs_database_t
 type hsScratch *C.hs_scratch_t
 type hsStream *C.hs_stream_t
 
+// A type containing information related to an expression
 type ExprInfo struct {
-	MinWidth, MaxWidth          uint
-	Unordered, AtEod, OnlyAtEod bool
+	MinWidth        uint // The minimum length in bytes of a match for the pattern.
+	MaxWidth        uint // The maximum length in bytes of a match for the pattern.
+	ReturnUnordered bool // Whether this expression can produce matches that are not returned in order, such as those produced by assertions.
+	AtEndOfData     bool // Whether this expression can produce matches at end of data (EOD).
+	OnlyAtEndOfData bool // Whether this expression can *only* produce matches at end of data (EOD).
 }
+
+// If the pattern expression has an unbounded maximum width
+const UnboundedMaxWidth = C.UINT_MAX
 
 type hsExprExt struct {
 	Flags                           ExtFlag
@@ -325,7 +353,7 @@ func hsSetDatabaseAllocator(allocFunc hsAllocFunc, freeFunc hsFreeFunc) error {
 	dbAllocator = hsAllocator{allocFunc, freeFunc}
 
 	if ret := C.hs_set_database_allocator_cgo(unsafe.Pointer(&dbAllocator.Alloc), unsafe.Pointer(&dbAllocator.Free)); ret != C.HS_SUCCESS {
-		return hsError(ret)
+		return HsError(ret)
 	}
 
 	return nil
@@ -353,7 +381,7 @@ func hsSetMiscAllocator(allocFunc hsAllocFunc, freeFunc hsFreeFunc) error {
 	miscAllocator = hsAllocator{allocFunc, freeFunc}
 
 	if ret := C.hs_set_misc_allocator_cgo(unsafe.Pointer(&miscAllocator.Alloc), unsafe.Pointer(&miscAllocator.Free)); ret != C.HS_SUCCESS {
-		return hsError(ret)
+		return HsError(ret)
 	}
 
 	return nil
@@ -381,7 +409,7 @@ func hsSetScratchAllocator(allocFunc hsAllocFunc, freeFunc hsFreeFunc) error {
 	scratchAllocator = hsAllocator{allocFunc, freeFunc}
 
 	if ret := C.hs_set_scratch_allocator_cgo(unsafe.Pointer(&scratchAllocator.Alloc), unsafe.Pointer(&scratchAllocator.Free)); ret != C.HS_SUCCESS {
-		return hsError(ret)
+		return HsError(ret)
 	}
 
 	return nil
@@ -409,7 +437,7 @@ func hsSetStreamAllocator(allocFunc hsAllocFunc, freeFunc hsFreeFunc) error {
 	streamAllocator = hsAllocator{allocFunc, freeFunc}
 
 	if ret := C.hs_set_stream_allocator_cgo(unsafe.Pointer(&streamAllocator.Alloc), unsafe.Pointer(&streamAllocator.Free)); ret != C.HS_SUCCESS {
-		return hsError(ret)
+		return HsError(ret)
 	}
 
 	return nil
@@ -421,7 +449,7 @@ func hsVersion() string {
 
 func hsFreeDatabase(db hsDatabase) error {
 	if ret := C.hs_free_database(db); ret != C.HS_SUCCESS {
-		return hsError(ret)
+		return HsError(ret)
 	}
 
 	return nil
@@ -432,7 +460,7 @@ func hsSerializeDatabase(db hsDatabase) ([]byte, error) {
 	var length C.size_t
 
 	if ret := C.hs_serialize_database(db, &data, &length); ret != C.HS_SUCCESS {
-		return nil, hsError(ret)
+		return nil, HsError(ret)
 	}
 
 	return C.GoBytes(unsafe.Pointer(data), C.int(length)), nil
@@ -442,7 +470,7 @@ func hsDeserializeDatabase(data []byte) (hsDatabase, error) {
 	var db *C.hs_database_t
 
 	if ret := C.hs_deserialize_database((*C.char)(unsafe.Pointer(&data[0])), C.size_t(len(data)), &db); ret != C.HS_SUCCESS {
-		return nil, hsError(ret)
+		return nil, HsError(ret)
 	}
 
 	return db, nil
@@ -450,7 +478,7 @@ func hsDeserializeDatabase(data []byte) (hsDatabase, error) {
 
 func hsDeserializeDatabaseAt(data []byte, db hsDatabase) error {
 	if ret := C.hs_deserialize_database_at((*C.char)(unsafe.Pointer(&data[0])), C.size_t(len(data)), db); ret != C.HS_SUCCESS {
-		return hsError(ret)
+		return HsError(ret)
 	}
 
 	return nil
@@ -460,7 +488,7 @@ func hsStreamSize(db hsDatabase) (int, error) {
 	var size C.size_t
 
 	if ret := C.hs_stream_size(db, &size); ret != C.HS_SUCCESS {
-		return 0, hsError(ret)
+		return 0, HsError(ret)
 	}
 
 	return int(size), nil
@@ -470,7 +498,7 @@ func hsDatabaseSize(db hsDatabase) (int, error) {
 	var size C.size_t
 
 	if ret := C.hs_database_size(db, &size); ret != C.HS_SUCCESS {
-		return -1, hsError(ret)
+		return -1, HsError(ret)
 	}
 
 	return int(size), nil
@@ -480,7 +508,7 @@ func hsSerializedDatabaseSize(data []byte) (int, error) {
 	var size C.size_t
 
 	if ret := C.hs_serialized_database_size((*C.char)(unsafe.Pointer(&data[0])), C.size_t(len(data)), &size); ret != C.HS_SUCCESS {
-		return 0, hsError(ret)
+		return 0, HsError(ret)
 	}
 
 	return int(size), nil
@@ -490,7 +518,7 @@ func hsDatabaseInfo(db hsDatabase) (string, error) {
 	var info *C.char
 
 	if ret := C.hs_database_info(db, &info); ret != C.HS_SUCCESS {
-		return "", hsError(ret)
+		return "", HsError(ret)
 	}
 
 	return C.GoString(info), nil
@@ -500,7 +528,7 @@ func hsSerializedDatabaseInfo(data []byte) (string, error) {
 	var info *C.char
 
 	if ret := C.hs_serialized_database_info((*C.char)(unsafe.Pointer(&data[0])), C.size_t(len(data)), &info); ret != C.HS_SUCCESS {
-		return "", hsError(ret)
+		return "", HsError(ret)
 	}
 
 	return C.GoString(info), nil
@@ -682,11 +710,11 @@ func hsExpressionInfo(expression string, flags CompileFlag) (*ExprInfo, error) {
 		defer hsMiscFree(unsafe.Pointer(info))
 
 		return &ExprInfo{
-			MinWidth:  uint(info.min_width),
-			MaxWidth:  uint(info.max_width),
-			Unordered: info.unordered_matches != 0,
-			AtEod:     info.matches_at_eod != 0,
-			OnlyAtEod: info.matches_only_at_eod != 0,
+			MinWidth:        uint(info.min_width),
+			MaxWidth:        uint(info.max_width),
+			ReturnUnordered: info.unordered_matches != 0,
+			AtEndOfData:     info.matches_at_eod != 0,
+			OnlyAtEndOfData: info.matches_only_at_eod != 0,
 		}, nil
 	}
 
@@ -705,7 +733,7 @@ func hsAllocScratch(db hsDatabase) (hsScratch, error) {
 	var scratch *C.hs_scratch_t
 
 	if ret := C.hs_alloc_scratch(db, &scratch); ret != C.HS_SUCCESS {
-		return nil, hsError(ret)
+		return nil, HsError(ret)
 	}
 
 	return scratch, nil
@@ -713,7 +741,7 @@ func hsAllocScratch(db hsDatabase) (hsScratch, error) {
 
 func hsReallocScratch(db hsDatabase, scratch *hsScratch) error {
 	if ret := C.hs_alloc_scratch(db, (**C.struct_hs_scratch)(scratch)); ret != C.HS_SUCCESS {
-		return hsError(ret)
+		return HsError(ret)
 	}
 
 	return nil
@@ -723,7 +751,7 @@ func hsCloneScratch(scratch hsScratch) (hsScratch, error) {
 	var clone *C.hs_scratch_t
 
 	if ret := C.hs_clone_scratch(scratch, &clone); ret != C.HS_SUCCESS {
-		return nil, hsError(ret)
+		return nil, HsError(ret)
 	}
 
 	return clone, nil
@@ -733,7 +761,7 @@ func hsScratchSize(scratch hsScratch) (int, error) {
 	var size C.size_t
 
 	if ret := C.hs_scratch_size(scratch, &size); ret != C.HS_SUCCESS {
-		return 0, hsError(ret)
+		return 0, HsError(ret)
 	}
 
 	return int(size), nil
@@ -741,7 +769,7 @@ func hsScratchSize(scratch hsScratch) (int, error) {
 
 func hsFreeScratch(scratch hsScratch) error {
 	if ret := C.hs_free_scratch(scratch); ret != C.HS_SUCCESS {
-		return hsError(ret)
+		return HsError(ret)
 	}
 
 	return nil
@@ -777,7 +805,7 @@ func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEve
 	ctxt := &hsMatchEventContext{onEvent, context}
 
 	if ret := C.hs_scan_cgo(db, (*C.char)(unsafe.Pointer(&data[0])), C.uint(len(data)), C.uint(flags), scratch, unsafe.Pointer(ctxt)); ret != C.HS_SUCCESS {
-		return hsError(ret)
+		return HsError(ret)
 	}
 
 	return nil
@@ -794,7 +822,7 @@ func hsScanVector(db hsDatabase, data [][]byte, flags ScanFlag, scratch hsScratc
 
 	if ret := C.hs_scan_vector_cgo(db, (**C.char)(unsafe.Pointer(&cdata[0])), &clength[0], C.uint(len(data)), C.uint(flags),
 		scratch, unsafe.Pointer(&hsMatchEventContext{onEvent, context})); ret != C.HS_SUCCESS {
-		return hsError(ret)
+		return HsError(ret)
 	}
 
 	return nil
@@ -804,7 +832,7 @@ func hsOpenStream(db hsDatabase, flags ScanFlag) (hsStream, error) {
 	var stream *C.hs_stream_t
 
 	if ret := C.hs_open_stream(db, C.uint(flags), &stream); ret != C.HS_SUCCESS {
-		return nil, hsError(ret)
+		return nil, HsError(ret)
 	}
 
 	return stream, nil
@@ -813,7 +841,7 @@ func hsOpenStream(db hsDatabase, flags ScanFlag) (hsStream, error) {
 func hsScanStream(stream hsStream, data []byte, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
 	if ret := C.hs_scan_stream_cgo(stream, (*C.char)(unsafe.Pointer(&data[0])), C.uint(len(data)), C.uint(flags),
 		scratch, unsafe.Pointer(&hsMatchEventContext{onEvent, context})); ret != C.HS_SUCCESS {
-		return hsError(ret)
+		return HsError(ret)
 	}
 
 	return nil
@@ -821,7 +849,7 @@ func hsScanStream(stream hsStream, data []byte, flags ScanFlag, scratch hsScratc
 
 func hsCloseStream(stream hsStream, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
 	if ret := C.hs_close_stream_cgo(stream, scratch, unsafe.Pointer(&hsMatchEventContext{onEvent, context})); ret != C.HS_SUCCESS {
-		return hsError(ret)
+		return HsError(ret)
 	}
 
 	return nil
@@ -829,7 +857,7 @@ func hsCloseStream(stream hsStream, scratch hsScratch, onEvent hsMatchEventHandl
 
 func hsResetStream(stream hsStream, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
 	if ret := C.hs_reset_stream_cgo(stream, C.uint(flags), scratch, unsafe.Pointer(&hsMatchEventContext{onEvent, context})); ret != C.HS_SUCCESS {
-		return hsError(ret)
+		return HsError(ret)
 	}
 
 	return nil
@@ -839,7 +867,7 @@ func hsCopyStream(stream hsStream) (hsStream, error) {
 	var copied *C.hs_stream_t
 
 	if ret := C.hs_copy_stream(&copied, stream); ret != C.HS_SUCCESS {
-		return nil, hsError(ret)
+		return nil, HsError(ret)
 	}
 
 	return copied, nil
@@ -847,7 +875,7 @@ func hsCopyStream(stream hsStream) (hsStream, error) {
 
 func hsResetAndCopyStream(to, from hsStream, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
 	if ret := C.hs_reset_and_copy_stream_cgo(to, from, scratch, unsafe.Pointer(&hsMatchEventContext{onEvent, context})); ret != C.HS_SUCCESS {
-		return hsError(ret)
+		return HsError(ret)
 	}
 
 	return nil

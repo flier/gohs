@@ -93,7 +93,7 @@ func TestDatabaseBuilder(t *testing.T) {
 		})
 
 		Convey("When build with a simple expression", func() {
-			db, err := b.AddPatterns("test").Build()
+			db, err := b.AddExpressions("test").Build()
 
 			So(err, ShouldBeNil)
 			So(db, ShouldNotBeNil)
@@ -102,7 +102,7 @@ func TestDatabaseBuilder(t *testing.T) {
 		})
 
 		Convey("When build with some complicated expression", func() {
-			db, err := b.AddPatterns("test", EmailAddress, IPv4Address, CreditCard).Build()
+			db, err := b.AddExpressions("test", EmailAddress, IPv4Address, CreditCard).Build()
 
 			So(err, ShouldBeNil)
 			So(db, ShouldNotBeNil)
@@ -114,15 +114,15 @@ func TestDatabaseBuilder(t *testing.T) {
 			mode, err := info.Mode()
 
 			So(err, ShouldBeNil)
-			So(mode, ShouldEqual, Block)
+			So(mode, ShouldEqual, BlockMode)
 
 			So(db.Close(), ShouldBeNil)
 		})
 
 		Convey("When build stream database with a simple expression", func() {
-			b.Mode = Stream
+			b.Mode = StreamMode
 
-			db, err := b.AddPatterns("test").Build()
+			db, err := b.AddExpressions("test").Build()
 
 			So(err, ShouldBeNil)
 			So(db, ShouldNotBeNil)
@@ -134,15 +134,15 @@ func TestDatabaseBuilder(t *testing.T) {
 			mode, err := info.Mode()
 
 			So(err, ShouldBeNil)
-			So(mode, ShouldEqual, Stream)
+			So(mode, ShouldEqual, StreamMode)
 
 			So(db.Close(), ShouldBeNil)
 		})
 
 		Convey("When build vectored database with a simple expression", func() {
-			b.Mode = Vectored
+			b.Mode = VectoredMode
 
-			db, err := b.AddPatterns("test").Build()
+			db, err := b.AddExpressions("test").Build()
 
 			So(err, ShouldBeNil)
 			So(db, ShouldNotBeNil)
@@ -154,7 +154,7 @@ func TestDatabaseBuilder(t *testing.T) {
 			mode, err := info.Mode()
 
 			So(err, ShouldBeNil)
-			So(mode, ShouldEqual, Vectored)
+			So(mode, ShouldEqual, VectoredMode)
 
 			So(db.Close(), ShouldBeNil)
 		})
