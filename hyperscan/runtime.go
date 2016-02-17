@@ -161,7 +161,7 @@ type StreamMatcher interface {
 
 // The vectored regular expression scanner.
 type VectoredScanner interface {
-	Scan(data [][]byte, handler MatchHandler, context interface{}) error
+	Scan(data [][]byte, scratch Scratch, handler MatchHandler, context interface{}) error
 }
 
 type VectoredMatcher interface {

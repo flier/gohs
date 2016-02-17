@@ -9,7 +9,7 @@ import (
 
 type Database interface {
 	// Provides information about a database.
-	Info() (DatabaseInfo, error)
+	Info() (DbInfo, error)
 
 	// Provides the size of the given database in bytes.
 	Size() (int, error)
@@ -49,9 +49,11 @@ var (
 )
 
 // The version and platform information for the supplied database
-type DatabaseInfo string
+type DbInfo string
 
-func (i DatabaseInfo) Version() (string, error) {
+func (i DbInfo) String() string { return string(i) }
+
+func (i DbInfo) Version() (string, error) {
 	matched := regexInfo.FindStringSubmatch(string(i))
 
 	if len(matched) != 4 {
@@ -61,7 +63,7 @@ func (i DatabaseInfo) Version() (string, error) {
 	return matched[1], nil
 }
 
-func (i DatabaseInfo) Mode() (ModeFlag, error) {
+func (i DbInfo) Mode() (ModeFlag, error) {
 	matched := regexInfo.FindStringSubmatch(string(i))
 
 	if len(matched) != 4 {
@@ -78,7 +80,7 @@ type baseDatabase struct {
 }
 
 // Utility function for reconstructing a pattern database from a stream of bytes.
-func Unmarshal(data []byte) (Database, error) {
+func UnmarshalDatabase(data []byte) (Database, error) {
 	db, err := hsDeserializeDatabase(data)
 
 	if err != nil {
@@ -89,21 +91,21 @@ func Unmarshal(data []byte) (Database, error) {
 }
 
 // Utility function for reporting the size that would be required by a database if it were deserialized.
-func Size(data []byte) (int, error) { return hsSerializedDatabaseSize(data) }
+func DatabaseSize(data []byte) (int, error) { return hsSerializedDatabaseSize(data) }
 
 // Utility function providing information about a serialized database.
-func Info(data []byte) (DatabaseInfo, error) {
+func DatabaseInfo(data []byte) (DbInfo, error) {
 	i, err := hsSerializedDatabaseInfo(data)
 
-	return DatabaseInfo(i), err
+	return DbInfo(i), err
 }
 
 func (d *baseDatabase) Size() (int, error) { return hsDatabaseSize(d.db) }
 
-func (d *baseDatabase) Info() (DatabaseInfo, error) {
+func (d *baseDatabase) Info() (DbInfo, error) {
 	i, err := hsDatabaseInfo(d.db)
 
-	return DatabaseInfo(i), err
+	return DbInfo(i), err
 }
 
 func (d *baseDatabase) Close() error { return hsFreeDatabase(d.db) }

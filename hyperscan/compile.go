@@ -184,7 +184,7 @@ func NewStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 		return nil, err
 	}
 
-	return db.(StreamDatabase), err
+	return db.(*streamDatabase), err
 }
 
 func NewVectoredDatabase(patterns ...*Pattern) (VectoredDatabase, error) {
@@ -196,7 +196,7 @@ func NewVectoredDatabase(patterns ...*Pattern) (VectoredDatabase, error) {
 		return nil, err
 	}
 
-	return db.(VectoredDatabase), err
+	return db.(*vectoredDatabase), err
 }
 
 // Compile a regular expression and returns, if successful,
