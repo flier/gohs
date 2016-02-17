@@ -89,6 +89,26 @@ func TestBaseDatabase(t *testing.T) {
 
 				So(db.Close(), ShouldBeNil)
 			})
+
+			Convey("Then deserialize database in place", func() {
+				So(bdb.Unmarshal(data), ShouldBeNil)
+
+				Convey("When get info", func() {
+					info, err := bdb.Info()
+
+					So(err, ShouldBeNil)
+					So(info, ShouldNotBeNil)
+
+					So(regexInfo.MatchString(info.String()), ShouldBeTrue)
+
+					Convey("Then get version", func() {
+						ver, err := info.Version()
+
+						So(err, ShouldBeNil)
+						So(Version(), ShouldStartWith, ver)
+					})
+				})
+			})
 		})
 
 		So(bdb.Close(), ShouldBeNil)
@@ -124,13 +144,13 @@ func TestBlockDatabase(t *testing.T) {
 
 func TestVectoredDatabase(t *testing.T) {
 	Convey("Give a vectored database", t, func() {
-		bdb, err := NewVectoredDatabase(&Pattern{Expression: "test"})
+		vdb, err := NewVectoredDatabase(&Pattern{Expression: "test"})
 
 		So(err, ShouldBeNil)
-		So(bdb, ShouldNotBeNil)
+		So(vdb, ShouldNotBeNil)
 
 		Convey("When get info", func() {
-			info, err := bdb.Info()
+			info, err := vdb.Info()
 
 			So(err, ShouldBeNil)
 			So(info, ShouldNotBeNil)
@@ -145,19 +165,19 @@ func TestVectoredDatabase(t *testing.T) {
 			})
 		})
 
-		So(bdb.Close(), ShouldBeNil)
+		So(vdb.Close(), ShouldBeNil)
 	})
 }
 
 func TestStreamDatabase(t *testing.T) {
 	Convey("Give a stream database", t, func() {
-		bdb, err := NewStreamDatabase(&Pattern{Expression: "test"})
+		sdb, err := NewStreamDatabase(&Pattern{Expression: "test"})
 
 		So(err, ShouldBeNil)
-		So(bdb, ShouldNotBeNil)
+		So(sdb, ShouldNotBeNil)
 
 		Convey("When get info", func() {
-			info, err := bdb.Info()
+			info, err := sdb.Info()
 
 			So(err, ShouldBeNil)
 			So(info, ShouldNotBeNil)
@@ -172,6 +192,13 @@ func TestStreamDatabase(t *testing.T) {
 			})
 		})
 
-		So(bdb.Close(), ShouldBeNil)
+		Convey("When get stream size", func() {
+			size, err := sdb.StreamSize()
+
+			So(err, ShouldBeNil)
+			So(size, ShouldEqual, 24)
+		})
+
+		So(sdb.Close(), ShouldBeNil)
 	})
 }
