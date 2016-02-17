@@ -9,6 +9,8 @@ import (
 // The expression of pattern
 type Expression string
 
+func (e Expression) String() string { return string(e) }
+
 type Pattern struct {
 	Expression             // The expression to parse.
 	Flags      CompileFlag // Flags which modify the behaviour of the expression.
@@ -217,19 +219,19 @@ func MustCompile(expr string) Database {
 	db, err := hsCompile(expr, SomLeftMost, BlockMode, nil)
 
 	if err != nil {
-		panic(`Compile(` + quote(expr) + `): ` + err.Error())
+		panic(`Compile(` + Quote(expr) + `): ` + err.Error())
 	}
 
 	bdb, err := newBlockDatabase(db)
 
 	if err != nil {
-		panic(`Compile(` + quote(expr) + `): ` + err.Error())
+		panic(`Compile(` + Quote(expr) + `): ` + err.Error())
 	}
 
 	return bdb
 }
 
-func quote(s string) string {
+func Quote(s string) string {
 	if strconv.CanBackquote(s) {
 		return "`" + s + "`"
 	}

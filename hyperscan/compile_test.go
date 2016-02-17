@@ -16,6 +16,9 @@ func TestPattern(t *testing.T) {
 			So(p.Expression, ShouldEqual, "test")
 			So(p.Flags, ShouldEqual, Caseless|MultiLine)
 
+			So(p.Expression.String(), ShouldEqual, "test")
+			So(p.String(), ShouldEqual, `/test/im`)
+
 			Convey("When pattern contains forward slash", func() {
 				p, err := ParsePattern(`/te/st/im`)
 
@@ -77,6 +80,11 @@ func TestPattern(t *testing.T) {
 			So(err, ShouldNotBeNil)
 			So(info, ShouldBeNil)
 			So(p.IsValid(), ShouldBeFalse)
+		})
+
+		Convey("When quote a string", func() {
+			So(Quote("test"), ShouldEqual, "`test`")
+			So(Quote("`can't backquote this`"), ShouldEqual, "\"`can't backquote this`\"")
 		})
 	})
 }
@@ -180,5 +188,17 @@ func TestCompile(t *testing.T) {
 
 			So(db.Close(), ShouldBeNil)
 		})
+	})
+}
+
+func TestPlatform(t *testing.T) {
+	Convey("Given a native platform", t, func() {
+		p := PopulatePlatform()
+
+		So(p, ShouldNotBeNil)
+		So(p.Tune(), ShouldBeGreaterThan, Generic)
+		So(p.CpuFeatures(), ShouldBeGreaterThanOrEqualTo, 0)
+
+		So(p, ShouldResemble, NewPlatform(p.Tune(), p.CpuFeatures()))
 	})
 }
