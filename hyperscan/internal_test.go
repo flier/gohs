@@ -17,6 +17,18 @@ func TestVersion(t *testing.T) {
 	})
 }
 
+func TestModeFlag(t *testing.T) {
+	Convey("Give a mode", t, func() {
+		So(BlockMode.String(), ShouldEqual, "BLOCK")
+		So(StreamMode.String(), ShouldEqual, "STREAM")
+		So(VectoredMode.String(), ShouldEqual, "VECTORED")
+
+		mode := StreamMode | SomHorizonLargeMode
+
+		So(mode.String(), ShouldEqual, "STREAM")
+	})
+}
+
 func TestCompileFlag(t *testing.T) {
 	Convey("Given a compile flags", t, func() {
 		flags := Caseless | DotAll | MultiLine | SingleMatch | AllowEmpty | Utf8Mode | UnicodeProperty | PrefilterMode
@@ -268,14 +280,30 @@ func TestCompileAPI(t *testing.T) {
 		So(platform, ShouldNotBeNil)
 		So(err, ShouldBeNil)
 
-		Convey("Compile a unsupported expression", func() {
-			db, err := hsCompile(`\R`, 0, StreamMode, platform)
+		Convey("When Compile a unsupported expression", func() {
+			Convey("Then compile as stream", func() {
+				db, err := hsCompile(`\R`, 0, StreamMode, platform)
 
-			So(db, ShouldBeNil)
-			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, `\R at index 0 not supported.`)
+				So(db, ShouldBeNil)
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldEqual, `\R at index 0 not supported.`)
+			})
 
-			So(hsFreeDatabase(db), ShouldBeNil)
+			Convey("Then compile as vector", func() {
+				db, err := hsCompileMulti([]string{`\R`}, []CompileFlag{Caseless}, []uint{1}, BlockMode, platform)
+
+				So(db, ShouldBeNil)
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldEqual, `\R at index 0 not supported.`)
+			})
+
+			Convey("Then compile as extended vector", func() {
+				db, err := hsCompileExtMulti([]string{`\R`}, []CompileFlag{Caseless}, []uint{1}, []ExprExt{{Flags: MinOffset, MinOffset: 10}}, VectoredMode, platform)
+
+				So(db, ShouldBeNil)
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldEqual, `\R at index 0 not supported.`)
+			})
 		})
 
 		Convey("Compile an empty expression", func() {
@@ -305,7 +333,7 @@ func TestCompileAPI(t *testing.T) {
 		})
 
 		Convey("Compile multi expressions with extension", func() {
-			exts := []hsExprExt{
+			exts := []ExprExt{
 				{Flags: MinOffset, MinOffset: 10},
 				{Flags: MaxOffset, MaxOffset: 10},
 				{Flags: MinLength, MinLength: 10},

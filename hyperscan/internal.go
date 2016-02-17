@@ -70,14 +70,14 @@ type CompileFlag uint
 
 const (
 	Caseless        CompileFlag = C.HS_FLAG_CASELESS     // Set case-insensitive matching.
-	DotAll                      = C.HS_FLAG_DOTALL       // Matching a `.` will not exclude newlines.
-	MultiLine                   = C.HS_FLAG_MULTILINE    // Set multi-line anchoring.
-	SingleMatch                 = C.HS_FLAG_SINGLEMATCH  // Set single-match only mode.
-	AllowEmpty                  = C.HS_FLAG_ALLOWEMPTY   // Allow expressions that can match against empty buffers.
-	Utf8Mode                    = C.HS_FLAG_UTF8         // Enable UTF-8 mode for this expression.
-	UnicodeProperty             = C.HS_FLAG_UCP          // Enable Unicode property support for this expression.
-	PrefilterMode               = C.HS_FLAG_PREFILTER    // Enable prefiltering mode for this expression.
-	SomLeftMost                 = C.HS_FLAG_SOM_LEFTMOST // Enable leftmost start of match reporting.
+	DotAll          CompileFlag = C.HS_FLAG_DOTALL       // Matching a `.` will not exclude newlines.
+	MultiLine       CompileFlag = C.HS_FLAG_MULTILINE    // Set multi-line anchoring.
+	SingleMatch     CompileFlag = C.HS_FLAG_SINGLEMATCH  // Set single-match only mode.
+	AllowEmpty      CompileFlag = C.HS_FLAG_ALLOWEMPTY   // Allow expressions that can match against empty buffers.
+	Utf8Mode        CompileFlag = C.HS_FLAG_UTF8         // Enable UTF-8 mode for this expression.
+	UnicodeProperty CompileFlag = C.HS_FLAG_UCP          // Enable Unicode property support for this expression.
+	PrefilterMode   CompileFlag = C.HS_FLAG_PREFILTER    // Enable prefiltering mode for this expression.
+	SomLeftMost     CompileFlag = C.HS_FLAG_SOM_LEFTMOST // Enable leftmost start of match reporting.
 )
 
 var compileFlags = map[rune]CompileFlag{
@@ -145,11 +145,11 @@ type TuneFlag int
 
 const (
 	Generic     TuneFlag = C.HS_TUNE_FAMILY_GENERIC // Generic
-	SandyBridge          = C.HS_TUNE_FAMILY_SNB     // Intel(R) microarchitecture code name Sandy Bridge
-	IvyBridge            = C.HS_TUNE_FAMILY_IVB     // Intel(R) microarchitecture code name Ivy Bridge
-	Haswell              = C.HS_TUNE_FAMILY_HSW     // Intel(R) microarchitecture code name Haswell
-	Silvermont           = C.HS_TUNE_FAMILY_SLM     // Intel(R) microarchitecture code name Silvermont
-	Broadwell            = C.HS_TUNE_FAMILY_BDW     // Intel(R) microarchitecture code name Broadwell
+	SandyBridge TuneFlag = C.HS_TUNE_FAMILY_SNB     // Intel(R) microarchitecture code name Sandy Bridge
+	IvyBridge   TuneFlag = C.HS_TUNE_FAMILY_IVB     // Intel(R) microarchitecture code name Ivy Bridge
+	Haswell     TuneFlag = C.HS_TUNE_FAMILY_HSW     // Intel(R) microarchitecture code name Haswell
+	Silvermont  TuneFlag = C.HS_TUNE_FAMILY_SLM     // Intel(R) microarchitecture code name Silvermont
+	Broadwell   TuneFlag = C.HS_TUNE_FAMILY_BDW     // Intel(R) microarchitecture code name Broadwell
 )
 
 // Compile mode flags
@@ -157,12 +157,12 @@ type ModeFlag uint
 
 const (
 	BlockMode            ModeFlag = C.HS_MODE_BLOCK              // Block scan (non-streaming) database.
-	NoStreamMode                  = C.HS_MODE_NOSTREAM           // Alias for Block.
-	StreamMode                    = C.HS_MODE_STREAM             // Streaming database.
-	VectoredMode                  = C.HS_MODE_VECTORED           // Vectored scanning database.
-	SomHorizonLargeMode           = C.HS_MODE_SOM_HORIZON_LARGE  // Use full precision to track start of match offsets in stream state.
-	SomHorizonMediumMode          = C.HS_MODE_SOM_HORIZON_MEDIUM // Use medium precision to track start of match offsets in stream state. (within 2^32 bytes)
-	SomHorizonSmallMode           = C.HS_MODE_SOM_HORIZON_SMALL  // Use limited precision to track start of match offsets in stream state. (within 2^16 bytes)
+	NoStreamMode         ModeFlag = C.HS_MODE_NOSTREAM           // Alias for Block.
+	StreamMode           ModeFlag = C.HS_MODE_STREAM             // Streaming database.
+	VectoredMode         ModeFlag = C.HS_MODE_VECTORED           // Vectored scanning database.
+	SomHorizonLargeMode  ModeFlag = C.HS_MODE_SOM_HORIZON_LARGE  // Use full precision to track start of match offsets in stream state.
+	SomHorizonMediumMode ModeFlag = C.HS_MODE_SOM_HORIZON_MEDIUM // Use medium precision to track start of match offsets in stream state. (within 2^32 bytes)
+	SomHorizonSmallMode  ModeFlag = C.HS_MODE_SOM_HORIZON_SMALL  // Use limited precision to track start of match offsets in stream state. (within 2^16 bytes)
 )
 
 var modeFlags = map[string]ModeFlag{
@@ -181,7 +181,7 @@ func ParseModeFlag(s string) (ModeFlag, error) {
 }
 
 func (m ModeFlag) String() string {
-	switch m {
+	switch m & 0xF {
 	case BlockMode:
 		return "BLOCK"
 	case StreamMode:
@@ -207,15 +207,15 @@ type HsError int
 
 const (
 	ErrSuccess               HsError = C.HS_SUCCESS           // The engine completed normally.
-	ErrInvalid                       = C.HS_INVALID           // A parameter passed to this function was invalid.
-	ErrNoMemory                      = C.HS_NOMEM             // A memory allocation failed.
-	ErrScanTerminated                = C.HS_SCAN_TERMINATED   // The engine was terminated by callback.
-	ErrCompileError                  = C.HS_COMPILER_ERROR    // The pattern compiler failed.
-	ErrDatabaseVersionError          = C.HS_DB_VERSION_ERROR  // The given database was built for a different version of Hyperscan.
-	ErrDatabasePlatformError         = C.HS_DB_PLATFORM_ERROR // The given database was built for a different platform (i.e., CPU type).
-	ErrDatabaseModeError             = C.HS_DB_MODE_ERROR     // The given database was built for a different mode of operation.
-	ErrBadAlign                      = C.HS_BAD_ALIGN         // A parameter passed to this function was not correctly aligned.
-	ErrBadAlloc                      = C.HS_BAD_ALLOC         // The memory allocator did not correctly return memory suitably aligned.
+	ErrInvalid               HsError = C.HS_INVALID           // A parameter passed to this function was invalid.
+	ErrNoMemory              HsError = C.HS_NOMEM             // A memory allocation failed.
+	ErrScanTerminated        HsError = C.HS_SCAN_TERMINATED   // The engine was terminated by callback.
+	ErrCompileError          HsError = C.HS_COMPILER_ERROR    // The pattern compiler failed.
+	ErrDatabaseVersionError  HsError = C.HS_DB_VERSION_ERROR  // The given database was built for a different version of Hyperscan.
+	ErrDatabasePlatformError HsError = C.HS_DB_PLATFORM_ERROR // The given database was built for a different platform (i.e., CPU type).
+	ErrDatabaseModeError     HsError = C.HS_DB_MODE_ERROR     // The given database was built for a different mode of operation.
+	ErrBadAlign              HsError = C.HS_BAD_ALIGN         // A parameter passed to this function was not correctly aligned.
+	ErrBadAlloc              HsError = C.HS_BAD_ALLOC         // The memory allocator did not correctly return memory suitably aligned.
 )
 
 var (
@@ -296,7 +296,7 @@ type ExprInfo struct {
 // If the pattern expression has an unbounded maximum width
 const UnboundedMaxWidth = C.UINT_MAX
 
-type hsExprExt struct {
+type ExprExt struct {
 	Flags                           ExtFlag
 	MinOffset, MaxOffset, MinLength uint64
 }
@@ -622,7 +622,7 @@ func hsCompileMulti(expressions []string, flags []CompileFlag, ids []uint, mode 
 	return nil, fmt.Errorf("compile error, %d", int(ret))
 }
 
-func hsCompileExtMulti(expressions []string, flags []CompileFlag, ids []uint, exts []hsExprExt, mode ModeFlag, info *hsPlatformInfo) (hsDatabase, error) {
+func hsCompileExtMulti(expressions []string, flags []CompileFlag, ids []uint, exts []ExprExt, mode ModeFlag, info *hsPlatformInfo) (hsDatabase, error) {
 	var db *C.hs_database_t
 	var err *C.hs_compile_error_t
 	var platform *C.hs_platform_info_t

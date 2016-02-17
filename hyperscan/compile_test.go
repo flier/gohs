@@ -130,7 +130,7 @@ func TestDatabaseBuilder(t *testing.T) {
 		Convey("When build stream database with a simple expression", func() {
 			b.Mode = StreamMode
 
-			db, err := b.AddExpressions("test").Build()
+			db, err := b.AddExpressionWithFlags("test", Caseless).Build()
 
 			So(err, ShouldBeNil)
 			So(db, ShouldNotBeNil)
