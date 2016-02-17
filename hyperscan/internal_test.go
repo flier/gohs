@@ -23,9 +23,19 @@ func TestModeFlag(t *testing.T) {
 		So(StreamMode.String(), ShouldEqual, "STREAM")
 		So(VectoredMode.String(), ShouldEqual, "VECTORED")
 
-		mode := StreamMode | SomHorizonLargeMode
+		Convey("When combile mode with flags", func() {
+			mode := StreamMode | SomHorizonLargeMode
 
-		So(mode.String(), ShouldEqual, "STREAM")
+			So(mode.String(), ShouldEqual, "STREAM")
+		})
+
+		Convey("When parse unknown mode", func() {
+			m, err := ParseModeFlag("test")
+
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldEqual, "Unknown Mode: test")
+			So(m, ShouldEqual, BlockMode)
+		})
 	})
 }
 
