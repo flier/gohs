@@ -27,11 +27,17 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
 
 	"github.com/flier/gohs/hyperscan"
+)
+
+var (
+	flagNoColor    = flag.Bool("C", false, "Disable colorized output.")
+	flagByteOffset = flag.Bool("b", false, "The offset in bytes of a matched pattern is displayed in front of the respective matched line")
 )
 
 var theme = func(s string) string { return s }
@@ -62,19 +68,33 @@ func eventHandler(ctxt hyperscan.MatchContext, evt hyperscan.MatchEvent) error {
 		end = len(inputData)
 	}
 
-	fmt.Printf("%d: %s%s%s\n", start, inputData[start:evt.From()], theme(string(inputData[evt.From():evt.To()])), inputData[evt.To():end])
+	if *flagByteOffset {
+		fmt.Printf("%d: ", start)
+	}
+
+	fmt.Printf("%s%s%s\n", inputData[start:evt.From()], theme(string(inputData[evt.From():evt.To()])), inputData[evt.To():end])
 
 	return nil
 }
 
 func main() {
-	if len(os.Args) != 3 {
+	flag.Parse()
+
+	if len(flag.Args()) != 2 {
 		fmt.Fprintf(os.Stderr, "Usage: %s <pattern> <input file>\n", os.Args[0])
 		os.Exit(-1)
 	}
 
-	pattern := hyperscan.NewPattern(os.Args[1], hyperscan.DotAll|hyperscan.SomLeftMost)
-	inputFN := os.Args[2]
+	if !*flagNoColor {
+		stat, _ := os.Stdout.Stat()
+
+		if stat.Mode()&os.ModeType != 0 {
+			theme = highlight
+		}
+	}
+
+	pattern := hyperscan.NewPattern(flag.Arg(0), hyperscan.DotAll|hyperscan.SomLeftMost)
+	inputFN := flag.Arg(1)
 
 	/* First, we attempt to compile the pattern provided on the command line.
 	 * We assume 'DOTALL' semantics, meaning that the '.' meta-character will
@@ -122,12 +142,6 @@ func main() {
 	}
 
 	defer scratch.Free()
-
-	stat, _ := os.Stdout.Stat()
-
-	if stat.Mode()&os.ModeType != 0 {
-		theme = highlight
-	}
 
 	fmt.Printf("Scanning %d bytes with Hyperscan\n", len(inputData))
 
