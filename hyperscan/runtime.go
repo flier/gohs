@@ -20,7 +20,7 @@ type Scratch interface {
 	Clone() (Scratch, error)
 
 	// Free a scratch block previously allocated
-	Close() error
+	Free() error
 }
 
 type scratch struct {
@@ -31,7 +31,7 @@ type scratch struct {
 // This is required for runtime use, and one scratch space per thread,
 // or concurrent caller, is required.
 func NewScratch(db Database) (Scratch, error) {
-	s, err := hsAllocScratch(db.(*baseDatabase).db)
+	s, err := hsAllocScratch(db.(database).Db())
 
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func NewScratch(db Database) (Scratch, error) {
 func (s *scratch) Size() (int, error) { return hsScratchSize(s.s) }
 
 func (s *scratch) Realloc(db Database) error {
-	if err := hsReallocScratch(db.(*baseDatabase).db, &s.s); err != nil {
+	if err := hsReallocScratch(db.(database).Db(), &s.s); err != nil {
 		return err
 	}
 
@@ -60,7 +60,7 @@ func (s *scratch) Clone() (Scratch, error) {
 	return &scratch{cloned}, nil
 }
 
-func (s *scratch) Close() error { return hsFreeScratch(s.s) }
+func (s *scratch) Free() error { return hsFreeScratch(s.s) }
 
 type MatchContext interface {
 	Database() Database

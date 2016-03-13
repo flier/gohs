@@ -18,6 +18,10 @@ type Pattern struct {
 	info       *ExprInfo
 }
 
+func NewPattern(expr string, flags CompileFlag) *Pattern {
+	return &Pattern{Expression: Expression(expr), Flags: flags}
+}
+
 func (p *Pattern) IsValid() bool {
 	_, err := p.Info()
 
@@ -44,13 +48,14 @@ func (p *Pattern) String() string {
 }
 
 /*
-	Parse pattern from a formated string
 
-		/<expression>/[flags]
+Parse pattern from a formated string
 
-	For example, the following pattern will match `test` in the caseless and multi-lines mode
+	/<expression>/[flags]
 
-		/test/im
+For example, the following pattern will match `test` in the caseless and multi-lines mode
+
+	/test/im
 
 */
 func ParsePattern(s string) (*Pattern, error) {

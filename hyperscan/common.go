@@ -75,6 +75,10 @@ func (i DbInfo) Mode() (ModeFlag, error) {
 // Utility function for identifying this release version.
 func Version() string { return hsVersion() }
 
+type database interface {
+	Db() hsDatabase
+}
+
 type baseDatabase struct {
 	db hsDatabase
 }
@@ -100,6 +104,8 @@ func SerializedDatabaseInfo(data []byte) (DbInfo, error) {
 	return DbInfo(i), err
 }
 
+func (d *baseDatabase) Db() hsDatabase { return d.db }
+
 func (d *baseDatabase) Size() (int, error) { return hsDatabaseSize(d.db) }
 
 func (d *baseDatabase) Info() (DbInfo, error) {
@@ -115,13 +121,13 @@ func (d *baseDatabase) Marshal() ([]byte, error) { return hsSerializeDatabase(d.
 func (d *baseDatabase) Unmarshal(data []byte) error { return hsDeserializeDatabaseAt(data, d.db) }
 
 type blockDatabase struct {
-	*baseDatabase
+	baseDatabase
 	*blockScanner
 	*blockMatcher
 }
 
 func newBlockDatabase(db hsDatabase) (*blockDatabase, error) {
-	bdb := &blockDatabase{baseDatabase: &baseDatabase{db}}
+	bdb := &blockDatabase{baseDatabase: baseDatabase{db}}
 
 	bdb.blockScanner = newBlockScanner(bdb)
 	bdb.blockMatcher = newBlockMatcher(bdb.blockScanner)
@@ -146,13 +152,13 @@ func (d *blockDatabase) Close() error {
 }
 
 type streamDatabase struct {
-	*baseDatabase
+	baseDatabase
 	*streamScanner
 	*streamMatcher
 }
 
 func newStreamDatabase(db hsDatabase) (*streamDatabase, error) {
-	sdb := &streamDatabase{baseDatabase: &baseDatabase{db}}
+	sdb := &streamDatabase{baseDatabase: baseDatabase{db}}
 
 	sdb.streamScanner = newStreamScanner(sdb)
 	sdb.streamMatcher = newStreamMatcher(sdb.streamScanner)
@@ -179,13 +185,13 @@ func (d *streamDatabase) Close() error {
 }
 
 type vectoredDatabase struct {
-	*baseDatabase
+	baseDatabase
 	*vectoredScanner
 	*vectoredMatcher
 }
 
 func newVectoredDatabase(db hsDatabase) (*vectoredDatabase, error) {
-	vdb := &vectoredDatabase{baseDatabase: &baseDatabase{db}}
+	vdb := &vectoredDatabase{baseDatabase: baseDatabase{db}}
 
 	vdb.vectoredScanner = newVectoredScanner(vdb)
 	vdb.vectoredMatcher = newVectoredMatcher(vdb.vectoredScanner)
