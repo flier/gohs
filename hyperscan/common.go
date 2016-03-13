@@ -91,10 +91,10 @@ func UnmarshalDatabase(data []byte) (Database, error) {
 }
 
 // Utility function for reporting the size that would be required by a database if it were deserialized.
-func DatabaseSize(data []byte) (int, error) { return hsSerializedDatabaseSize(data) }
+func SerializedDatabaseSize(data []byte) (int, error) { return hsSerializedDatabaseSize(data) }
 
 // Utility function providing information about a serialized database.
-func DatabaseInfo(data []byte) (DbInfo, error) {
+func SerializedDatabaseInfo(data []byte) (DbInfo, error) {
 	i, err := hsSerializedDatabaseInfo(data)
 
 	return DbInfo(i), err

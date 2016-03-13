@@ -50,14 +50,14 @@ func TestBaseDatabase(t *testing.T) {
 			So(len(data), ShouldEqual, 1000)
 
 			Convey("When get size", func() {
-				size, err := DatabaseSize(data)
+				size, err := SerializedDatabaseSize(data)
 
 				So(err, ShouldBeNil)
 				So(size, ShouldEqual, 1000)
 			})
 
 			Convey("When get info", func() {
-				info, err := DatabaseInfo(data)
+				info, err := SerializedDatabaseInfo(data)
 
 				So(err, ShouldBeNil)
 				So(info, ShouldNotBeNil)

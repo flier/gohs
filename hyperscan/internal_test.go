@@ -61,6 +61,23 @@ func TestCompileFlag(t *testing.T) {
 	})
 }
 
+type testAllocator struct {
+	memoryUsed  int
+	memoryFreed []unsafe.Pointer
+}
+
+func (a *testAllocator) alloc(size uint) unsafe.Pointer {
+	a.memoryUsed += int(size)
+
+	return hsDefaultAlloc(size)
+}
+
+func (a *testAllocator) free(ptr unsafe.Pointer) {
+	a.memoryFreed = append(a.memoryFreed, ptr)
+
+	hsDefaultFree(ptr)
+}
+
 func TestAllocator(t *testing.T) {
 	Convey("Given the host platform", t, func() {
 		platform, err := hsPopulatePlatform()
@@ -68,23 +85,10 @@ func TestAllocator(t *testing.T) {
 		So(platform, ShouldNotBeNil)
 		So(err, ShouldBeNil)
 
-		var memoryUsed int
-		var memoryFreed []unsafe.Pointer
-
-		alloc := func(size uint) unsafe.Pointer {
-			memoryUsed += int(size)
-
-			return hsDefaultAlloc(size)
-		}
-
-		free := func(ptr unsafe.Pointer) {
-			memoryFreed = append(memoryFreed, ptr)
-
-			hsDefaultFree(ptr)
-		}
+		a := &testAllocator{}
 
 		Convey("Given a simple expression with allocator", func() {
-			So(hsSetMiscAllocator(alloc, free), ShouldBeNil)
+			So(hsSetMiscAllocator(a.alloc, a.free), ShouldBeNil)
 
 			info, err := hsExpressionInfo("test", 0)
 
@@ -95,13 +99,13 @@ func TestAllocator(t *testing.T) {
 			})
 			So(err, ShouldBeNil)
 
-			So(memoryUsed, ShouldBeGreaterThanOrEqualTo, 12)
+			So(a.memoryUsed, ShouldBeGreaterThanOrEqualTo, 12)
 
-			So(hsSetMiscAllocator(nil, nil), ShouldBeNil)
+			So(hsClearMiscAllocator(), ShouldBeNil)
 		})
 
 		Convey("Then create a stream database with allocator", func() {
-			So(hsSetDatabaseAllocator(alloc, free), ShouldBeNil)
+			So(hsSetDatabaseAllocator(a.alloc, a.free), ShouldBeNil)
 
 			db, err := hsCompile("test", 0, StreamMode, platform)
 
@@ -111,14 +115,14 @@ func TestAllocator(t *testing.T) {
 			Convey("Get the database size", func() {
 				size, err := hsDatabaseSize(db)
 
-				So(memoryUsed, ShouldBeGreaterThanOrEqualTo, size)
+				So(a.memoryUsed, ShouldBeGreaterThanOrEqualTo, size)
 				So(err, ShouldBeNil)
 			})
 
 			Convey("Then create a scratch with allocator", func() {
-				So(hsSetScratchAllocator(alloc, free), ShouldBeNil)
+				So(hsSetScratchAllocator(a.alloc, a.free), ShouldBeNil)
 
-				memoryUsed = 0
+				a.memoryUsed = 0
 
 				s, err := hsAllocScratch(db)
 
@@ -128,14 +132,14 @@ func TestAllocator(t *testing.T) {
 				Convey("Get the scratch size", func() {
 					size, err := hsScratchSize(s)
 
-					So(memoryUsed, ShouldBeGreaterThanOrEqualTo, size)
+					So(a.memoryUsed, ShouldBeGreaterThanOrEqualTo, size)
 					So(err, ShouldBeNil)
 				})
 
 				Convey("Then open a stream", func() {
-					So(hsSetStreamAllocator(alloc, free), ShouldBeNil)
+					So(hsSetStreamAllocator(a.alloc, a.free), ShouldBeNil)
 
-					memoryUsed = 0
+					a.memoryUsed = 0
 
 					stream, err := hsOpenStream(db, 0)
 
@@ -145,40 +149,40 @@ func TestAllocator(t *testing.T) {
 					Convey("Get the stream size", func() {
 						size, err := hsStreamSize(db)
 
-						So(memoryUsed, ShouldBeGreaterThanOrEqualTo, size)
+						So(a.memoryUsed, ShouldBeGreaterThanOrEqualTo, size)
 						So(err, ShouldBeNil)
 					})
 
 					h := &matchRecorder{}
 
 					Convey("Then close stream with allocator", func() {
-						memoryFreed = nil
+						a.memoryFreed = nil
 
 						So(hsCloseStream(stream, s, h, nil), ShouldBeNil)
 
-						So(hsSetStreamAllocator(nil, nil), ShouldBeNil)
+						So(hsClearStreamAllocator(), ShouldBeNil)
 					})
 				})
 
 				Convey("Then free scratch with allocator", func() {
-					memoryFreed = nil
+					a.memoryFreed = nil
 
 					So(hsFreeScratch(s), ShouldBeNil)
 
-					So(memoryFreed, ShouldResemble, []unsafe.Pointer{unsafe.Pointer(s)})
+					So(a.memoryFreed, ShouldResemble, []unsafe.Pointer{unsafe.Pointer(s)})
 
-					So(hsSetScratchAllocator(nil, nil), ShouldBeNil)
+					So(hsClearScratchAllocator(), ShouldBeNil)
 				})
 			})
 
 			Convey("Then free database with allocator", func() {
-				memoryFreed = nil
+				a.memoryFreed = nil
 
 				So(hsFreeDatabase(db), ShouldBeNil)
 
-				So(memoryFreed, ShouldResemble, []unsafe.Pointer{unsafe.Pointer(db)})
+				So(a.memoryFreed, ShouldResemble, []unsafe.Pointer{unsafe.Pointer(db)})
 
-				So(hsSetDatabaseAllocator(nil, nil), ShouldBeNil)
+				So(hsClearDatabaseAllocator(), ShouldBeNil)
 			})
 		})
 	})

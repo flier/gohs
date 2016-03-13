@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"unsafe"
 )
 
@@ -20,8 +21,10 @@ import (
 	extern void hs ## ID ## Free(void *ptr); \
 	static inline void *hs ## ID ## Alloc_cgo(size_t size) { return hs ## ID ## Alloc(size); } \
 	static inline void hs ## ID ## Free_cgo(void *ptr) { hs ## ID ## Free(ptr); } \
-	static inline hs_error_t hs_set_ ## TYPE ## _allocator_cgo(void *alloc, void *free) \
-	{ return hs_set_ ## TYPE ## _allocator(alloc ? hs ## ID ## Alloc_cgo : NULL, free ? hs ## ID ## Free_cgo : NULL); }
+	static inline hs_error_t hs_set_ ## TYPE ## _allocator_cgo() \
+	{ return hs_set_ ## TYPE ## _allocator(hs ## ID ## Alloc_cgo, hs ## ID ## Free_cgo); } \
+	static inline hs_error_t hs_clear_ ## TYPE ## _allocator_cgo() \
+	{ return hs_set_ ## TYPE ## _allocator(NULL, NULL); }
 
 DEFINE_ALLOCTOR(Db, database);
 DEFINE_ALLOCTOR(Misc, misc);
@@ -352,7 +355,15 @@ func hsDbFree(ptr unsafe.Pointer) {
 func hsSetDatabaseAllocator(allocFunc hsAllocFunc, freeFunc hsFreeFunc) error {
 	dbAllocator = hsAllocator{allocFunc, freeFunc}
 
-	if ret := C.hs_set_database_allocator_cgo(unsafe.Pointer(&dbAllocator.Alloc), unsafe.Pointer(&dbAllocator.Free)); ret != C.HS_SUCCESS {
+	if ret := C.hs_set_database_allocator_cgo(); ret != C.HS_SUCCESS {
+		return HsError(ret)
+	}
+
+	return nil
+}
+
+func hsClearDatabaseAllocator() error {
+	if ret := C.hs_clear_database_allocator_cgo(); ret != C.HS_SUCCESS {
 		return HsError(ret)
 	}
 
@@ -380,7 +391,15 @@ func hsMiscFree(ptr unsafe.Pointer) {
 func hsSetMiscAllocator(allocFunc hsAllocFunc, freeFunc hsFreeFunc) error {
 	miscAllocator = hsAllocator{allocFunc, freeFunc}
 
-	if ret := C.hs_set_misc_allocator_cgo(unsafe.Pointer(&miscAllocator.Alloc), unsafe.Pointer(&miscAllocator.Free)); ret != C.HS_SUCCESS {
+	if ret := C.hs_set_misc_allocator_cgo(); ret != C.HS_SUCCESS {
+		return HsError(ret)
+	}
+
+	return nil
+}
+
+func hsClearMiscAllocator() error {
+	if ret := C.hs_clear_misc_allocator_cgo(); ret != C.HS_SUCCESS {
 		return HsError(ret)
 	}
 
@@ -408,7 +427,15 @@ func hsScratchFree(ptr unsafe.Pointer) {
 func hsSetScratchAllocator(allocFunc hsAllocFunc, freeFunc hsFreeFunc) error {
 	scratchAllocator = hsAllocator{allocFunc, freeFunc}
 
-	if ret := C.hs_set_scratch_allocator_cgo(unsafe.Pointer(&scratchAllocator.Alloc), unsafe.Pointer(&scratchAllocator.Free)); ret != C.HS_SUCCESS {
+	if ret := C.hs_set_scratch_allocator_cgo(); ret != C.HS_SUCCESS {
+		return HsError(ret)
+	}
+
+	return nil
+}
+
+func hsClearScratchAllocator() error {
+	if ret := C.hs_clear_scratch_allocator_cgo(); ret != C.HS_SUCCESS {
 		return HsError(ret)
 	}
 
@@ -436,7 +463,15 @@ func hsStreamFree(ptr unsafe.Pointer) {
 func hsSetStreamAllocator(allocFunc hsAllocFunc, freeFunc hsFreeFunc) error {
 	streamAllocator = hsAllocator{allocFunc, freeFunc}
 
-	if ret := C.hs_set_stream_allocator_cgo(unsafe.Pointer(&streamAllocator.Alloc), unsafe.Pointer(&streamAllocator.Free)); ret != C.HS_SUCCESS {
+	if ret := C.hs_set_stream_allocator_cgo(); ret != C.HS_SUCCESS {
+		return HsError(ret)
+	}
+
+	return nil
+}
+
+func hsClearStreamAllocator() error {
+	if ret := C.hs_clear_stream_allocator_cgo(); ret != C.HS_SUCCESS {
 		return HsError(ret)
 	}
 
@@ -661,18 +696,19 @@ func hsCompileExtMulti(expressions []string, flags []CompileFlag, ids []uint, ex
 	}
 
 	if exts != nil {
+
 		values := make([]C.hs_expr_ext_t, len(exts))
-		ptrs := make([]*C.hs_expr_ext_t, len(exts))
+		ptrs := make([]uintptr, len(exts))
 
 		for i, ext := range exts {
 			values[i].flags = C.ulonglong(ext.Flags)
 			values[i].min_offset = C.ulonglong(ext.MinOffset)
 			values[i].max_offset = C.ulonglong(ext.MaxOffset)
 			values[i].min_length = C.ulonglong(ext.MinLength)
-			ptrs[i] = &values[i]
+			ptrs[i] = uintptr(unsafe.Pointer(&values[i]))
 		}
 
-		cexts = &ptrs[0]
+		cexts = (**C.hs_expr_ext_t)(unsafe.Pointer(&ptrs[0]))
 	}
 
 	ret := C.hs_compile_ext_multi(&cexprs[0], cflags, cids, cexts, C.uint(len(cexprs)), C.uint(mode), platform, &db, &err)
@@ -788,23 +824,64 @@ func (fn hsMatchEventHandleFunc) handle(id uint, from, to uint64, flags uint, co
 type hsMatchEventContext struct {
 	handler hsMatchEventHandler
 	context interface{}
+	refcnt  int
+}
+
+type contextKey uintptr
+
+func (key contextKey) Done() {
+	contextLock.Lock()
+	if ctxt, exists := contextMap[key]; exists {
+		ctxt.refcnt -= 1
+
+		if ctxt.refcnt <= 0 {
+			delete(contextMap, key)
+		}
+	}
+	contextLock.Unlock()
+}
+
+var (
+	contextMap  = make(map[contextKey]*hsMatchEventContext)
+	contextLock sync.Mutex
+)
+
+func newContext(key unsafe.Pointer, onEvent hsMatchEventHandler, context interface{}) contextKey {
+	contextLock.Lock()
+	if ctxt, exists := contextMap[contextKey(key)]; exists && ctxt.handler == onEvent && ctxt.context == context {
+		ctxt.refcnt += 1
+	} else {
+		contextMap[contextKey(key)] = &hsMatchEventContext{onEvent, context, 1}
+	}
+	contextLock.Unlock()
+
+	return contextKey(key)
+}
+
+func getContext(key contextKey) *hsMatchEventContext {
+	contextLock.Lock()
+	ctxt, _ := contextMap[key]
+	contextLock.Unlock()
+
+	return ctxt
 }
 
 //export hsMatchEventCallback
-func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, context unsafe.Pointer) C.int {
-	ctxt := (*hsMatchEventContext)(context)
-
-	if err := ctxt.handler.handle(uint(id), uint64(from), uint64(to), uint(flags), ctxt.context); err != nil {
-		return -1
+func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, key unsafe.Pointer) C.int {
+	if ctxt := getContext(contextKey(key)); ctxt != nil {
+		if err := ctxt.handler.handle(uint(id), uint64(from), uint64(to), uint(flags), ctxt.context); err != nil {
+			return -1
+		}
 	}
 
 	return 0
 }
 
 func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	ctxt := &hsMatchEventContext{onEvent, context}
+	ctxt := newContext(unsafe.Pointer(db), onEvent, context)
 
 	if ret := C.hs_scan_cgo(db, (*C.char)(unsafe.Pointer(&data[0])), C.uint(len(data)), C.uint(flags), scratch, unsafe.Pointer(ctxt)); ret != C.HS_SUCCESS {
+		ctxt.Done()
 		return HsError(ret)
 	}
 
@@ -812,16 +889,19 @@ func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEve
 }
 
 func hsScanVector(db hsDatabase, data [][]byte, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	cdata := make([]*C.char, len(data))
+	cdata := make([]uintptr, len(data))
 	clength := make([]C.uint, len(data))
 
 	for i, d := range data {
-		cdata[i] = (*C.char)(unsafe.Pointer(&d[0]))
+		cdata[i] = uintptr(unsafe.Pointer(&d[0]))
 		clength[i] = C.uint(len(d))
 	}
 
+	ctxt := newContext(unsafe.Pointer(db), onEvent, context)
+
 	if ret := C.hs_scan_vector_cgo(db, (**C.char)(unsafe.Pointer(&cdata[0])), &clength[0], C.uint(len(data)), C.uint(flags),
-		scratch, unsafe.Pointer(&hsMatchEventContext{onEvent, context})); ret != C.HS_SUCCESS {
+		scratch, unsafe.Pointer(ctxt)); ret != C.HS_SUCCESS {
+		ctxt.Done()
 		return HsError(ret)
 	}
 
@@ -831,7 +911,7 @@ func hsScanVector(db hsDatabase, data [][]byte, flags ScanFlag, scratch hsScratc
 func hsOpenStream(db hsDatabase, flags ScanFlag) (hsStream, error) {
 	var stream *C.hs_stream_t
 
-	if ret := C.hs_open_stream(db, C.uint(flags), &stream); ret != C.HS_SUCCESS {
+	if ret := C.hs_open_stream(unsafe.Pointer(db), C.uint(flags), &stream); ret != C.HS_SUCCESS {
 		return nil, HsError(ret)
 	}
 
@@ -839,8 +919,11 @@ func hsOpenStream(db hsDatabase, flags ScanFlag) (hsStream, error) {
 }
 
 func hsScanStream(stream hsStream, data []byte, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
+	ctxt := newContext(unsafe.Pointer(stream), onEvent, context)
+
 	if ret := C.hs_scan_stream_cgo(stream, (*C.char)(unsafe.Pointer(&data[0])), C.uint(len(data)), C.uint(flags),
-		scratch, unsafe.Pointer(&hsMatchEventContext{onEvent, context})); ret != C.HS_SUCCESS {
+		scratch, unsafe.Pointer(ctxt)); ret != C.HS_SUCCESS {
+		ctxt.Done()
 		return HsError(ret)
 	}
 
@@ -848,7 +931,10 @@ func hsScanStream(stream hsStream, data []byte, flags ScanFlag, scratch hsScratc
 }
 
 func hsCloseStream(stream hsStream, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	if ret := C.hs_close_stream_cgo(stream, scratch, unsafe.Pointer(&hsMatchEventContext{onEvent, context})); ret != C.HS_SUCCESS {
+	ctxt := newContext(unsafe.Pointer(stream), onEvent, context)
+
+	if ret := C.hs_close_stream_cgo(stream, scratch, unsafe.Pointer(ctxt)); ret != C.HS_SUCCESS {
+		ctxt.Done()
 		return HsError(ret)
 	}
 
@@ -856,7 +942,10 @@ func hsCloseStream(stream hsStream, scratch hsScratch, onEvent hsMatchEventHandl
 }
 
 func hsResetStream(stream hsStream, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	if ret := C.hs_reset_stream_cgo(stream, C.uint(flags), scratch, unsafe.Pointer(&hsMatchEventContext{onEvent, context})); ret != C.HS_SUCCESS {
+	ctxt := newContext(unsafe.Pointer(stream), onEvent, context)
+
+	if ret := C.hs_reset_stream_cgo(stream, C.uint(flags), scratch, unsafe.Pointer(ctxt)); ret != C.HS_SUCCESS {
+		ctxt.Done()
 		return HsError(ret)
 	}
 
@@ -874,7 +963,10 @@ func hsCopyStream(stream hsStream) (hsStream, error) {
 }
 
 func hsResetAndCopyStream(to, from hsStream, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	if ret := C.hs_reset_and_copy_stream_cgo(to, from, scratch, unsafe.Pointer(&hsMatchEventContext{onEvent, context})); ret != C.HS_SUCCESS {
+	ctxt := newContext(unsafe.Pointer(to), onEvent, context)
+
+	if ret := C.hs_reset_and_copy_stream_cgo(to, from, scratch, unsafe.Pointer(ctxt)); ret != C.HS_SUCCESS {
+		ctxt.Done()
 		return HsError(ret)
 	}
 
