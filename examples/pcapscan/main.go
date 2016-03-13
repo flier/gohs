@@ -35,6 +35,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/flier/gohs/hyperscan"
 	"github.com/google/gopacket"
@@ -43,7 +44,7 @@ import (
 )
 
 var (
-	flagRepeatCount = flag.Int("n", 1, "Repeating PCAP scan several times")
+	repeatCount = flag.Int("n", 1, "Repeating PCAP scan several times")
 )
 
 type FiveTuple struct {
@@ -163,6 +164,52 @@ func (b *Benchmark) Close() {
 	b.dbBlock.Close()
 }
 
+func (b *Benchmark) Bytes() (sum int) {
+	for _, pkt := range b.packets {
+		sum += len(pkt)
+	}
+
+	return
+}
+
+func (b *Benchmark) DisplayStats() {
+	numPackets := len(b.packets)
+	numStreams := len(b.streamMap)
+	numBytes := b.Bytes()
+
+	fmt.Printf("%d packets in %d streams, totalling %d bytes\n", numPackets, numStreams, numBytes)
+	fmt.Printf("Average packet length: %d bytes\n", numBytes/numPackets)
+	fmt.Printf("Average stream length: %d bytes\n", numBytes/numStreams)
+
+	if size, err := b.dbStreaming.Size(); err != nil {
+		fmt.Printf("Error getting streaming mode Hyperscan database size, %s\n", err)
+	} else {
+		fmt.Printf("Streaming mode Hyperscan database size : %d bytes.\n", size)
+	}
+
+	if size, err := b.dbBlock.Size(); err != nil {
+		fmt.Printf("Error getting block mode Hyperscan database size, %s\n", err)
+	} else {
+		fmt.Printf("Block mode Hyperscan database size : %d bytes.\n", size)
+	}
+
+	if size, err := b.dbStreaming.StreamSize(); err != nil {
+		fmt.Printf("Error getting stream state size, %s\n", err)
+	} else {
+		fmt.Printf("Streaming mode Hyperscan stream state size : %d bytes (per stream).\n", size)
+	}
+}
+
+type Clock struct {
+	start, stop time.Time
+}
+
+func (c *Clock) Start() { c.start = time.Now() }
+
+func (c *Clock) Stop() { c.stop = time.Now() }
+
+func (c *Clock) Time() time.Duration { return c.stop.Sub(c.start) }
+
 func parseFile(filename string) (patterns []*hyperscan.Pattern) {
 	data, err := ioutil.ReadFile(filename)
 
@@ -233,19 +280,33 @@ func databasesFromFile(filename string) (hyperscan.StreamDatabase, hyperscan.Blo
 
 	fmt.Printf("Compiling Hyperscan databases with %d patterns.\n", len(patterns))
 
+	var clock Clock
+
+	clock.Start()
+
 	sdb, err := hyperscan.NewStreamDatabase(patterns...)
+
+	clock.Stop()
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: Could not compile patterns, %s", err)
 		os.Exit(-1)
 	}
+
+	fmt.Printf("Hyperscan streaming mode database compiled in %.2f ms\n", clock.Time().Seconds()*1000)
+
+	clock.Start()
 
 	bdb, err := hyperscan.NewBlockDatabase(patterns...)
 
+	clock.Stop()
+
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: Could not compile patterns, %s", err)
 		os.Exit(-1)
 	}
+
+	fmt.Printf("Hyperscan block mode database compiled in %.2f ms\n", clock.Time().Seconds()*1000)
 
 	return sdb, bdb
 }
@@ -283,4 +344,10 @@ func main() {
 	} else {
 		fmt.Printf("Read %d of %d packets within %d stream\n", len(bench.packets), read, len(bench.streamMap))
 	}
+
+	if *repeatCount != 1 {
+		fmt.Printf("Repeating PCAP scan %d times.\n", *repeatCount)
+	}
+
+	bench.DisplayStats()
 }
