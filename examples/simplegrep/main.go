@@ -80,7 +80,7 @@ func eventHandler(ctxt hyperscan.MatchContext, evt hyperscan.MatchEvent) error {
 func main() {
 	flag.Parse()
 
-	if len(flag.Args()) != 2 {
+	if flag.NArg() != 2 {
 		fmt.Fprintf(os.Stderr, "Usage: %s <pattern> <input file>\n", os.Args[0])
 		os.Exit(-1)
 	}
