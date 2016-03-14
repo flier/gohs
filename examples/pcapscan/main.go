@@ -70,6 +70,7 @@ func (t *FiveTuple) Hash() uint64 {
 	return t.hash
 }
 
+// Class wrapping all state associated with the benchmark
 type Benchmark struct {
 	dbStreaming hyperscan.StreamDatabase // Hyperscan compiled database (streaming mode)
 	dbBlock     hyperscan.BlockDatabase  // Hyperscan compiled database (block mode)
@@ -100,6 +101,7 @@ func NewBenchmark(streaming hyperscan.StreamDatabase, block hyperscan.BlockDatab
 	}, nil
 }
 
+// Read a set of streams from a pcap file
 func (b *Benchmark) ReadStreams(pcapFile string) (int, error) {
 	h, err := pcap.OpenOffline(pcapFile)
 
@@ -165,6 +167,7 @@ func (b *Benchmark) Close() {
 	b.dbBlock.Close()
 }
 
+// Return the number of bytes scanned
 func (b *Benchmark) Bytes() (sum int) {
 	for _, pkt := range b.packets {
 		sum += len(pkt)
@@ -173,10 +176,13 @@ func (b *Benchmark) Bytes() (sum int) {
 	return
 }
 
+// Return the number of matches found.
 func (b *Benchmark) Matches() int { return b.matchCount }
 
+// Clear the number of matches found.
 func (b *Benchmark) ClearMatches() { b.matchCount = 0 }
 
+// Display some information about the compiled database and scanned data.
 func (b *Benchmark) DisplayStats() {
 	numPackets := len(b.packets)
 	numStreams := len(b.streamMap)
@@ -205,12 +211,14 @@ func (b *Benchmark) DisplayStats() {
 	}
 }
 
+// Match event handler: called every time Hyperscan finds a match.
 func (b *Benchmark) onMatch(ctxt hyperscan.MatchContext, evt hyperscan.MatchEvent) error {
 	b.matchCount += 1
 
 	return nil
 }
 
+// Open a Hyperscan stream for each stream in stream_ids
 func (b *Benchmark) OpenStreams() {
 	b.streams = make([]hyperscan.Stream, len(b.streamMap))
 
@@ -226,6 +234,7 @@ func (b *Benchmark) OpenStreams() {
 	}
 }
 
+// Close all open Hyperscan streams (potentially generating any end-anchored matches)
 func (b *Benchmark) CloseStreams() {
 	for _, stream := range b.streams {
 		if err := stream.Close(); err != nil {
@@ -235,6 +244,7 @@ func (b *Benchmark) CloseStreams() {
 	}
 }
 
+// Scan each packet (in the ordering given in the PCAP file) through Hyperscan using the streaming interface.
 func (b *Benchmark) ScanStreams() {
 	for i, pkt := range b.packets {
 		if len(pkt) == 0 {
@@ -248,6 +258,7 @@ func (b *Benchmark) ScanStreams() {
 	}
 }
 
+// Scan each packet (in the ordering given in the PCAP file) through Hyperscan using the block-mode interface.
 func (b *Benchmark) ScanBlock() {
 	for _, pkt := range b.packets {
 		if len(pkt) == 0 {
@@ -261,6 +272,7 @@ func (b *Benchmark) ScanBlock() {
 	}
 }
 
+// Simple timing class
 type Clock struct {
 	start, stop time.Time
 }
