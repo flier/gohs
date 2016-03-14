@@ -831,7 +831,7 @@ var (
 	contextMap   = make(map[contextKey]*hsMatchEventContext)
 	contextCache = &sync.Pool{New: func() interface{} { return &hsMatchEventContext{} }}
 	contextLock  sync.Mutex
-	contextId    uint64
+	contextId    uintptr
 )
 
 type contextKey uintptr
@@ -850,7 +850,7 @@ func newContext(onEvent hsMatchEventHandler, context interface{}) contextKey {
 	ctxt.handler = onEvent
 	ctxt.context = context
 
-	key := contextKey(atomic.AddUint64(&contextId, 1))
+	key := contextKey(atomic.AddUintptr(&contextId, 1))
 
 	contextLock.Lock()
 	contextMap[key] = ctxt
