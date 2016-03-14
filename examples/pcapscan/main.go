@@ -224,8 +224,10 @@ func (b *Benchmark) onMatch(id uint, from, to uint64, flags uint, context interf
 func (b *Benchmark) OpenStreams() {
 	b.streams = make([]hyperscan.Stream, len(b.streamMap))
 
+	handler := hyperscan.MatchHandleFunc(b.onMatch)
+
 	for i := 0; i < len(b.streamMap); i++ {
-		stream, err := b.dbStreaming.Open(0, b.scratch, hyperscan.MatchHandleFunc(b.onMatch), nil)
+		stream, err := b.dbStreaming.Open(0, b.scratch, handler, nil)
 
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: Unable to open stream, %s. Exiting.", err)
@@ -262,12 +264,15 @@ func (b *Benchmark) ScanStreams() {
 
 // Scan each packet (in the ordering given in the PCAP file) through Hyperscan using the block-mode interface.
 func (b *Benchmark) ScanBlock() {
+	var handler hyperscan.MatchHandler = hyperscan.MatchHandleFunc(b.onMatch)
+	var scanner hyperscan.BlockScanner = b.dbBlock
+
 	for _, pkt := range b.packets {
 		if len(pkt) == 0 {
 			continue
 		}
 
-		if err := b.dbBlock.Scan(pkt, b.scratch, hyperscan.MatchHandleFunc(b.onMatch), nil); err != nil {
+		if err := scanner.Scan(pkt, b.scratch, handler, nil); err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: Unable to scan packet, %s. Exiting.", err)
 			os.Exit(-1)
 		}
