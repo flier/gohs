@@ -152,8 +152,15 @@ type BlockMatcher interface {
 	MatchString(s string) bool
 }
 
+type Stream interface {
+	Scan(data []byte) error
+
+	Close() error
+}
+
 // The streaming regular expression scanner.
 type StreamScanner interface {
+	Open(flags ScanFlag, scratch Scratch, handler MatchHandler, context interface{}) (Stream, error)
 }
 
 type StreamMatcher interface {
@@ -167,6 +174,22 @@ type VectoredScanner interface {
 type VectoredMatcher interface {
 }
 
+type stream struct {
+	stream  hsStream
+	flags   ScanFlag
+	scratch hsScratch
+	handler hsMatchEventHandler
+	context interface{}
+}
+
+func (s *stream) Scan(data []byte) error {
+	return hsScanStream(s.stream, data, s.flags, s.scratch, s.handler, s.context)
+}
+
+func (s *stream) Close() error {
+	return hsCloseStream(s.stream, s.scratch, s.handler, s.context)
+}
+
 type streamScanner struct {
 	sdb *streamDatabase
 }
@@ -177,6 +200,16 @@ func newStreamScanner(sdb *streamDatabase) *streamScanner {
 
 func (s *streamScanner) Close() error {
 	return nil
+}
+
+func (ss *streamScanner) Open(flags ScanFlag, sc Scratch, handler MatchHandler, context interface{}) (Stream, error) {
+	s, err := hsOpenStream(ss.sdb.db, flags)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &stream{s, flags, sc.(*scratch).s, &matchContext{ss.sdb, sc, handler, context}, context}, nil
 }
 
 type vectoredScanner struct {

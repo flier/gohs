@@ -77,6 +77,7 @@ type Benchmark struct {
 	packets     [][]byte                 // Packet data to be scanned.
 	streamIds   []int                    // The stream ID to which each packet belongs
 	streamMap   map[uint64]int           // Map used to construct stream_ids
+	streams     []hyperscan.Stream       // Vector of Hyperscan stream state (used in streaming mode)
 	matchCount  int                      // Count of matches found during scanning
 }
 
@@ -211,15 +212,40 @@ func (b *Benchmark) onMatch(ctxt hyperscan.MatchContext, evt hyperscan.MatchEven
 }
 
 func (b *Benchmark) OpenStreams() {
+	b.streams = make([]hyperscan.Stream, len(b.streamMap))
 
-}
+	for i := 0; i < len(b.streamMap); i++ {
+		stream, err := b.dbStreaming.Open(0, b.scratch, hyperscan.MatchHandFunc(b.onMatch), nil)
 
-func (b *Benchmark) ScanStreams() {
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: Unable to open stream, %s. Exiting.", err)
+			os.Exit(-1)
+		}
 
+		b.streams[i] = stream
+	}
 }
 
 func (b *Benchmark) CloseStreams() {
+	for _, stream := range b.streams {
+		if err := stream.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: Unable to close stream, %s. Exiting.", err)
+			os.Exit(-1)
+		}
+	}
+}
 
+func (b *Benchmark) ScanStreams() {
+	for i, pkt := range b.packets {
+		if len(pkt) == 0 {
+			continue
+		}
+
+		if err := b.streams[b.streamIds[i]].Scan(pkt); err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: Unable to scan packet, %s. Exiting.", err)
+			os.Exit(-1)
+		}
+	}
 }
 
 func (b *Benchmark) ScanBlock() {
