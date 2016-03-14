@@ -172,6 +172,10 @@ func (b *Benchmark) Bytes() (sum int) {
 	return
 }
 
+func (b *Benchmark) Matches() int { return b.matchCount }
+
+func (b *Benchmark) ClearMatches() { b.matchCount = 0 }
+
 func (b *Benchmark) DisplayStats() {
 	numPackets := len(b.packets)
 	numStreams := len(b.streamMap)
@@ -197,6 +201,37 @@ func (b *Benchmark) DisplayStats() {
 		fmt.Printf("Error getting stream state size, %s\n", err)
 	} else {
 		fmt.Printf("Streaming mode Hyperscan stream state size : %d bytes (per stream).\n", size)
+	}
+}
+
+func (b *Benchmark) onMatch(ctxt hyperscan.MatchContext, evt hyperscan.MatchEvent) error {
+	b.matchCount += 1
+
+	return nil
+}
+
+func (b *Benchmark) OpenStreams() {
+
+}
+
+func (b *Benchmark) ScanStreams() {
+
+}
+
+func (b *Benchmark) CloseStreams() {
+
+}
+
+func (b *Benchmark) ScanBlock() {
+	for _, pkt := range b.packets {
+		if len(pkt) == 0 {
+			continue
+		}
+
+		if err := b.dbBlock.Scan(pkt, b.scratch, hyperscan.MatchHandFunc(b.onMatch), nil); err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: Unable to scan packet, %s. Exiting.", err)
+			os.Exit(-1)
+		}
 	}
 }
 
@@ -350,4 +385,69 @@ func main() {
 	}
 
 	bench.DisplayStats()
+
+	var clock Clock
+	var secsStreamingScan, secsStreamingOpenClose time.Duration
+
+	// Streaming mode scans.
+	for i := 0; i < *repeatCount; i++ {
+		// Open streams.
+		clock.Start()
+		bench.OpenStreams()
+		clock.Stop()
+
+		secsStreamingOpenClose += clock.Time()
+
+		// Scan all our packets in streaming mode.
+		clock.Start()
+		bench.ScanStreams()
+		clock.Stop()
+
+		secsStreamingScan += clock.Time()
+
+		// Close streams.
+		clock.Start()
+		bench.CloseStreams()
+		clock.Stop()
+		secsStreamingOpenClose += clock.Time()
+	}
+
+	// Collect data from streaming mode scans.
+	bytes := bench.Bytes()
+	tputStreamScanning := float64(bytes*8**repeatCount) / secsStreamingScan.Seconds()
+	tputStreamOverhead := float64(bytes*8**repeatCount) / (secsStreamingScan + secsStreamingOpenClose).Seconds()
+	matchesStream := bench.Matches()
+	matchRateStream := float64(matchesStream) / (float64(bytes**repeatCount) / 1024.0) // matches per kilobyte
+
+	// Scan all our packets in block mode.
+	bench.ClearMatches()
+
+	clock.Start()
+	for i := 0; i < *repeatCount; i++ {
+		bench.ScanBlock()
+	}
+	clock.Stop()
+
+	secsScanBlock := clock.Time()
+
+	// Collect data from block mode scans.
+	tputBlockScanning := float64(bytes*8**repeatCount) / secsScanBlock.Seconds()
+	matchesBlock := bench.Matches()
+	matchRateBlock := float64(matchesBlock) / (float64(bytes**repeatCount) / 1024.0) // matches per kilobyte
+
+	fmt.Println("Streaming mode:")
+	fmt.Printf("  Total matches: %d\n", matchesStream)
+	fmt.Printf("  Match rate:    %.4f matches/kilobyte\n", matchRateStream)
+	fmt.Printf("  Throughput (with stream overhead): %.2f megabits/sec\n", tputStreamOverhead/1000000)
+	fmt.Printf("  Throughput (no stream overhead):   %.2f megabits/sec\n", tputStreamScanning/1000000)
+	fmt.Println("Block mode:")
+	fmt.Printf("  Total matches: %d\n", matchesBlock)
+	fmt.Printf("  Match rate:    %.4f matches/kilobyte\n", matchRateBlock)
+	fmt.Printf("  Throughput:    %.2f megabits/sec\n", tputBlockScanning/1000000)
+
+	if bytes < (2 * 1024 * 1024) {
+		fmt.Println("")
+		fmt.Println("WARNING: Input PCAP file is less than 2MB in size.")
+		fmt.Println("This test may have been too short to calculate accurate results.")
+	}
 }
