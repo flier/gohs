@@ -80,29 +80,12 @@ type MatchEvent interface {
 	Flags() ScanFlag
 }
 
-type MatchHandler interface {
-	Handle(ctxt MatchContext, evt MatchEvent) error
-}
+type MatchHandler hsMatchEventHandler
 
-type MatchHandFunc func(ctxt MatchContext, evt MatchEvent) error
+type MatchHandleFunc hsMatchEventHandleFunc
 
-func (fn MatchHandFunc) Handle(ctxt MatchContext, evt MatchEvent) error { return fn(ctxt, evt) }
-
-type matchContext struct {
-	db   Database
-	s    Scratch
-	h    MatchHandler
-	data interface{}
-}
-
-func (c *matchContext) Database() Database { return c.db }
-
-func (c *matchContext) Scratch() Scratch { return c.s }
-
-func (c *matchContext) UserData() interface{} { return c.data }
-
-func (c *matchContext) handle(id uint, from, to uint64, flags uint, context interface{}) error {
-	return c.h.Handle(c, &matchEvent{id, from, to, ScanFlag(flags)})
+func (fn MatchHandleFunc) Handle(id uint, from, to uint64, flags uint, context interface{}) error {
+	return fn(id, from, to, flags, context)
 }
 
 // The block (non-streaming) regular expression scanner.
@@ -209,7 +192,7 @@ func (ss *streamScanner) Open(flags ScanFlag, sc Scratch, handler MatchHandler, 
 		return nil, err
 	}
 
-	return &stream{s, flags, sc.(*scratch).s, &matchContext{ss.sdb, sc, handler, context}, context}, nil
+	return &stream{s, flags, sc.(*scratch).s, handler, context}, nil
 }
 
 type vectoredScanner struct {
@@ -223,19 +206,9 @@ func newVectoredScanner(vdb *vectoredDatabase) *vectoredScanner {
 func (s *vectoredScanner) Close() error { return nil }
 
 func (vs *vectoredScanner) Scan(data [][]byte, s Scratch, handler MatchHandler, context interface{}) error {
-	if s == nil {
-		sc, err := hsAllocScratch(vs.vdb.db)
+	err := hsScanVector(vs.vdb.db, data, 0, s.(*scratch).s, handler, context)
 
-		if err != nil {
-			return err
-		}
-
-		s = &scratch{sc}
-
-		defer hsFreeScratch(sc)
-	}
-
-	if err := hsScanVector(vs.vdb.db, data, 0, s.(*scratch).s, &matchContext{vs.vdb, s, handler, context}, context); err != nil {
+	if err != nil {
 		return err
 	}
 
@@ -251,19 +224,9 @@ func newBlockScanner(bdb *blockDatabase) *blockScanner {
 }
 
 func (bs *blockScanner) Scan(data []byte, s Scratch, handler MatchHandler, context interface{}) error {
-	if s == nil {
-		sc, err := hsAllocScratch(bs.bdb.db)
+	err := hsScan(bs.bdb.db, data, 0, s.(*scratch).s, handler, context)
 
-		if err != nil {
-			return err
-		}
-
-		s = &scratch{sc}
-
-		defer hsFreeScratch(sc)
-	}
-
-	if err := hsScan(bs.bdb.db, data, 0, s.(*scratch).s, &matchContext{bs.bdb, s, handler, context}, context); err != nil {
+	if err != nil {
 		return err
 	}
 
@@ -284,14 +247,14 @@ func (m *blockMatcher) Close() error {
 	return nil
 }
 
-func (m *blockMatcher) handle(id uint, from, to uint64, flags uint, context interface{}) error {
+func (m *blockMatcher) Handle(id uint, from, to uint64, flags uint, context interface{}) error {
 	m.n -= 1
 
 	if m.n == 0 {
 		m.handler.err = errTooManyMatches
 	}
 
-	return m.handler.handle(id, from, to, flags, context)
+	return m.handler.Handle(id, from, to, flags, context)
 }
 
 func (m *blockMatcher) scan(data []byte) error {

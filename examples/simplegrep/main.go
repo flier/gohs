@@ -52,11 +52,11 @@ func highlight(s string) string {
  * access to for each match. In our simple example we're just going to use it
  * to pass in the pattern that was being searched for so we can print it out.
  */
-func eventHandler(ctxt hyperscan.MatchContext, evt hyperscan.MatchEvent) error {
-	inputData := ctxt.UserData().([]byte)
+func eventHandler(id uint, from, to uint64, flags uint, context interface{}) error {
+	inputData := context.([]byte)
 
-	start := bytes.LastIndexByte(inputData[:evt.From()], '\n')
-	end := int(evt.To()) + bytes.IndexByte(inputData[evt.To():], '\n')
+	start := bytes.LastIndexByte(inputData[:from], '\n')
+	end := int(to) + bytes.IndexByte(inputData[to:], '\n')
 
 	if start == -1 {
 		start = 0
@@ -72,7 +72,7 @@ func eventHandler(ctxt hyperscan.MatchContext, evt hyperscan.MatchEvent) error {
 		fmt.Printf("%d: ", start)
 	}
 
-	fmt.Printf("%s%s%s\n", inputData[start:evt.From()], theme(string(inputData[evt.From():evt.To()])), inputData[evt.To():end])
+	fmt.Printf("%s%s%s\n", inputData[start:from], theme(string(inputData[from:to])), inputData[to:end])
 
 	return nil
 }
@@ -145,7 +145,7 @@ func main() {
 
 	fmt.Printf("Scanning %d bytes with Hyperscan\n", len(inputData))
 
-	if err := database.Scan(inputData, scratch, hyperscan.MatchHandFunc(eventHandler), inputData); err != nil {
+	if err := database.Scan(inputData, scratch, hyperscan.MatchHandleFunc(eventHandler), inputData); err != nil {
 		fmt.Fprint(os.Stderr, "ERROR: Unable to scan input buffer. Exiting.\n")
 		os.Exit(-1)
 	}

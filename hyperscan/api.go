@@ -25,13 +25,7 @@ type matchRecorder struct {
 	err     error
 }
 
-func (h *matchRecorder) Handle(ctxt MatchContext, evt MatchEvent) error {
-	h.matched = append(h.matched, *evt.(*matchEvent))
-
-	return h.err
-}
-
-func (h *matchRecorder) handle(id uint, from, to uint64, flags uint, context interface{}) error {
+func (h *matchRecorder) Handle(id uint, from, to uint64, flags uint, context interface{}) error {
 	h.matched = append(h.matched, matchEvent{id, from, to, ScanFlag(flags)})
 
 	return h.err

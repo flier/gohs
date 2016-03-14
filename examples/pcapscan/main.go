@@ -33,6 +33,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"runtime/pprof"
 	"strconv"
 	"strings"
 	"time"
@@ -45,6 +46,7 @@ import (
 
 var (
 	repeatCount = flag.Int("n", 1, "Repeating PCAP scan several times")
+	cpuprofile  = flag.String("cpuprofile", "", "write cpu profile to file")
 )
 
 type FiveTuple struct {
@@ -212,7 +214,7 @@ func (b *Benchmark) DisplayStats() {
 }
 
 // Match event handler: called every time Hyperscan finds a match.
-func (b *Benchmark) onMatch(ctxt hyperscan.MatchContext, evt hyperscan.MatchEvent) error {
+func (b *Benchmark) onMatch(id uint, from, to uint64, flags uint, context interface{}) error {
 	b.matchCount += 1
 
 	return nil
@@ -223,7 +225,7 @@ func (b *Benchmark) OpenStreams() {
 	b.streams = make([]hyperscan.Stream, len(b.streamMap))
 
 	for i := 0; i < len(b.streamMap); i++ {
-		stream, err := b.dbStreaming.Open(0, b.scratch, hyperscan.MatchHandFunc(b.onMatch), nil)
+		stream, err := b.dbStreaming.Open(0, b.scratch, hyperscan.MatchHandleFunc(b.onMatch), nil)
 
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: Unable to open stream, %s. Exiting.", err)
@@ -265,7 +267,7 @@ func (b *Benchmark) ScanBlock() {
 			continue
 		}
 
-		if err := b.dbBlock.Scan(pkt, b.scratch, hyperscan.MatchHandFunc(b.onMatch), nil); err != nil {
+		if err := b.dbBlock.Scan(pkt, b.scratch, hyperscan.MatchHandleFunc(b.onMatch), nil); err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: Unable to scan packet, %s. Exiting.", err)
 			os.Exit(-1)
 		}
@@ -390,6 +392,16 @@ func main() {
 	if flag.NArg() != 2 {
 		fmt.Fprintf(os.Stderr, "Usage: %s [-n repeats] <pattern file> <pcap file>\n", os.Args[0])
 		os.Exit(-1)
+	}
+
+	if *cpuprofile != "" {
+		if f, err := os.Create(*cpuprofile); err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: Unable to start profiling, %s. Exiting.", err)
+			os.Exit(-1)
+		} else {
+			pprof.StartCPUProfile(f)
+			defer pprof.StopCPUProfile()
+		}
 	}
 
 	patternFile := flag.Arg(0)
