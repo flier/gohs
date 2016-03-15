@@ -57,13 +57,13 @@ hs_error_t hs_close_stream_cgo(intptr_t id, intptr_t scratch, intptr_t context) 
 }
 
 static inline
-hs_error_t hs_reset_stream_cgo(hs_stream_t *id, unsigned int flags, hs_scratch_t *scratch, intptr_t context) {
-	return hs_reset_stream(id, flags, scratch, hsMatchEventCallback, (void *) context);
+hs_error_t hs_reset_stream_cgo(intptr_t id, unsigned int flags, intptr_t scratch, intptr_t context) {
+	return hs_reset_stream((hs_stream_t *) id, flags, (hs_scratch_t *) scratch, hsMatchEventCallback, (void *) context);
 }
 
 static inline
-hs_error_t hs_reset_and_copy_stream_cgo(hs_stream_t *to_id, const hs_stream_t *from_id, hs_scratch_t *scratch, intptr_t context) {
-	return hs_reset_and_copy_stream(to_id, from_id, scratch, hsMatchEventCallback, (void *) context);
+hs_error_t hs_reset_and_copy_stream_cgo(intptr_t to_id, intptr_t from_id, intptr_t scratch, intptr_t context) {
+	return hs_reset_and_copy_stream((hs_stream_t *) to_id, (const hs_stream_t *) from_id, (hs_scratch_t *) scratch, hsMatchEventCallback, (void *) context);
 }
 */
 import "C"
@@ -909,7 +909,8 @@ func hsCloseStream(stream hsStream, scratch hsScratch, onEvent hsMatchEventHandl
 func hsResetStream(stream hsStream, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
 	ctxt := &hsMatchEventContext{onEvent, context}
 
-	ret := C.hs_reset_stream_cgo(stream, C.uint(flags), scratch, C.intptr_t(uintptr(unsafe.Pointer(ctxt))))
+	ret := C.hs_reset_stream_cgo(C.intptr_t(uintptr(unsafe.Pointer(stream))), C.uint(flags),
+		C.intptr_t(uintptr(unsafe.Pointer(scratch))), C.intptr_t(uintptr(unsafe.Pointer(ctxt))))
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
@@ -931,7 +932,8 @@ func hsCopyStream(stream hsStream) (hsStream, error) {
 func hsResetAndCopyStream(to, from hsStream, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
 	ctxt := &hsMatchEventContext{onEvent, context}
 
-	ret := C.hs_reset_and_copy_stream_cgo(to, from, scratch, C.intptr_t(uintptr(unsafe.Pointer(ctxt))))
+	ret := C.hs_reset_and_copy_stream_cgo(C.intptr_t(uintptr(unsafe.Pointer(to))), C.intptr_t(uintptr(unsafe.Pointer(from))),
+		C.intptr_t(uintptr(unsafe.Pointer(scratch))), C.intptr_t(uintptr(unsafe.Pointer(ctxt))))
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
