@@ -109,6 +109,38 @@ func NewBenchmark(streaming hyperscan.StreamDatabase, block hyperscan.BlockDatab
 	return bench, nil
 }
 
+func (b *Benchmark) decodePacket(pkt gopacket.Packet) (key *FiveTuple, payload []byte) {
+	ipv4, ok := pkt.NetworkLayer().(*layers.IPv4)
+
+	if !ok {
+		return // Ignore packets that aren't IPv4
+	}
+
+	if ipv4.FragOffset != 0 || (ipv4.Flags&layers.IPv4MoreFragments) != 0 {
+		return // Ignore fragmented packets.
+	}
+
+	var stream FiveTuple
+
+	stream.protocol = ipv4.Protocol
+	stream.srcAddr = ipv4.SrcIP
+	stream.dstAddr = ipv4.DstIP
+
+	switch t := pkt.TransportLayer().(type) {
+	case *layers.TCP:
+		stream.srcPort = uint16(t.SrcPort)
+		stream.dstPort = uint16(t.DstPort)
+		return &stream, t.Payload
+
+	case *layers.UDP:
+		stream.srcPort = uint16(t.SrcPort)
+		stream.dstPort = uint16(t.DstPort)
+		return &stream, t.Payload
+	}
+
+	return
+}
+
 // Read a set of streams from a pcap file
 func (b *Benchmark) ReadStreams(pcapFile string) (int, error) {
 	h, err := pcap.OpenOffline(pcapFile)
@@ -125,43 +157,26 @@ func (b *Benchmark) ReadStreams(pcapFile string) (int, error) {
 	for pkt := range s.Packets() {
 		count += 1
 
-		var key FiveTuple
+		key, payload := b.decodePacket(pkt)
 
-		switch t := pkt.NetworkLayer().(type) {
-		case *layers.IPv4:
-			key.protocol = t.Protocol
-			key.srcAddr = t.SrcIP
-			key.dstAddr = t.DstIP
-		case *layers.IPv6:
-			key.protocol = t.NextHeader
-			key.srcAddr = t.SrcIP
-			key.dstAddr = t.DstIP
-		default:
+		if key == nil || len(payload) == 0 {
 			continue
 		}
 
-		switch t := pkt.TransportLayer().(type) {
-		case *layers.TCP:
-			key.srcPort = uint16(t.SrcPort)
-			key.dstPort = uint16(t.DstPort)
-		case *layers.UDP:
-			key.srcPort = uint16(t.SrcPort)
-			key.dstPort = uint16(t.DstPort)
-		default:
-			continue
-		}
+		var id int
 
-		id := len(b.streamMap)
 		hash := key.Hash()
 
 		if _id, exists := b.streamMap[hash]; exists {
 			id = _id
 		} else {
+			id = len(b.streamMap)
 			b.streamMap[hash] = id
 		}
 
-		b.packets = append(b.packets, pkt.TransportLayer().LayerPayload())
+		b.packets = append(b.packets, payload)
 		b.streamIds = append(b.streamIds, id)
+
 	}
 
 	return count, nil
@@ -268,10 +283,6 @@ func (b *Benchmark) ResetStreams() error {
 // Scan each packet (in the ordering given in the PCAP file) through Hyperscan using the streaming interface.
 func (b *Benchmark) ScanStreams() error {
 	for i, pkt := range b.packets {
-		if len(pkt) == 0 {
-			continue
-		}
-
 		if err := b.streams[b.streamIds[i]].Scan(pkt); err != nil {
 			return err
 		}
@@ -285,10 +296,6 @@ func (b *Benchmark) ScanBlock() error {
 	var scanner hyperscan.BlockScanner = b.dbBlock
 
 	for _, pkt := range b.packets {
-		if len(pkt) == 0 {
-			continue
-		}
-
 		if err := scanner.Scan(pkt, b.scratch, b.handler, nil); err != nil {
 			return err
 		}
