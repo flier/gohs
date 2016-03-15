@@ -9,40 +9,28 @@ var (
 )
 
 // A Hyperscan scratch space.
-type Scratch interface {
-	// Provides the size of the given scratch space.
-	Size() (int, error)
-
-	// Reallocate the scratch for another database.
-	Realloc(db Database) error
-
-	// Allocate a scratch space that is a clone of an existing scratch space.
-	Clone() (Scratch, error)
-
-	// Free a scratch block previously allocated
-	Free() error
-}
-
-type scratch struct {
+type Scratch struct {
 	s hsScratch
 }
 
 // Allocate a "scratch" space for use by Hyperscan.
 // This is required for runtime use, and one scratch space per thread,
 // or concurrent caller, is required.
-func NewScratch(db Database) (Scratch, error) {
+func NewScratch(db Database) (*Scratch, error) {
 	s, err := hsAllocScratch(db.(database).Db())
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &scratch{s}, nil
+	return &Scratch{s}, nil
 }
 
-func (s *scratch) Size() (int, error) { return hsScratchSize(s.s) }
+// Provides the size of the given scratch space.
+func (s *Scratch) Size() (int, error) { return hsScratchSize(s.s) }
 
-func (s *scratch) Realloc(db Database) error {
+// Reallocate the scratch for another database.
+func (s *Scratch) Realloc(db Database) error {
 	if err := hsReallocScratch(db.(database).Db(), &s.s); err != nil {
 		return err
 	}
@@ -50,17 +38,19 @@ func (s *scratch) Realloc(db Database) error {
 	return nil
 }
 
-func (s *scratch) Clone() (Scratch, error) {
+// Allocate a scratch space that is a clone of an existing scratch space.
+func (s *Scratch) Clone() (*Scratch, error) {
 	cloned, err := hsCloneScratch(s.s)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &scratch{cloned}, nil
+	return &Scratch{cloned}, nil
 }
 
-func (s *scratch) Free() error { return hsFreeScratch(s.s) }
+// Free a scratch block previously allocated
+func (s *Scratch) Free() error { return hsFreeScratch(s.s) }
 
 type MatchContext interface {
 	Database() Database
@@ -91,7 +81,7 @@ func (fn MatchHandleFunc) Handle(id uint, from, to uint64, flags uint, context i
 // The block (non-streaming) regular expression scanner.
 type BlockScanner interface {
 	// This is the function call in which the actual pattern matching takes place for block-mode pattern databases.
-	Scan(data []byte, scratch Scratch, handler MatchHandler, context interface{}) error
+	Scan(data []byte, scratch *Scratch, handler MatchHandler, context interface{}) error
 }
 
 type BlockMatcher interface {
@@ -147,7 +137,7 @@ type Stream interface {
 
 // The streaming regular expression scanner.
 type StreamScanner interface {
-	Open(flags ScanFlag, scratch Scratch, handler MatchHandler, context interface{}) (Stream, error)
+	Open(flags ScanFlag, scratch *Scratch, handler MatchHandler, context interface{}) (Stream, error)
 }
 
 type StreamMatcher interface {
@@ -155,7 +145,7 @@ type StreamMatcher interface {
 
 // The vectored regular expression scanner.
 type VectoredScanner interface {
-	Scan(data [][]byte, scratch Scratch, handler MatchHandler, context interface{}) error
+	Scan(data [][]byte, scratch *Scratch, handler MatchHandler, context interface{}) error
 }
 
 type VectoredMatcher interface {
@@ -201,14 +191,14 @@ func (s *streamScanner) Close() error {
 	return nil
 }
 
-func (ss *streamScanner) Open(flags ScanFlag, sc Scratch, handler MatchHandler, context interface{}) (Stream, error) {
+func (ss *streamScanner) Open(flags ScanFlag, sc *Scratch, handler MatchHandler, context interface{}) (Stream, error) {
 	s, err := hsOpenStream(ss.sdb.db, flags)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &stream{s, flags, sc.(*scratch).s, handler, context}, nil
+	return &stream{s, flags, sc.s, handler, context}, nil
 }
 
 type vectoredScanner struct {
@@ -221,8 +211,8 @@ func newVectoredScanner(vdb *vectoredDatabase) *vectoredScanner {
 
 func (s *vectoredScanner) Close() error { return nil }
 
-func (vs *vectoredScanner) Scan(data [][]byte, s Scratch, handler MatchHandler, context interface{}) error {
-	err := hsScanVector(vs.vdb.db, data, 0, s.(*scratch).s, handler, context)
+func (vs *vectoredScanner) Scan(data [][]byte, s *Scratch, handler MatchHandler, context interface{}) error {
+	err := hsScanVector(vs.vdb.db, data, 0, s.s, handler, context)
 
 	if err != nil {
 		return err
@@ -239,8 +229,8 @@ func newBlockScanner(bdb *blockDatabase) *blockScanner {
 	return &blockScanner{bdb}
 }
 
-func (bs *blockScanner) Scan(data []byte, s Scratch, handler MatchHandler, context interface{}) error {
-	err := hsScan(bs.bdb.db, data, 0, s.(*scratch).s, handler, context)
+func (bs *blockScanner) Scan(data []byte, s *Scratch, handler MatchHandler, context interface{}) error {
+	err := hsScan(bs.bdb.db, data, 0, s.s, handler, context)
 
 	if err != nil {
 		return err

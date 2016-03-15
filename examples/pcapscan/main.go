@@ -77,7 +77,7 @@ func (t *FiveTuple) Hash() uint64 {
 type Benchmark struct {
 	dbStreaming hyperscan.StreamDatabase // Hyperscan compiled database (streaming mode)
 	dbBlock     hyperscan.BlockDatabase  // Hyperscan compiled database (block mode)
-	scratch     hyperscan.Scratch        // Hyperscan temporary scratch space (used in both modes)
+	scratch     *hyperscan.Scratch       // Hyperscan temporary scratch space (used in both modes)
 	packets     [][]byte                 // Packet data to be scanned.
 	streamIds   []int                    // The stream ID to which each packet belongs
 	streamMap   map[uint64]int           // Map used to construct stream_ids
