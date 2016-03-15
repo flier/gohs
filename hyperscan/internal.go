@@ -30,40 +30,45 @@ DEFINE_ALLOCTOR(Misc, misc);
 DEFINE_ALLOCTOR(Scratch, scratch);
 DEFINE_ALLOCTOR(Stream, stream);
 
-extern int hsMatchEventCallback(unsigned int id, unsigned long long from, unsigned long long to, unsigned int flags, void *context);
+extern int hsMatchEventCallback(unsigned int id, unsigned long long from, unsigned long long to, unsigned int flags, uintptr_t context);
+
+static
+int hs_event_callback(unsigned int id, unsigned long long from, unsigned long long to, unsigned int flags, void *context) {
+	return hsMatchEventCallback(id, from, to, flags, (uintptr_t) context);
+}
 
 static inline
 hs_error_t hs_scan_cgo(uintptr_t db, uintptr_t data, unsigned int length,
 					   unsigned int flags, uintptr_t scratch, uintptr_t context) {
-	return hs_scan((const hs_database_t *) db, (const char *) data, length, flags, (hs_scratch_t *) scratch, hsMatchEventCallback, (void *) context);
+	return hs_scan((const hs_database_t *) db, (const char *) data, length, flags, (hs_scratch_t *) scratch, hs_event_callback, (void *) context);
 }
 
 static inline
 hs_error_t hs_scan_vector_cgo(uintptr_t db, uintptr_t data, uintptr_t length, unsigned int count,
 					   		  unsigned int flags, uintptr_t scratch, uintptr_t context) {
 	return hs_scan_vector((const hs_database_t *) db, (const char *const *) data, (const unsigned int *) length, count,
-						  flags, (hs_scratch_t *) scratch, hsMatchEventCallback, (void *) context);
+						  flags, (hs_scratch_t *) scratch, hs_event_callback, (void *) context);
 }
 
 static inline
 hs_error_t hs_scan_stream_cgo(uintptr_t id, uintptr_t data, unsigned int length,
 							  unsigned int flags, uintptr_t scratch, uintptr_t context) {
-	return hs_scan_stream((hs_stream_t *) id, (const char *) data, length, flags, (hs_scratch_t *) scratch, hsMatchEventCallback, (void *) context);
+	return hs_scan_stream((hs_stream_t *) id, (const char *) data, length, flags, (hs_scratch_t *) scratch, hs_event_callback, (void *) context);
 }
 
 static inline
 hs_error_t hs_close_stream_cgo(uintptr_t id, uintptr_t scratch, uintptr_t context) {
-	return hs_close_stream((hs_stream_t *) id, (hs_scratch_t *) scratch, hsMatchEventCallback, (void *) context);
+	return hs_close_stream((hs_stream_t *) id, (hs_scratch_t *) scratch, hs_event_callback, (void *) context);
 }
 
 static inline
 hs_error_t hs_reset_stream_cgo(uintptr_t id, unsigned int flags, uintptr_t scratch, uintptr_t context) {
-	return hs_reset_stream((hs_stream_t *) id, flags, (hs_scratch_t *) scratch, hsMatchEventCallback, (void *) context);
+	return hs_reset_stream((hs_stream_t *) id, flags, (hs_scratch_t *) scratch, hs_event_callback, (void *) context);
 }
 
 static inline
 hs_error_t hs_reset_and_copy_stream_cgo(uintptr_t to_id, uintptr_t from_id, uintptr_t scratch, uintptr_t context) {
-	return hs_reset_and_copy_stream((hs_stream_t *) to_id, (const hs_stream_t *) from_id, (hs_scratch_t *) scratch, hsMatchEventCallback, (void *) context);
+	return hs_reset_and_copy_stream((hs_stream_t *) to_id, (const hs_stream_t *) from_id, (hs_scratch_t *) scratch, hs_event_callback, (void *) context);
 }
 */
 import "C"
@@ -827,8 +832,8 @@ type hsMatchEventContext struct {
 }
 
 //export hsMatchEventCallback
-func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, data unsafe.Pointer) C.int {
-	ctxt := (*hsMatchEventContext)(data)
+func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, data C.uintptr_t) C.int {
+	ctxt := (*hsMatchEventContext)(unsafe.Pointer((uintptr(data))))
 
 	if err := ctxt.handler.Handle(uint(id), uint64(from), uint64(to), uint(flags), ctxt.context); err != nil {
 		return -1
