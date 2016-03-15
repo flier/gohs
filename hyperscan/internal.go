@@ -816,15 +816,7 @@ func hsFreeScratch(scratch hsScratch) error {
 	return nil
 }
 
-type hsMatchEventHandler interface {
-	Handle(id uint, from, to uint64, flags uint, context interface{}) error
-}
-
-type hsMatchEventHandleFunc func(id uint, from, to uint64, flags uint, context interface{}) error
-
-func (fn hsMatchEventHandleFunc) Handle(id uint, from, to uint64, flags uint, context interface{}) error {
-	return fn(id, from, to, flags, context)
-}
+type hsMatchEventHandler func(id uint, from, to uint64, flags uint, context interface{}) error
 
 type hsMatchEventContext struct {
 	handler hsMatchEventHandler
@@ -835,7 +827,7 @@ type hsMatchEventContext struct {
 func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, data C.uintptr_t) C.int {
 	ctxt := (*hsMatchEventContext)(unsafe.Pointer((uintptr(data))))
 
-	if err := ctxt.handler.Handle(uint(id), uint64(from), uint64(to), uint(flags), ctxt.context); err != nil {
+	if err := ctxt.handler(uint(id), uint64(from), uint64(to), uint(flags), ctxt.context); err != nil {
 		return -1
 	}
 

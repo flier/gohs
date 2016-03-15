@@ -145,7 +145,7 @@ func main() {
 
 	fmt.Printf("Scanning %d bytes with Hyperscan\n", len(inputData))
 
-	if err := database.Scan(inputData, scratch, hyperscan.MatchHandleFunc(eventHandler), inputData); err != nil {
+	if err := database.Scan(inputData, scratch, eventHandler, inputData); err != nil {
 		fmt.Fprint(os.Stderr, "ERROR: Unable to scan input buffer. Exiting.\n")
 		os.Exit(-1)
 	}

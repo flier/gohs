@@ -158,7 +158,7 @@ func TestAllocator(t *testing.T) {
 					Convey("Then close stream with allocator", func() {
 						a.memoryFreed = nil
 
-						So(hsCloseStream(stream, s, h, nil), ShouldBeNil)
+						So(hsCloseStream(stream, s, h.Handle, nil), ShouldBeNil)
 
 						So(hsClearStreamAllocator(), ShouldBeNil)
 					})
@@ -492,24 +492,24 @@ func TestBlockScan(t *testing.T) {
 		h := &matchRecorder{}
 
 		Convey("Scan block with pattern", func() {
-			So(hsScan(db, []byte("abctestdef"), 0, s, h, nil), ShouldBeNil)
+			So(hsScan(db, []byte("abctestdef"), 0, s, h.Handle, nil), ShouldBeNil)
 			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}})
 		})
 
 		Convey("Scan block without pattern", func() {
-			So(hsScan(db, []byte("abcdef"), 0, s, h, nil), ShouldBeNil)
+			So(hsScan(db, []byte("abcdef"), 0, s, h.Handle, nil), ShouldBeNil)
 			So(h.matched, ShouldBeEmpty)
 		})
 
 		Convey("Scan block with multi pattern", func() {
-			So(hsScan(db, []byte("abctestdeftest"), 0, s, h, nil), ShouldBeNil)
+			So(hsScan(db, []byte("abctestdeftest"), 0, s, h.Handle, nil), ShouldBeNil)
 			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}, {0, 0, 14, 0}})
 		})
 
 		Convey("Scan block with multi pattern but terminated", func() {
 			h.err = errors.New("terminated")
 
-			So(hsScan(db, []byte("abctestdeftest"), 0, s, h, nil), ShouldEqual, ErrScanTerminated)
+			So(hsScan(db, []byte("abctestdeftest"), 0, s, h.Handle, nil), ShouldEqual, ErrScanTerminated)
 			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}})
 		})
 
@@ -538,24 +538,24 @@ func TestVectorScan(t *testing.T) {
 		h := &matchRecorder{}
 
 		Convey("Scan multi block with pattern", func() {
-			So(hsScanVector(db, [][]byte{[]byte("abctestdef"), []byte("abcdef")}, 0, s, h, nil), ShouldBeNil)
+			So(hsScanVector(db, [][]byte{[]byte("abctestdef"), []byte("abcdef")}, 0, s, h.Handle, nil), ShouldBeNil)
 			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}})
 		})
 
 		Convey("Scan multi block without pattern", func() {
-			So(hsScanVector(db, [][]byte{[]byte("123456"), []byte("abcdef")}, 0, s, h, nil), ShouldBeNil)
+			So(hsScanVector(db, [][]byte{[]byte("123456"), []byte("abcdef")}, 0, s, h.Handle, nil), ShouldBeNil)
 			So(h.matched, ShouldBeEmpty)
 		})
 
 		Convey("Scan multi block with multi pattern", func() {
-			So(hsScanVector(db, [][]byte{[]byte("abctestdef"), []byte("123test456")}, 0, s, h, nil), ShouldBeNil)
+			So(hsScanVector(db, [][]byte{[]byte("abctestdef"), []byte("123test456")}, 0, s, h.Handle, nil), ShouldBeNil)
 			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}, {0, 0, 17, 0}})
 		})
 
 		Convey("Scan multi block with multi pattern but terminated", func() {
 			h.err = errors.New("terminated")
 
-			So(hsScanVector(db, [][]byte{[]byte("abctestdef"), []byte("123test456")}, 0, s, h, nil), ShouldEqual, ErrScanTerminated)
+			So(hsScanVector(db, [][]byte{[]byte("abctestdef"), []byte("123test456")}, 0, s, h.Handle, nil), ShouldEqual, ErrScanTerminated)
 			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}})
 		})
 
@@ -589,11 +589,11 @@ func TestStreamScan(t *testing.T) {
 			h := &matchRecorder{}
 
 			Convey("Then scan a simple stream with first part", func() {
-				So(hsScanStream(stream, []byte("abcte"), 0, s, h, nil), ShouldBeNil)
+				So(hsScanStream(stream, []byte("abcte"), 0, s, h.Handle, nil), ShouldBeNil)
 				So(h.matched, ShouldBeNil)
 
 				Convey("When scan second part, should be matched", func() {
-					So(hsScanStream(stream, []byte("stdef"), 0, s, h, nil), ShouldBeNil)
+					So(hsScanStream(stream, []byte("stdef"), 0, s, h.Handle, nil), ShouldBeNil)
 					So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}})
 				})
 
@@ -604,40 +604,40 @@ func TestStreamScan(t *testing.T) {
 					So(err, ShouldBeNil)
 
 					Convey("When copied stream2 scan the second part, should be matched", func() {
-						So(hsScanStream(stream2, []byte("stdef"), 0, s, h, nil), ShouldBeNil)
+						So(hsScanStream(stream2, []byte("stdef"), 0, s, h.Handle, nil), ShouldBeNil)
 						So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}})
 
 						Convey("When copied stream2 scan the second part again, should not be matched", func() {
 							h.matched = nil
-							So(hsScanStream(stream2, []byte("stdef"), 0, s, h, nil), ShouldBeNil)
+							So(hsScanStream(stream2, []byte("stdef"), 0, s, h.Handle, nil), ShouldBeNil)
 							So(h.matched, ShouldBeNil)
 
 							Convey("When copy and reset stream2", func() {
-								So(hsResetAndCopyStream(stream2, stream, s, h, nil), ShouldBeNil)
+								So(hsResetAndCopyStream(stream2, stream, s, h.Handle, nil), ShouldBeNil)
 
 								Convey("When copied and reset stream2 scan the second part again, should be matched", func() {
 									h.matched = nil
-									So(hsScanStream(stream2, []byte("stdef"), 0, s, h, nil), ShouldBeNil)
+									So(hsScanStream(stream2, []byte("stdef"), 0, s, h.Handle, nil), ShouldBeNil)
 									So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}})
 								})
 							})
 						})
 					})
 
-					So(hsCloseStream(stream2, s, h, nil), ShouldBeNil)
+					So(hsCloseStream(stream2, s, h.Handle, nil), ShouldBeNil)
 				})
 
 				Convey("Then reset the stream", func() {
-					So(hsResetStream(stream, 0, s, h, nil), ShouldBeNil)
+					So(hsResetStream(stream, 0, s, h.Handle, nil), ShouldBeNil)
 
 					Convey("When scan the second part, should not be matched", func() {
-						So(hsScanStream(stream, []byte("stdef"), 0, s, h, nil), ShouldBeNil)
+						So(hsScanStream(stream, []byte("stdef"), 0, s, h.Handle, nil), ShouldBeNil)
 						So(h.matched, ShouldBeNil)
 					})
 				})
 			})
 
-			So(hsCloseStream(stream, s, h, nil), ShouldBeNil)
+			So(hsCloseStream(stream, s, h.Handle, nil), ShouldBeNil)
 		})
 
 		So(hsFreeScratch(s), ShouldBeNil)

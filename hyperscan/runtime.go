@@ -72,12 +72,6 @@ type MatchEvent interface {
 
 type MatchHandler hsMatchEventHandler
 
-type MatchHandleFunc hsMatchEventHandleFunc
-
-func (fn MatchHandleFunc) Handle(id uint, from, to uint64, flags uint, context interface{}) error {
-	return fn(id, from, to, flags, context)
-}
-
 // The block (non-streaming) regular expression scanner.
 type BlockScanner interface {
 	// This is the function call in which the actual pattern matching takes place for block-mode pattern databases.
@@ -198,7 +192,7 @@ func (ss *streamScanner) Open(flags ScanFlag, sc *Scratch, handler MatchHandler,
 		return nil, err
 	}
 
-	return &stream{s, flags, sc.s, handler, context}, nil
+	return &stream{s, flags, sc.s, hsMatchEventHandler(handler), context}, nil
 }
 
 type vectoredScanner struct {
@@ -212,7 +206,7 @@ func newVectoredScanner(vdb *vectoredDatabase) *vectoredScanner {
 func (s *vectoredScanner) Close() error { return nil }
 
 func (vs *vectoredScanner) Scan(data [][]byte, s *Scratch, handler MatchHandler, context interface{}) error {
-	err := hsScanVector(vs.vdb.db, data, 0, s.s, handler, context)
+	err := hsScanVector(vs.vdb.db, data, 0, s.s, hsMatchEventHandler(handler), context)
 
 	if err != nil {
 		return err
@@ -230,7 +224,7 @@ func newBlockScanner(bdb *blockDatabase) *blockScanner {
 }
 
 func (bs *blockScanner) Scan(data []byte, s *Scratch, handler MatchHandler, context interface{}) error {
-	err := hsScan(bs.bdb.db, data, 0, s.s, handler, context)
+	err := hsScan(bs.bdb.db, data, 0, s.s, hsMatchEventHandler(handler), context)
 
 	if err != nil {
 		return err
@@ -264,7 +258,7 @@ func (m *blockMatcher) Handle(id uint, from, to uint64, flags uint, context inte
 }
 
 func (m *blockMatcher) scan(data []byte) error {
-	if err := m.scanner.Scan(data, nil, m.handler, nil); err != nil {
+	if err := m.scanner.Scan(data, nil, m.handler.Handle, nil); err != nil {
 		return err
 	}
 

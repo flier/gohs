@@ -83,7 +83,6 @@ type Benchmark struct {
 	streamMap   map[uint64]int           // Map used to construct stream_ids
 	streams     []hyperscan.Stream       // Vector of Hyperscan stream state (used in streaming mode)
 	matchCount  int                      // Count of matches found during scanning
-	handler     hyperscan.MatchHandler
 }
 
 func NewBenchmark(streaming hyperscan.StreamDatabase, block hyperscan.BlockDatabase) (*Benchmark, error) {
@@ -97,16 +96,12 @@ func NewBenchmark(streaming hyperscan.StreamDatabase, block hyperscan.BlockDatab
 		return nil, fmt.Errorf("could not reallocate scratch space, %s", err)
 	}
 
-	bench := &Benchmark{
+	return &Benchmark{
 		dbStreaming: streaming,
 		dbBlock:     block,
 		scratch:     scratch,
 		streamMap:   make(map[uint64]int),
-	}
-
-	bench.handler = hyperscan.MatchHandleFunc(bench.onMatch)
-
-	return bench, nil
+	}, nil
 }
 
 func (b *Benchmark) decodePacket(pkt gopacket.Packet) (key *FiveTuple, payload []byte) {
@@ -245,8 +240,10 @@ func (b *Benchmark) onMatch(id uint, from, to uint64, flags uint, context interf
 func (b *Benchmark) OpenStreams() error {
 	b.streams = make([]hyperscan.Stream, len(b.streamMap))
 
+	var handler hyperscan.MatchHandler = b.onMatch
+
 	for i := 0; i < len(b.streamMap); i++ {
-		stream, err := b.dbStreaming.Open(0, b.scratch, b.handler, nil)
+		stream, err := b.dbStreaming.Open(0, b.scratch, handler, nil)
 
 		if err != nil {
 			return err
@@ -294,9 +291,10 @@ func (b *Benchmark) ScanStreams() error {
 // Scan each packet (in the ordering given in the PCAP file) through Hyperscan using the block-mode interface.
 func (b *Benchmark) ScanBlock() error {
 	var scanner hyperscan.BlockScanner = b.dbBlock
+	var handler hyperscan.MatchHandler = b.onMatch
 
 	for _, pkt := range b.packets {
-		if err := scanner.Scan(pkt, b.scratch, b.handler, nil); err != nil {
+		if err := scanner.Scan(pkt, b.scratch, handler, nil); err != nil {
 			return err
 		}
 	}

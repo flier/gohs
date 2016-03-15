@@ -42,7 +42,7 @@ func Match(pattern string, data []byte) (bool, error) {
 		} else {
 			h := &matchRecorder{}
 
-			if err = hsScan(db, data, 0, scratch, h, nil); err != nil {
+			if err = hsScan(db, data, 0, scratch, h.Handle, nil); err != nil {
 				result = multierror.Append(result, err)
 			}
 
@@ -82,12 +82,12 @@ func MatchReader(pattern string, reader io.Reader) (bool, error) {
 						break
 					} else if err != nil {
 						result = multierror.Append(result, err)
-					} else if err := hsScanStream(stream, buf[:read], 0, scratch, h, nil); err != nil {
+					} else if err := hsScanStream(stream, buf[:read], 0, scratch, h.Handle, nil); err != nil {
 						result = multierror.Append(result, err)
 					}
 				}
 
-				if err := hsCloseStream(stream, scratch, h, nil); err != nil {
+				if err := hsCloseStream(stream, scratch, h.Handle, nil); err != nil {
 					result = multierror.Append(result, err)
 				}
 
