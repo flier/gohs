@@ -139,6 +139,10 @@ type Stream interface {
 	Scan(data []byte) error
 
 	Close() error
+
+	Reset() error
+
+	Clone() (Stream, error)
 }
 
 // The streaming regular expression scanner.
@@ -171,6 +175,18 @@ func (s *stream) Scan(data []byte) error {
 
 func (s *stream) Close() error {
 	return hsCloseStream(s.stream, s.scratch, s.handler, s.context)
+}
+
+func (s *stream) Reset() error {
+	return hsResetStream(s.stream, s.flags, s.scratch, s.handler, s.context)
+}
+
+func (s *stream) Clone() (Stream, error) {
+	if ss, err := hsCopyStream(s.stream); err != nil {
+		return nil, err
+	} else {
+		return &stream{ss, s.flags, s.scratch, s.handler, s.context}, nil
+	}
 }
 
 type streamScanner struct {

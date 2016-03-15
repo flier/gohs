@@ -47,6 +47,7 @@ import (
 var (
 	repeatCount = flag.Int("n", 1, "Repeating PCAP scan several times")
 	cpuprofile  = flag.String("cpuprofile", "", "write cpu profile to file")
+	memprofile  = flag.String("memprofile", "", "write memory profile to this file")
 )
 
 type FiveTuple struct {
@@ -82,6 +83,7 @@ type Benchmark struct {
 	streamMap   map[uint64]int           // Map used to construct stream_ids
 	streams     []hyperscan.Stream       // Vector of Hyperscan stream state (used in streaming mode)
 	matchCount  int                      // Count of matches found during scanning
+	handler     hyperscan.MatchHandler
 }
 
 func NewBenchmark(streaming hyperscan.StreamDatabase, block hyperscan.BlockDatabase) (*Benchmark, error) {
@@ -95,12 +97,16 @@ func NewBenchmark(streaming hyperscan.StreamDatabase, block hyperscan.BlockDatab
 		return nil, fmt.Errorf("could not reallocate scratch space, %s", err)
 	}
 
-	return &Benchmark{
+	bench := &Benchmark{
 		dbStreaming: streaming,
 		dbBlock:     block,
 		scratch:     scratch,
 		streamMap:   make(map[uint64]int),
-	}, nil
+	}
+
+	bench.handler = hyperscan.MatchHandleFunc(bench.onMatch)
+
+	return bench, nil
 }
 
 // Read a set of streams from a pcap file
@@ -221,50 +227,61 @@ func (b *Benchmark) onMatch(id uint, from, to uint64, flags uint, context interf
 }
 
 // Open a Hyperscan stream for each stream in stream_ids
-func (b *Benchmark) OpenStreams() {
+func (b *Benchmark) OpenStreams() error {
 	b.streams = make([]hyperscan.Stream, len(b.streamMap))
 
-	handler := hyperscan.MatchHandleFunc(b.onMatch)
-
 	for i := 0; i < len(b.streamMap); i++ {
-		stream, err := b.dbStreaming.Open(0, b.scratch, handler, nil)
+		stream, err := b.dbStreaming.Open(0, b.scratch, b.handler, nil)
 
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR: Unable to open stream, %s. Exiting.", err)
-			os.Exit(-1)
+			return err
 		}
 
 		b.streams[i] = stream
 	}
+
+	return nil
 }
 
 // Close all open Hyperscan streams (potentially generating any end-anchored matches)
-func (b *Benchmark) CloseStreams() {
+func (b *Benchmark) CloseStreams() error {
 	for _, stream := range b.streams {
 		if err := stream.Close(); err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR: Unable to close stream, %s. Exiting.", err)
-			os.Exit(-1)
+			return err
 		}
 	}
+
+	return nil
+}
+
+// Reset all open Hyperscan streams (potentially generating any end-anchored matches)
+func (b *Benchmark) ResetStreams() error {
+	for _, stream := range b.streams {
+		if err := stream.Reset(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Scan each packet (in the ordering given in the PCAP file) through Hyperscan using the streaming interface.
-func (b *Benchmark) ScanStreams() {
+func (b *Benchmark) ScanStreams() error {
 	for i, pkt := range b.packets {
 		if len(pkt) == 0 {
 			continue
 		}
 
 		if err := b.streams[b.streamIds[i]].Scan(pkt); err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR: Unable to scan packet, %s. Exiting.", err)
-			os.Exit(-1)
+			return err
 		}
 	}
+
+	return nil
 }
 
 // Scan each packet (in the ordering given in the PCAP file) through Hyperscan using the block-mode interface.
-func (b *Benchmark) ScanBlock() {
-	var handler hyperscan.MatchHandler = hyperscan.MatchHandleFunc(b.onMatch)
+func (b *Benchmark) ScanBlock() error {
 	var scanner hyperscan.BlockScanner = b.dbBlock
 
 	for _, pkt := range b.packets {
@@ -272,11 +289,12 @@ func (b *Benchmark) ScanBlock() {
 			continue
 		}
 
-		if err := scanner.Scan(pkt, b.scratch, handler, nil); err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR: Unable to scan packet, %s. Exiting.", err)
-			os.Exit(-1)
+		if err := scanner.Scan(pkt, b.scratch, b.handler, nil); err != nil {
+			return err
 		}
 	}
+
+	return nil
 }
 
 // Simple timing class
@@ -444,28 +462,47 @@ func main() {
 	var clock Clock
 	var secsStreamingScan, secsStreamingOpenClose time.Duration
 
+	// Open streams.
+	clock.Start()
+	if err := bench.OpenStreams(); err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: Unable to open stream, %s. Exiting.", err)
+		os.Exit(-1)
+	}
+	clock.Stop()
+
+	secsStreamingOpenClose += clock.Time()
+
 	// Streaming mode scans.
 	for i := 0; i < *repeatCount; i++ {
-		// Open streams.
-		clock.Start()
-		bench.OpenStreams()
-		clock.Stop()
-
-		secsStreamingOpenClose += clock.Time()
+		if i > 0 {
+			clock.Start()
+			if err := bench.ResetStreams(); err != nil {
+				fmt.Fprintf(os.Stderr, "ERROR: Unable to reset stream, %s. Exiting.", err)
+				os.Exit(-1)
+			}
+			clock.Stop()
+			secsStreamingOpenClose += clock.Time()
+		}
 
 		// Scan all our packets in streaming mode.
 		clock.Start()
-		bench.ScanStreams()
+		if err := bench.ScanStreams(); err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: Unable to scan packet, %s. Exiting.", err)
+			os.Exit(-1)
+		}
 		clock.Stop()
 
 		secsStreamingScan += clock.Time()
-
-		// Close streams.
-		clock.Start()
-		bench.CloseStreams()
-		clock.Stop()
-		secsStreamingOpenClose += clock.Time()
 	}
+
+	// Close streams.
+	clock.Start()
+	if err := bench.CloseStreams(); err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: Unable to close stream, %s. Exiting.", err)
+		os.Exit(-1)
+	}
+	clock.Stop()
+	secsStreamingOpenClose += clock.Time()
 
 	// Collect data from streaming mode scans.
 	bytes := bench.Bytes()
@@ -479,11 +516,24 @@ func main() {
 
 	clock.Start()
 	for i := 0; i < *repeatCount; i++ {
-		bench.ScanBlock()
+		if err := bench.ScanBlock(); err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: Unable to scan packet, %s. Exiting.", err)
+			os.Exit(-1)
+		}
 	}
 	clock.Stop()
 
 	secsScanBlock := clock.Time()
+
+	if *memprofile != "" {
+		if f, err := os.Create(*memprofile); err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: Unable to write memory profile to file, %s. Exiting.", err)
+			os.Exit(-1)
+		} else {
+			pprof.WriteHeapProfile(f)
+			f.Close()
+		}
+	}
 
 	// Collect data from block mode scans.
 	tputBlockScanning := float64(bytes*8**repeatCount) / secsScanBlock.Seconds()
