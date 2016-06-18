@@ -13,6 +13,8 @@ import (
 #cgo pkg-config: libhs
 
 #include <limits.h>
+#include <stdint.h>
+
 #include <hs.h>
 
 #define DEFINE_ALLOCTOR(ID, TYPE) \
