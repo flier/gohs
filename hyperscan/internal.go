@@ -12,8 +12,29 @@ import (
 #cgo LDFLAGS: -lstdc++
 #cgo pkg-config: libhs
 
+#include <stdlib.h>
 #include <limits.h>
 #include <hs.h>
+
+static inline void* aligned64_malloc(size_t size) {
+	void* result;
+	#ifdef _WIN32
+	result = _aligned_malloc(size, 64);
+	#else
+	if (posix_memalign(&result, 64, size)) {
+		result = 0;
+	}
+	#endif
+	return result;
+}
+
+static inline void aligned64_free(void *ptr) {
+	#ifdef _WIN32
+		_aligned_free(ptr);
+	#else
+		free(ptr);
+	#endif
+}
 
 #define DEFINE_ALLOCTOR(ID, TYPE) \
 	extern void *hs ## ID ## Alloc(size_t size); \
@@ -326,17 +347,11 @@ var (
 )
 
 func hsDefaultAlloc(size uint) unsafe.Pointer {
-	var ptr unsafe.Pointer
-
-	if ret := C.posix_memalign(&ptr, 64, C.size_t(size)); ret == 0 {
-		return ptr
-	}
-
-	return nil
+	return C.aligned64_malloc(C.size_t(size))
 }
 
 func hsDefaultFree(ptr unsafe.Pointer) {
-	C.free(ptr)
+	C.aligned64_free(ptr)
 }
 
 //export hsDbAlloc
