@@ -9,10 +9,11 @@ import (
 )
 
 /*
-#cgo LDFLAGS: -lstdc++
-#cgo pkg-config: libhs
+#cgo pkg-config: libhs --static
 
 #include <limits.h>
+#include <stdint.h>
+
 #include <hs.h>
 
 #define DEFINE_ALLOCTOR(ID, TYPE) \
