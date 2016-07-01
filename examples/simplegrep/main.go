@@ -88,7 +88,7 @@ func main() {
 	if !*flagNoColor {
 		stat, _ := os.Stdout.Stat()
 
-		if stat.Mode()&os.ModeType != 0 {
+		if stat != nil && stat.Mode()&os.ModeType != 0 {
 			theme = highlight
 		}
 	}
