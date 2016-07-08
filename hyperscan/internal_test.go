@@ -210,14 +210,14 @@ func TestDatabase(t *testing.T) {
 		Convey("Get the database size", func() {
 			size, err := hsDatabaseSize(db)
 
-			So(size, ShouldEqual, 1000)
+			So(size, ShouldBeGreaterThan, 800)
 			So(err, ShouldBeNil)
 		})
 
 		Convey("Get the stream size", func() {
 			size, err := hsStreamSize(db)
 
-			So(size, ShouldEqual, 24)
+			So(size, ShouldBeGreaterThan, 20)
 			So(err, ShouldBeNil)
 		})
 
@@ -237,7 +237,7 @@ func TestDatabase(t *testing.T) {
 			data, err := hsSerializeDatabase(db)
 
 			So(data, ShouldNotBeNil)
-			So(len(data), ShouldEqual, 1000)
+			So(len(data), ShouldBeGreaterThan, 800)
 			So(err, ShouldBeNil)
 
 			Convey("Get the database info", func() {
@@ -250,7 +250,7 @@ func TestDatabase(t *testing.T) {
 			Convey("Get the database size", func() {
 				size, err := hsSerializedDatabaseSize(data)
 
-				So(size, ShouldEqual, 1000)
+				So(size, ShouldBeGreaterThan, 800)
 				So(err, ShouldBeNil)
 			})
 
