@@ -10,6 +10,8 @@ import (
 
 /*
 #cgo pkg-config: libhs --static
+#cgo linux LDFLAGS: -lm -lstdc++
+#cgo darwin LDFLAGS: -lstdc++
 
 #include <stdlib.h>
 #include <limits.h>
@@ -219,7 +221,7 @@ func (m ModeFlag) String() string {
 	case VectoredMode:
 		return "VECTORED"
 	default:
-		panic(fmt.Sprintf("unknown mode: %v", m))
+		panic(fmt.Sprintf("unknown mode: %d", m))
 	}
 }
 
