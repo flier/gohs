@@ -853,6 +853,10 @@ func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, data C.
 }
 
 func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
+	if len(data) == 0 {
+		return HsError(C.HS_INVALID)
+	}
+
 	ctxt := &hsMatchEventContext{onEvent, context}
 
 	ret := C.hs_scan_cgo(C.uintptr_t(uintptr(unsafe.Pointer(db))), C.uintptr_t(uintptr(unsafe.Pointer(&data[0]))), C.uint(len(data)),
@@ -866,10 +870,18 @@ func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEve
 }
 
 func hsScanVector(db hsDatabase, data [][]byte, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
+	if len(data) == 0 {
+		return HsError(C.HS_INVALID)
+	}
+
 	cdata := make([]uintptr, len(data))
 	clength := make([]C.uint, len(data))
 
 	for i, d := range data {
+		if len(d) == 0 {
+			return HsError(C.HS_INVALID)
+		}
+
 		cdata[i] = uintptr(unsafe.Pointer(&d[0]))
 		clength[i] = C.uint(len(d))
 	}
@@ -897,6 +909,10 @@ func hsOpenStream(db hsDatabase, flags ScanFlag) (hsStream, error) {
 }
 
 func hsScanStream(stream hsStream, data []byte, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
+	if len(data) == 0 {
+		return HsError(C.HS_INVALID)
+	}
+
 	ctxt := &hsMatchEventContext{onEvent, context}
 
 	ret := C.hs_scan_stream_cgo(C.uintptr_t(uintptr(unsafe.Pointer(stream))), C.uintptr_t(uintptr(unsafe.Pointer(&data[0]))), C.uint(len(data)),
