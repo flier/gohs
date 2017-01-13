@@ -66,13 +66,13 @@ func TestBaseDatabase(t *testing.T) {
 			})
 
 			Convey("Then deserialize database", func() {
-				db, err := UnmarshalDatabase(data)
+				db, err := UnmarshalBlockDatabase(data)
 
 				So(err, ShouldBeNil)
 				So(db, ShouldNotBeNil)
 
 				Convey("When get info", func() {
-					info, err := bdb.Info()
+					info, err := db.Info()
 
 					So(err, ShouldBeNil)
 					So(info, ShouldNotBeNil)

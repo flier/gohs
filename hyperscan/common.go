@@ -94,6 +94,39 @@ func UnmarshalDatabase(data []byte) (Database, error) {
 	return &baseDatabase{db}, nil
 }
 
+// Utility function for reconstructing a block database from a stream of bytes.
+func UnmarshalBlockDatabase(data []byte) (BlockDatabase, error) {
+	db, err := hsDeserializeDatabase(data)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return newBlockDatabase(db)
+}
+
+// Utility function for reconstructing a stream database from a stream of bytes.
+func UnmarshalStreamDatabase(data []byte) (StreamDatabase, error) {
+	db, err := hsDeserializeDatabase(data)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return newStreamDatabase(db)
+}
+
+// Utility function for reconstructing a vectored database from a stream of bytes.
+func UnmarshalVectoredDatabase(data []byte) (VectoredDatabase, error) {
+	db, err := hsDeserializeDatabase(data)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return newVectoredDatabase(db)
+}
+
 // Utility function for reporting the size that would be required by a database if it were deserialized.
 func SerializedDatabaseSize(data []byte) (int, error) { return hsSerializedDatabaseSize(data) }
 
