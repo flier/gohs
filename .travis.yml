@@ -24,6 +24,7 @@ go:
 
 install:
     - go get -v github.com/hashicorp/go-multierror
+    - go get -v github.com/google/gopacket
     - go get -v github.com/smartystreets/goconvey/convey
 
 before_install:
