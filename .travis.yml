@@ -1,0 +1,59 @@
+sudo: false
+
+language: go
+
+os:
+  - linux
+  - osx
+
+addons:
+  apt:
+    sources:
+      - george-edison55-precise-backports # cmake 3.2.3 / doxygen 1.8.3
+      - ubuntu-toolchain-r-test # gcc-4.8 / g++-4.8
+    packages:
+      - cmake
+      - cmake-data
+      - g++
+      - gcc-4.8
+      - g++-4.8
+      - pkg-config
+      - ragel
+      - libbz2-dev
+      - libpcap-dev
+      - tree
+
+go:
+  - 1.6
+  - 1.7.x
+  - 1.8.x
+  - master
+
+install:
+  - go get -v github.com/hashicorp/go-multierror
+  - go get -v github.com/smartystreets/goconvey/convey
+
+before_install:
+  - .travis/setup-travis.sh
+
+before_script:
+  - .travis/build-hyperscan.sh
+
+script:
+  - go test ./...
+
+env:
+  global:
+    - BOOST_VERSION_MINOR=63
+    - BOOST_ROOT=$HOME/boost-1.$BOOST_VERSION_MINOR
+    - HYPERSCAN_VERSION=4.4.0
+    - HYPERSCAN_ROOT=$HOME/hyperscan-$HYPERSCAN_VERSION
+
+after_failure:
+  - echo `pwd`
+  - tree -h
+
+cache:
+  directories:
+    - $BOOST_ROOT
+    - $HYPERSCAN_ROOT
