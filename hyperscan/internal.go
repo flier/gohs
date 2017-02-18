@@ -901,7 +901,7 @@ func hsScanVector(db hsDatabase, data [][]byte, flags ScanFlag, scratch hsScratc
 func hsOpenStream(db hsDatabase, flags ScanFlag) (hsStream, error) {
 	var stream *C.hs_stream_t
 
-	if ret := C.hs_open_stream(unsafe.Pointer(db), C.uint(flags), &stream); ret != C.HS_SUCCESS {
+	if ret := C.hs_open_stream(db, C.uint(flags), &stream); ret != C.HS_SUCCESS {
 		return nil, HsError(ret)
 	}
 
