@@ -13,14 +13,11 @@ addons:
         - g++-4.8
         - pkg-config
         - ragel
-        - libbz2-dev
-        - libpcap-dev
         - tree
 
 language: go
 
 go:
-    - 1.6
     - 1.7.x
     - 1.8.x
     - master
