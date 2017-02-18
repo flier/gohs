@@ -24,7 +24,7 @@ if [ ! -f "$HYPERSCAN_ROOT/lib/libhs.a" ]; then
 else
 	echo "Using cached hyperscan v${HYPERSCAN_VERSION} @ ${HYPERSCAN_ROOT}.";
 
-	cd hyperscan-$HYPERSCAN_VERSION
+	cd $HYPERSCAN_ROOT
 
 	make install
 fi
