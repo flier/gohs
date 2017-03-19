@@ -20,6 +20,7 @@ else
 
 	if [ ! -f "$BOOST_ROOT/lib/libboost_graph.a" ]; then
 		wget http://downloads.sourceforge.net/project/boost/boost/1.$BOOST_VERSION_MINOR.0/boost_1_$BOOST_VERSION_MINOR\_0.tar.gz -O /tmp/boost.tar.gz
+		mkdir /tmp/boost
 		tar -xzf /tmp/boost.tar.gz -C /tmp/boost --strip-components 1
 		cd /tmp/boost
 		./bootstrap.sh
