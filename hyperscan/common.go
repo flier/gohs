@@ -45,7 +45,7 @@ type VectoredDatabase interface {
 }
 
 var (
-	regexInfo = regexp.MustCompile(`^Version: (\d+\.\d+\.\d+) Features: ([\w\s]+) Mode: (\w+)$`)
+	regexInfo = regexp.MustCompile(`^Version: (\d+\.\d+\.\d+) Features: ([\w\s]+)? Mode: (\w+)$`)
 )
 
 // The version and platform information for the supplied database
