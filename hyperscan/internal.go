@@ -248,6 +248,8 @@ const (
 	ErrDatabaseModeError     HsError = C.HS_DB_MODE_ERROR     // The given database was built for a different mode of operation.
 	ErrBadAlign              HsError = C.HS_BAD_ALIGN         // A parameter passed to this function was not correctly aligned.
 	ErrBadAlloc              HsError = C.HS_BAD_ALLOC         // The memory allocator did not correctly return memory suitably aligned.
+	ErrScratchInUse          HsError = C.HS_SCRATCH_IN_USE    // The scratch region was already in use.
+	ErrArchError             HsError = C.HS_ARCH_ERROR        // Unsupported CPU architecture.
 )
 
 var (
@@ -262,6 +264,8 @@ var (
 		C.HS_DB_MODE_ERROR:     "The given database was built for a different mode of operation.",
 		C.HS_BAD_ALIGN:         "A parameter passed to this function was not correctly aligned.",
 		C.HS_BAD_ALLOC:         "The memory allocator did not correctly return aligned memory.",
+		C.HS_SCRATCH_IN_USE:    "The scratch region was already in use.",
+		C.HS_ARCH_ERROR:        "Unsupported CPU architecture.",
 	}
 )
 
