@@ -101,7 +101,7 @@ import "C"
 type CompileFlag uint
 
 const (
-	Caseless        CompileFlag = C.HS_FLAG_CASELESS     // Set case-insensitive matching.
+	Caseless        CompileFlag = C.HS_FLAG_CASELESS
 	DotAll          CompileFlag = C.HS_FLAG_DOTALL       // Matching a `.` will not exclude newlines.
 	MultiLine       CompileFlag = C.HS_FLAG_MULTILINE    // Set multi-line anchoring.
 	SingleMatch     CompileFlag = C.HS_FLAG_SINGLEMATCH  // Set single-match only mode.
@@ -228,9 +228,14 @@ func (m ModeFlag) String() string {
 type ExtFlag uint
 
 const (
+	// MinOffset is a flag indicating that the ExprExt.MinOffset field is used.
 	MinOffset ExtFlag = C.HS_EXT_FLAG_MIN_OFFSET
-	MaxOffset         = C.HS_EXT_FLAG_MAX_OFFSET
-	MinLength         = C.HS_EXT_FLAG_MIN_LENGTH
+	// MaxOffset is a flag indicating that the ExprExt.MaxOffset field is used.
+	MaxOffset = C.HS_EXT_FLAG_MAX_OFFSET
+	// MinLength is a flag indicating that the ExprExt.MinLength field is used.
+	MinLength = C.HS_EXT_FLAG_MIN_LENGTH
+	// EditDistance is a flag indicating that the ExprExt.EditDistance field is used.
+	EditDistance = C.HS_EXT_FLAG_EDIT_DISTANCE
 )
 
 type ScanFlag uint
@@ -238,18 +243,30 @@ type ScanFlag uint
 type HsError int
 
 const (
-	ErrSuccess               HsError = C.HS_SUCCESS           // The engine completed normally.
-	ErrInvalid               HsError = C.HS_INVALID           // A parameter passed to this function was invalid.
-	ErrNoMemory              HsError = C.HS_NOMEM             // A memory allocation failed.
-	ErrScanTerminated        HsError = C.HS_SCAN_TERMINATED   // The engine was terminated by callback.
-	ErrCompileError          HsError = C.HS_COMPILER_ERROR    // The pattern compiler failed.
-	ErrDatabaseVersionError  HsError = C.HS_DB_VERSION_ERROR  // The given database was built for a different version of Hyperscan.
-	ErrDatabasePlatformError HsError = C.HS_DB_PLATFORM_ERROR // The given database was built for a different platform (i.e., CPU type).
-	ErrDatabaseModeError     HsError = C.HS_DB_MODE_ERROR     // The given database was built for a different mode of operation.
-	ErrBadAlign              HsError = C.HS_BAD_ALIGN         // A parameter passed to this function was not correctly aligned.
-	ErrBadAlloc              HsError = C.HS_BAD_ALLOC         // The memory allocator did not correctly return memory suitably aligned.
-	ErrScratchInUse          HsError = C.HS_SCRATCH_IN_USE    // The scratch region was already in use.
-	ErrArchError             HsError = C.HS_ARCH_ERROR        // Unsupported CPU architecture.
+	// ErrSuccess is the error returned if the engine completed normally.
+	ErrSuccess HsError = C.HS_SUCCESS
+	// ErrInvalid is the error returned if a parameter passed to this function was invalid.
+	ErrInvalid = C.HS_INVALID
+	// ErrNoMemory is the error returned if a memory allocation failed.
+	ErrNoMemory = C.HS_NOMEM
+	// ErrScanTerminated is the error returned if the engine was terminated by callback.
+	ErrScanTerminated = C.HS_SCAN_TERMINATED
+	// ErrCompileError is the error returned if the pattern compiler failed.
+	ErrCompileError = C.HS_COMPILER_ERROR
+	// ErrDatabaseVersionError is the error returned if the given database was built for a different version of Hyperscan.
+	ErrDatabaseVersionError = C.HS_DB_VERSION_ERROR
+	// ErrDatabasePlatformError is the error returned if the given database was built for a different platform (i.e., CPU type).
+	ErrDatabasePlatformError = C.HS_DB_PLATFORM_ERROR
+	// ErrDatabaseModeError is the error returned if the given database was built for a different mode of operation.
+	ErrDatabaseModeError = C.HS_DB_MODE_ERROR
+	// ErrBadAlign is the error returned if a parameter passed to this function was not correctly aligned.
+	ErrBadAlign = C.HS_BAD_ALIGN
+	// ErrBadAlloc is the error returned if the memory allocator did not correctly return memory suitably aligned.
+	ErrBadAlloc = C.HS_BAD_ALLOC
+	// ErrScratchInUse is the error returned if the scratch region was already in use.
+	ErrScratchInUse = C.HS_SCRATCH_IN_USE
+	// ErrArchError is the error returned if unsupported CPU architecture.
+	ErrArchError = C.HS_ARCH_ERROR
 )
 
 var (
@@ -332,9 +349,18 @@ type ExprInfo struct {
 // If the pattern expression has an unbounded maximum width
 const UnboundedMaxWidth = C.UINT_MAX
 
+// ExprExt is a structure containing additional parameters related to an expression.
 type ExprExt struct {
-	Flags                           ExtFlag
-	MinOffset, MaxOffset, MinLength uint64
+	// Flags governing which parts of this structure are to be used by the compiler.
+	Flags ExtFlag
+	// The minimum end offset in the data stream at which this expression should match successfully.
+	MinOffset uint64
+	// The maximum end offset in the data stream at which this expression should match successfully.
+	MaxOffset uint64
+	// The minimum match length (from start to end) required to successfully match this expression.
+	MinLength uint64
+	// Allow patterns to approximately match within this edit distance.
+	EditDistance uint
 }
 
 type hsAllocFunc func(uint) unsafe.Pointer
@@ -507,6 +533,14 @@ func hsClearStreamAllocator() error {
 
 func hsVersion() string {
 	return C.GoString(C.hs_version())
+}
+
+func hsValidPlatform() error {
+	if ret := C.hs_valid_platform(); ret != C.HS_SUCCESS {
+		return HsError(ret)
+	}
+
+	return nil
 }
 
 func hsFreeDatabase(db hsDatabase) error {
@@ -732,6 +766,7 @@ func hsCompileExtMulti(expressions []string, flags []CompileFlag, ids []uint, ex
 			values[i].min_offset = C.ulonglong(ext.MinOffset)
 			values[i].max_offset = C.ulonglong(ext.MaxOffset)
 			values[i].min_length = C.ulonglong(ext.MinLength)
+			values[i].edit_distance = C.uint(ext.EditDistance)
 			ptrs[i] = uintptr(unsafe.Pointer(&values[i]))
 		}
 
