@@ -22,6 +22,7 @@ language: go
 go:
     - 1.7.x
     - 1.8.x
+    - 1.9.x
     - master
 
 install:
@@ -42,7 +43,7 @@ env:
     global:
         - BOOST_VERSION_MINOR=63
         - BOOST_ROOT=$HOME/boost-1.$BOOST_VERSION_MINOR
-        - HYPERSCAN_VERSION=4.4.0
+        - HYPERSCAN_VERSION=4.5.2
         - HYPERSCAN_ROOT=$HOME/hyperscan-$HYPERSCAN_VERSION
         - PKG_CONFIG_PATH=$HYPERSCAN_ROOT/lib/pkgconfig:$BOOST_ROOT/lib/pkgconfig
         - DYLD_LIBRARY_PATH=$HYPERSCAN_ROOT/lib:$BOOST_ROOT/lib

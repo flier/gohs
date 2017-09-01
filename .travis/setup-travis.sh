@@ -10,7 +10,7 @@ if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
 	brew install ragel
 	brew install tree
 else
-	mkdir $HOME/bin
+	mkdir -p $HOME/bin
 
 	ln -s /usr/bin/g++-4.8 $HOME/bin/g++
 	ln -s /usr/bin/gcc-4.8 $HOME/bin/gcc
@@ -20,7 +20,7 @@ else
 
 	if [ ! -f "$BOOST_ROOT/lib/libboost_graph.a" ]; then
 		wget http://downloads.sourceforge.net/project/boost/boost/1.$BOOST_VERSION_MINOR.0/boost_1_$BOOST_VERSION_MINOR\_0.tar.gz -O /tmp/boost.tar.gz
-		mkdir /tmp/boost
+		mkdir -p /tmp/boost
 		tar -xzf /tmp/boost.tar.gz -C /tmp/boost --strip-components 1
 		cd /tmp/boost
 		./bootstrap.sh
