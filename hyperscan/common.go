@@ -72,8 +72,12 @@ func (i DbInfo) Mode() (ModeFlag, error) {
 	return ParseModeFlag(matched[3])
 }
 
-// Utility function for identifying this release version.
+// Version identify this release version. The return version is a string
+// containing the version number of this release build and the date of the build.
 func Version() string { return hsVersion() }
+
+// ValidPlatform test the current system architecture.
+func ValidPlatform() error { return hsValidPlatform() }
 
 type database interface {
 	Db() hsDatabase
@@ -83,7 +87,7 @@ type baseDatabase struct {
 	db hsDatabase
 }
 
-// Utility function for reconstructing a pattern database from a stream of bytes.
+// UnmarshalDatabase reconstruct a pattern database from a stream of bytes.
 func UnmarshalDatabase(data []byte) (Database, error) {
 	db, err := hsDeserializeDatabase(data)
 
@@ -94,7 +98,7 @@ func UnmarshalDatabase(data []byte) (Database, error) {
 	return &baseDatabase{db}, nil
 }
 
-// Utility function for reconstructing a block database from a stream of bytes.
+// UnmarshalBlockDatabase reconstruct a block database from a stream of bytes.
 func UnmarshalBlockDatabase(data []byte) (BlockDatabase, error) {
 	db, err := hsDeserializeDatabase(data)
 
@@ -105,7 +109,7 @@ func UnmarshalBlockDatabase(data []byte) (BlockDatabase, error) {
 	return newBlockDatabase(db)
 }
 
-// Utility function for reconstructing a stream database from a stream of bytes.
+// UnmarshalStreamDatabase reconstruct a stream database from a stream of bytes.
 func UnmarshalStreamDatabase(data []byte) (StreamDatabase, error) {
 	db, err := hsDeserializeDatabase(data)
 
@@ -116,7 +120,7 @@ func UnmarshalStreamDatabase(data []byte) (StreamDatabase, error) {
 	return newStreamDatabase(db)
 }
 
-// Utility function for reconstructing a vectored database from a stream of bytes.
+// UnmarshalVectoredDatabase reconstruct a vectored database from a stream of bytes.
 func UnmarshalVectoredDatabase(data []byte) (VectoredDatabase, error) {
 	db, err := hsDeserializeDatabase(data)
 
@@ -127,10 +131,10 @@ func UnmarshalVectoredDatabase(data []byte) (VectoredDatabase, error) {
 	return newVectoredDatabase(db)
 }
 
-// Utility function for reporting the size that would be required by a database if it were deserialized.
+// SerializedDatabaseSize reports the size that would be required by a database if it were deserialized.
 func SerializedDatabaseSize(data []byte) (int, error) { return hsSerializedDatabaseSize(data) }
 
-// Utility function providing information about a serialized database.
+// SerializedDatabaseInfo provides information about a serialized database.
 func SerializedDatabaseInfo(data []byte) (DbInfo, error) {
 	i, err := hsSerializedDatabaseInfo(data)
 
