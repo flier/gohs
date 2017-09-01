@@ -165,23 +165,39 @@ func (flags CompileFlag) String() string {
 	return strings.Join(values, "")
 }
 
-// CPU feature support flags
+// CpuFeature is the CPU feature support flags
 type CpuFeature int
 
 const (
-	AVX2 CpuFeature = C.HS_CPU_FEATURES_AVX2 // Intel(R) Advanced Vector Extensions 2 (Intel(R) AVX2)
+	// AVX2 is a CPU features flag indicates that the target platform supports AVX2 instructions.
+	AVX2 CpuFeature = C.HS_CPU_FEATURES_AVX2
+	// AVX512 is a CPU features flag indicates that the target platform supports AVX512 instructions,
+	// specifically AVX-512BW. Using AVX512 implies the use of AVX2.
+	AVX512 = C.HS_CPU_FEATURES_AVX512
 )
 
-// Tuning flags
+// TuneFlag is the tuning flags
 type TuneFlag int
 
 const (
-	Generic     TuneFlag = C.HS_TUNE_FAMILY_GENERIC // Generic
-	SandyBridge TuneFlag = C.HS_TUNE_FAMILY_SNB     // Intel(R) microarchitecture code name Sandy Bridge
-	IvyBridge   TuneFlag = C.HS_TUNE_FAMILY_IVB     // Intel(R) microarchitecture code name Ivy Bridge
-	Haswell     TuneFlag = C.HS_TUNE_FAMILY_HSW     // Intel(R) microarchitecture code name Haswell
-	Silvermont  TuneFlag = C.HS_TUNE_FAMILY_SLM     // Intel(R) microarchitecture code name Silvermont
-	Broadwell   TuneFlag = C.HS_TUNE_FAMILY_BDW     // Intel(R) microarchitecture code name Broadwell
+	// Genericindicates that the compiled database should not be tuned for any particular target platform.
+	Generic TuneFlag = C.HS_TUNE_FAMILY_GENERIC
+	// SandyBridge indicates that the compiled database should be tuned for the Sandy Bridge microarchitecture.
+	SandyBridge = C.HS_TUNE_FAMILY_SNB
+	// IvyBridge indicates that the compiled database should be tuned for the Ivy Bridge microarchitecture.
+	IvyBridge = C.HS_TUNE_FAMILY_IVB
+	// Haswell indicates that the compiled database should be tuned for the Haswell microarchitecture.
+	Haswell = C.HS_TUNE_FAMILY_HSW
+	// Silvermont indicates that the compiled database should be tuned for the Silvermont microarchitecture.
+	Silvermont = C.HS_TUNE_FAMILY_SLM
+	// Broadwell indicates that the compiled database should be tuned for the Broadwell microarchitecture.
+	Broadwell = C.HS_TUNE_FAMILY_BDW
+	// Skylake indicates that the compiled database should be tuned for the Skylake microarchitecture.
+	Skylake = C.HS_TUNE_FAMILY_SKL
+	// SkylakeServer indicates that the compiled database should be tuned for the Skylake Server microarchitecture.
+	SkylakeServer = C.HS_TUNE_FAMILY_SKX
+	// Goldmont indicates that the compiled database should be tuned for the Goldmont microarchitecture.
+	Goldmont = C.HS_TUNE_FAMILY_GLM
 )
 
 // Compile mode flags
