@@ -8,6 +8,8 @@ import (
 
 func TestBaseDatabase(t *testing.T) {
 	Convey("Given a block database", t, func() {
+		So(ValidPlatform(), ShouldBeNil)
+
 		bdb, err := NewBlockDatabase(&Pattern{Expression: "test"})
 
 		So(err, ShouldBeNil)

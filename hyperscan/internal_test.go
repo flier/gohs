@@ -351,6 +351,7 @@ func TestCompileAPI(t *testing.T) {
 				{Flags: MinOffset, MinOffset: 10},
 				{Flags: MaxOffset, MaxOffset: 10},
 				{Flags: MinLength, MinLength: 10},
+				{Flags: EditDistance, EditDistance: 10},
 			}
 			db, err := hsCompileExtMulti([]string{`^\w+`, `\d+`, `\s+`}, nil, []uint{1, 2, 3}, exts, StreamMode, platform)
 
