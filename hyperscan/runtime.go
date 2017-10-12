@@ -192,6 +192,14 @@ func (ss *streamScanner) Open(flags ScanFlag, sc *Scratch, handler MatchHandler,
 		return nil, err
 	}
 
+	if sc == nil {
+		sc, err = NewScratch(ss.sdb)
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &stream{s, flags, sc.s, hsMatchEventHandler(handler), context}, nil
 }
 
@@ -205,8 +213,16 @@ func newVectoredScanner(vdb *vectoredDatabase) *vectoredScanner {
 
 func (s *vectoredScanner) Close() error { return nil }
 
-func (vs *vectoredScanner) Scan(data [][]byte, s *Scratch, handler MatchHandler, context interface{}) error {
-	err := hsScanVector(vs.vdb.db, data, 0, s.s, hsMatchEventHandler(handler), context)
+func (vs *vectoredScanner) Scan(data [][]byte, s *Scratch, handler MatchHandler, context interface{}) (err error) {
+	if s == nil {
+		s, err = NewScratch(vs.vdb)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	err = hsScanVector(vs.vdb.db, data, 0, s.s, hsMatchEventHandler(handler), context)
 
 	if err != nil {
 		return err
@@ -223,8 +239,16 @@ func newBlockScanner(bdb *blockDatabase) *blockScanner {
 	return &blockScanner{bdb}
 }
 
-func (bs *blockScanner) Scan(data []byte, s *Scratch, handler MatchHandler, context interface{}) error {
-	err := hsScan(bs.bdb.db, data, 0, s.s, hsMatchEventHandler(handler), context)
+func (bs *blockScanner) Scan(data []byte, s *Scratch, handler MatchHandler, context interface{}) (err error) {
+	if s == nil {
+		s, err = NewScratch(bs.bdb)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	err = hsScan(bs.bdb.db, data, 0, s.s, hsMatchEventHandler(handler), context)
 
 	if err != nil {
 		return err
