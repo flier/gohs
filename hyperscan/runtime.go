@@ -198,6 +198,8 @@ func (ss *streamScanner) Open(flags ScanFlag, sc *Scratch, handler MatchHandler,
 		if err != nil {
 			return nil, err
 		}
+
+		go sc.Free()
 	}
 
 	return &stream{s, flags, sc.s, hsMatchEventHandler(handler), context}, nil
@@ -220,6 +222,8 @@ func (vs *vectoredScanner) Scan(data [][]byte, s *Scratch, handler MatchHandler,
 		if err != nil {
 			return err
 		}
+
+		go s.Free()
 	}
 
 	err = hsScanVector(vs.vdb.db, data, 0, s.s, hsMatchEventHandler(handler), context)
@@ -246,6 +250,8 @@ func (bs *blockScanner) Scan(data []byte, s *Scratch, handler MatchHandler, cont
 		if err != nil {
 			return err
 		}
+
+		go s.Free()
 	}
 
 	err = hsScan(bs.bdb.db, data, 0, s.s, hsMatchEventHandler(handler), context)
