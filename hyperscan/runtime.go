@@ -174,11 +174,11 @@ func (s *stream) Clone() (Stream, error) {
 }
 
 type streamScanner struct {
-	sdb *streamDatabase
+	*baseDatabase
 }
 
-func newStreamScanner(sdb *streamDatabase) *streamScanner {
-	return &streamScanner{sdb}
+func newStreamScanner(db *baseDatabase) *streamScanner {
+	return &streamScanner{baseDatabase: db}
 }
 
 func (s *streamScanner) Close() error {
@@ -186,14 +186,14 @@ func (s *streamScanner) Close() error {
 }
 
 func (ss *streamScanner) Open(flags ScanFlag, sc *Scratch, handler MatchHandler, context interface{}) (Stream, error) {
-	s, err := hsOpenStream(ss.sdb.db, flags)
+	s, err := hsOpenStream(ss.db, flags)
 
 	if err != nil {
 		return nil, err
 	}
 
 	if sc == nil {
-		sc, err = NewScratch(ss.sdb)
+		sc, err = NewScratch(ss)
 
 		if err != nil {
 			return nil, err
@@ -206,10 +206,10 @@ func (ss *streamScanner) Open(flags ScanFlag, sc *Scratch, handler MatchHandler,
 }
 
 type vectoredScanner struct {
-	vdb *vectoredDatabase
+	*baseDatabase
 }
 
-func newVectoredScanner(vdb *vectoredDatabase) *vectoredScanner {
+func newVectoredScanner(vdb *baseDatabase) *vectoredScanner {
 	return &vectoredScanner{vdb}
 }
 
@@ -217,7 +217,7 @@ func (vs *vectoredScanner) Close() error { return nil }
 
 func (vs *vectoredScanner) Scan(data [][]byte, s *Scratch, handler MatchHandler, context interface{}) (err error) {
 	if s == nil {
-		s, err = NewScratch(vs.vdb)
+		s, err = NewScratch(vs)
 
 		if err != nil {
 			return err
@@ -226,7 +226,7 @@ func (vs *vectoredScanner) Scan(data [][]byte, s *Scratch, handler MatchHandler,
 		defer s.Free()
 	}
 
-	err = hsScanVector(vs.vdb.db, data, 0, s.s, hsMatchEventHandler(handler), context)
+	err = hsScanVector(vs.db, data, 0, s.s, hsMatchEventHandler(handler), context)
 
 	if err != nil {
 		return err
@@ -236,16 +236,16 @@ func (vs *vectoredScanner) Scan(data [][]byte, s *Scratch, handler MatchHandler,
 }
 
 type blockScanner struct {
-	bdb *blockDatabase
+	*baseDatabase
 }
 
-func newBlockScanner(bdb *blockDatabase) *blockScanner {
+func newBlockScanner(bdb *baseDatabase) *blockScanner {
 	return &blockScanner{bdb}
 }
 
 func (bs *blockScanner) Scan(data []byte, s *Scratch, handler MatchHandler, context interface{}) (err error) {
 	if s == nil {
-		s, err = NewScratch(bs.bdb)
+		s, err = NewScratch(bs)
 
 		if err != nil {
 			return err
@@ -254,7 +254,7 @@ func (bs *blockScanner) Scan(data []byte, s *Scratch, handler MatchHandler, cont
 		defer s.Free()
 	}
 
-	err = hsScan(bs.bdb.db, data, 0, s.s, hsMatchEventHandler(handler), context)
+	err = hsScan(bs.db, data, 0, s.s, hsMatchEventHandler(handler), context)
 
 	if err != nil {
 		return err
@@ -264,17 +264,13 @@ func (bs *blockScanner) Scan(data []byte, s *Scratch, handler MatchHandler, cont
 }
 
 type blockMatcher struct {
-	scanner *blockScanner
+	*blockScanner
 	handler *matchRecorder
 	n       int
 }
 
 func newBlockMatcher(scanner *blockScanner) *blockMatcher {
-	return &blockMatcher{scanner: scanner}
-}
-
-func (m *blockMatcher) Close() error {
-	return nil
+	return &blockMatcher{blockScanner: scanner}
 }
 
 func (m *blockMatcher) Handle(id uint, from, to uint64, flags uint, context interface{}) error {
@@ -290,7 +286,7 @@ func (m *blockMatcher) Handle(id uint, from, to uint64, flags uint, context inte
 func (m *blockMatcher) scan(data []byte) error {
 	m.handler = &matchRecorder{}
 
-	return m.scanner.Scan(data, nil, m.Handle, nil)
+	return m.blockScanner.Scan(data, nil, m.Handle, nil)
 }
 
 func (m *blockMatcher) Find(data []byte) []byte {
@@ -364,21 +360,17 @@ func (m *blockMatcher) MatchString(s string) bool {
 }
 
 type streamMatcher struct {
-	scanner *streamScanner
+	*streamScanner
 }
 
 func newStreamMatcher(scanner *streamScanner) *streamMatcher {
-	return &streamMatcher{scanner: scanner}
+	return &streamMatcher{streamScanner: scanner}
 }
 
-func (m *streamMatcher) Close() error { return m.scanner.Close() }
-
 type vectoredMatcher struct {
-	scanner *vectoredScanner
+	*vectoredScanner
 }
 
 func newVectoredMatcher(scanner *vectoredScanner) *vectoredMatcher {
-	return &vectoredMatcher{scanner: scanner}
+	return &vectoredMatcher{vectoredScanner: scanner}
 }
-
-func (m *vectoredMatcher) Close() error { return m.scanner.Close() }

@@ -3,8 +3,6 @@ package hyperscan
 import (
 	"errors"
 	"regexp"
-
-	"github.com/hashicorp/go-multierror"
 )
 
 type Database interface {
@@ -87,6 +85,10 @@ type baseDatabase struct {
 	db hsDatabase
 }
 
+func newBaseDatabase(db hsDatabase) *baseDatabase {
+	return &baseDatabase{db}
+}
+
 // UnmarshalDatabase reconstruct a pattern database from a stream of bytes.
 func UnmarshalDatabase(data []byte) (Database, error) {
 	db, err := hsDeserializeDatabase(data)
@@ -158,96 +160,27 @@ func (d *baseDatabase) Marshal() ([]byte, error) { return hsSerializeDatabase(d.
 func (d *baseDatabase) Unmarshal(data []byte) error { return hsDeserializeDatabaseAt(data, d.db) }
 
 type blockDatabase struct {
-	baseDatabase
-	*blockScanner
 	*blockMatcher
 }
 
 func newBlockDatabase(db hsDatabase) (*blockDatabase, error) {
-	bdb := &blockDatabase{baseDatabase: baseDatabase{db}}
-
-	bdb.blockScanner = newBlockScanner(bdb)
-	bdb.blockMatcher = newBlockMatcher(bdb.blockScanner)
-
-	return bdb, nil
-}
-
-func (d *blockDatabase) Close() error {
-	var result *multierror.Error
-
-	if d.blockMatcher != nil {
-		if err := d.blockMatcher.Close(); err != nil {
-			result = multierror.Append(result, err)
-		}
-	}
-
-	if err := d.baseDatabase.Close(); err != nil {
-		result = multierror.Append(result, err)
-	}
-
-	return result.ErrorOrNil()
+	return &blockDatabase{newBlockMatcher(newBlockScanner(newBaseDatabase(db)))}, nil
 }
 
 type streamDatabase struct {
-	baseDatabase
-	*streamScanner
 	*streamMatcher
 }
 
 func newStreamDatabase(db hsDatabase) (*streamDatabase, error) {
-	sdb := &streamDatabase{baseDatabase: baseDatabase{db}}
-
-	sdb.streamScanner = newStreamScanner(sdb)
-	sdb.streamMatcher = newStreamMatcher(sdb.streamScanner)
-
-	return sdb, nil
+	return &streamDatabase{newStreamMatcher(newStreamScanner(newBaseDatabase(db)))}, nil
 }
 
 func (d *streamDatabase) StreamSize() (int, error) { return hsStreamSize(d.db) }
 
-func (d *streamDatabase) Close() error {
-	var result *multierror.Error
-
-	if d.streamMatcher != nil {
-		if err := d.streamMatcher.Close(); err != nil {
-			result = multierror.Append(result, err)
-		}
-	}
-
-	if err := d.baseDatabase.Close(); err != nil {
-		result = multierror.Append(result, err)
-	}
-
-	return result.ErrorOrNil()
-}
-
 type vectoredDatabase struct {
-	baseDatabase
-	*vectoredScanner
 	*vectoredMatcher
 }
 
 func newVectoredDatabase(db hsDatabase) (*vectoredDatabase, error) {
-	vdb := &vectoredDatabase{baseDatabase: baseDatabase{db}}
-
-	vdb.vectoredScanner = newVectoredScanner(vdb)
-	vdb.vectoredMatcher = newVectoredMatcher(vdb.vectoredScanner)
-
-	return vdb, nil
-}
-
-func (d *vectoredDatabase) Close() error {
-	var result *multierror.Error
-
-	if d.vectoredMatcher != nil {
-		if err := d.vectoredMatcher.Close(); err != nil {
-			result = multierror.Append(result, err)
-		}
-	}
-
-	if err := d.baseDatabase.Close(); err != nil {
-		result = multierror.Append(result, err)
-	}
-
-	return result.ErrorOrNil()
+	return &vectoredDatabase{newVectoredMatcher(newVectoredScanner(newBaseDatabase(db)))}, nil
 }
