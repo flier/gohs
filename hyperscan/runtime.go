@@ -8,12 +8,12 @@ var (
 	errTooManyMatches = errors.New("too many matches")
 )
 
-// A Hyperscan scratch space.
+// Scratch is a Hyperscan scratch space.
 type Scratch struct {
 	s hsScratch
 }
 
-// Allocate a "scratch" space for use by Hyperscan.
+// NewScratch allocate a "scratch" space for use by Hyperscan.
 // This is required for runtime use, and one scratch space per thread,
 // or concurrent caller, is required.
 func NewScratch(db Database) (*Scratch, error) {
@@ -26,19 +26,15 @@ func NewScratch(db Database) (*Scratch, error) {
 	return &Scratch{s}, nil
 }
 
-// Provides the size of the given scratch space.
+// Size provides the size of the given scratch space.
 func (s *Scratch) Size() (int, error) { return hsScratchSize(s.s) }
 
-// Reallocate the scratch for another database.
+// Realloc reallocate the scratch for another database.
 func (s *Scratch) Realloc(db Database) error {
-	if err := hsReallocScratch(db.(database).Db(), &s.s); err != nil {
-		return err
-	}
-
-	return nil
+	return hsReallocScratch(db.(database).Db(), &s.s)
 }
 
-// Allocate a scratch space that is a clone of an existing scratch space.
+// Clone allocate a scratch space that is a clone of an existing scratch space.
 func (s *Scratch) Clone() (*Scratch, error) {
 	cloned, err := hsCloneScratch(s.s)
 
@@ -72,12 +68,13 @@ type MatchEvent interface {
 
 type MatchHandler hsMatchEventHandler
 
-// The block (non-streaming) regular expression scanner.
+// BlockScanner is the block (non-streaming) regular expression scanner.
 type BlockScanner interface {
 	// This is the function call in which the actual pattern matching takes place for block-mode pattern databases.
 	Scan(data []byte, scratch *Scratch, handler MatchHandler, context interface{}) error
 }
 
+// BlockMatcher implements regular expression search.
 type BlockMatcher interface {
 	// Find returns a slice holding the text of the leftmost match in b of the regular expression.
 	// A return value of nil indicates no match.
@@ -119,6 +116,7 @@ type BlockMatcher interface {
 	MatchString(s string) bool
 }
 
+// Stream exist in the Hyperscan library so that pattern matching state can be maintained across multiple blocks of target data
 type Stream interface {
 	Scan(data []byte) error
 
@@ -129,19 +127,21 @@ type Stream interface {
 	Clone() (Stream, error)
 }
 
-// The streaming regular expression scanner.
+// StreamScanner is the streaming regular expression scanner.
 type StreamScanner interface {
 	Open(flags ScanFlag, scratch *Scratch, handler MatchHandler, context interface{}) (Stream, error)
 }
 
+// StreamMatcher implements regular expression search.
 type StreamMatcher interface {
 }
 
-// The vectored regular expression scanner.
+// VectoredScanner is the vectored regular expression scanner.
 type VectoredScanner interface {
 	Scan(data [][]byte, scratch *Scratch, handler MatchHandler, context interface{}) error
 }
 
+// VectoredMatcher implements regular expression search.
 type VectoredMatcher interface {
 }
 
@@ -166,11 +166,13 @@ func (s *stream) Reset() error {
 }
 
 func (s *stream) Clone() (Stream, error) {
-	if ss, err := hsCopyStream(s.stream); err != nil {
+	ss, err := hsCopyStream(s.stream)
+
+	if err != nil {
 		return nil, err
-	} else {
-		return &stream{ss, s.flags, s.scratch, s.handler, s.context}, nil
 	}
+
+	return &stream{ss, s.flags, s.scratch, s.handler, s.context}, nil
 }
 
 type streamScanner struct {
@@ -181,7 +183,7 @@ func newStreamScanner(db *baseDatabase) *streamScanner {
 	return &streamScanner{baseDatabase: db}
 }
 
-func (s *streamScanner) Close() error {
+func (ss *streamScanner) Close() error {
 	return nil
 }
 

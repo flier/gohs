@@ -22,12 +22,16 @@ type Database interface {
 	Unmarshal([]byte) error
 }
 
+// BlockDatabase scan the target data that is a discrete,
+// contiguous block which can be scanned in one call and does not require state to be retained.
 type BlockDatabase interface {
 	Database
 	BlockScanner
 	BlockMatcher
 }
 
+// StreamDatabase scan the target data to be scanned is a continuous stream,
+// not all of which is available at once; blocks of data are scanned in sequence and matches may span multiple blocks in a stream.
 type StreamDatabase interface {
 	Database
 	StreamScanner
@@ -36,6 +40,7 @@ type StreamDatabase interface {
 	StreamSize() (int, error)
 }
 
+// VectoredDatabase scan the target data that consists of a list of non-contiguous blocks that are available all at once.
 type VectoredDatabase interface {
 	Database
 	VectoredScanner
