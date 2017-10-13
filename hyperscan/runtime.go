@@ -199,7 +199,7 @@ func (ss *streamScanner) Open(flags ScanFlag, sc *Scratch, handler MatchHandler,
 			return nil, err
 		}
 
-		go sc.Free()
+		defer sc.Free()
 	}
 
 	return &stream{s, flags, sc.s, hsMatchEventHandler(handler), context}, nil
@@ -213,7 +213,7 @@ func newVectoredScanner(vdb *vectoredDatabase) *vectoredScanner {
 	return &vectoredScanner{vdb}
 }
 
-func (s *vectoredScanner) Close() error { return nil }
+func (vs *vectoredScanner) Close() error { return nil }
 
 func (vs *vectoredScanner) Scan(data [][]byte, s *Scratch, handler MatchHandler, context interface{}) (err error) {
 	if s == nil {
@@ -223,7 +223,7 @@ func (vs *vectoredScanner) Scan(data [][]byte, s *Scratch, handler MatchHandler,
 			return err
 		}
 
-		go s.Free()
+		defer s.Free()
 	}
 
 	err = hsScanVector(vs.vdb.db, data, 0, s.s, hsMatchEventHandler(handler), context)
@@ -251,7 +251,7 @@ func (bs *blockScanner) Scan(data []byte, s *Scratch, handler MatchHandler, cont
 			return err
 		}
 
-		go s.Free()
+		defer s.Free()
 	}
 
 	err = hsScan(bs.bdb.db, data, 0, s.s, hsMatchEventHandler(handler), context)
@@ -270,7 +270,7 @@ type blockMatcher struct {
 }
 
 func newBlockMatcher(scanner *blockScanner) *blockMatcher {
-	return &blockMatcher{scanner: scanner, handler: &matchRecorder{}}
+	return &blockMatcher{scanner: scanner}
 }
 
 func (m *blockMatcher) Close() error {
@@ -278,7 +278,7 @@ func (m *blockMatcher) Close() error {
 }
 
 func (m *blockMatcher) Handle(id uint, from, to uint64, flags uint, context interface{}) error {
-	m.n -= 1
+	m.n--
 
 	if m.n == 0 {
 		m.handler.err = errTooManyMatches
@@ -288,11 +288,9 @@ func (m *blockMatcher) Handle(id uint, from, to uint64, flags uint, context inte
 }
 
 func (m *blockMatcher) scan(data []byte) error {
-	if err := m.scanner.Scan(data, nil, m.handler.Handle, nil); err != nil {
-		return err
-	}
+	m.handler = &matchRecorder{}
 
-	return nil
+	return m.scanner.Scan(data, nil, m.Handle, nil)
 }
 
 func (m *blockMatcher) Find(data []byte) []byte {
