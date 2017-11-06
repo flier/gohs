@@ -136,6 +136,18 @@ type StreamScanner interface {
 type StreamMatcher interface {
 }
 
+// StreamCompressor implements stream compressor.
+type StreamCompressor interface {
+	// Creates a compressed representation of the provided stream in the buffer provided.
+	Compress(stream Stream) ([]byte, error)
+
+	// Decompresses a compressed representation created by `CompressStream` into a new stream.
+	Expand(buf []byte, flags ScanFlag, scratch *Scratch, handler MatchHandler, context interface{}) (Stream, error)
+
+	// Decompresses a compressed representation created by `CompressStream` on top of the 'to' stream.
+	ResetAndExpand(stream Stream, buf []byte, flags ScanFlag, scratch *Scratch, handler MatchHandler, context interface{}) (Stream, error)
+}
+
 // VectoredScanner is the vectored regular expression scanner.
 type VectoredScanner interface {
 	Scan(data [][]byte, scratch *Scratch, handler MatchHandler, context interface{}) error
@@ -146,11 +158,12 @@ type VectoredMatcher interface {
 }
 
 type stream struct {
-	stream  hsStream
-	flags   ScanFlag
-	scratch hsScratch
-	handler hsMatchEventHandler
-	context interface{}
+	stream       hsStream
+	flags        ScanFlag
+	scratch      hsScratch
+	handler      hsMatchEventHandler
+	context      interface{}
+	ownedScratch bool
 }
 
 func (s *stream) Scan(data []byte) error {
@@ -158,7 +171,13 @@ func (s *stream) Scan(data []byte) error {
 }
 
 func (s *stream) Close() error {
-	return hsCloseStream(s.stream, s.scratch, s.handler, s.context)
+	err := hsCloseStream(s.stream, s.scratch, s.handler, s.context)
+
+	if s.ownedScratch {
+		hsFreeScratch(s.scratch)
+	}
+
+	return err
 }
 
 func (s *stream) Reset() error {
@@ -172,7 +191,17 @@ func (s *stream) Clone() (Stream, error) {
 		return nil, err
 	}
 
-	return &stream{ss, s.flags, s.scratch, s.handler, s.context}, nil
+	scratch := s.scratch
+
+	if s.ownedScratch {
+		scratch, err = hsCloneScratch(s.scratch)
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &stream{ss, s.flags, scratch, s.handler, s.context, s.ownedScratch}, nil
 }
 
 type streamScanner struct {
@@ -194,6 +223,8 @@ func (ss *streamScanner) Open(flags ScanFlag, sc *Scratch, handler MatchHandler,
 		return nil, err
 	}
 
+	ownedScratch := false
+
 	if sc == nil {
 		sc, err = NewScratch(ss)
 
@@ -201,10 +232,10 @@ func (ss *streamScanner) Open(flags ScanFlag, sc *Scratch, handler MatchHandler,
 			return nil, err
 		}
 
-		defer sc.Free()
+		ownedScratch = true
 	}
 
-	return &stream{s, flags, sc.s, hsMatchEventHandler(handler), context}, nil
+	return &stream{s, flags, sc.s, hsMatchEventHandler(handler), context, ownedScratch}, nil
 }
 
 type vectoredScanner struct {
@@ -375,4 +406,74 @@ type vectoredMatcher struct {
 
 func newVectoredMatcher(scanner *vectoredScanner) *vectoredMatcher {
 	return &vectoredMatcher{vectoredScanner: scanner}
+}
+
+var _ StreamCompressor = (*streamDatabase)(nil)
+
+func (db *streamDatabase) Compress(s Stream) ([]byte, error) {
+	size, err := db.StreamSize()
+
+	if err != nil {
+		return nil, err
+	}
+
+	buf := make([]byte, size)
+
+	buf, err = hsCompressStream(s.(*stream).stream, buf)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return buf, nil
+}
+
+func (db *streamDatabase) Expand(buf []byte, flags ScanFlag, sc *Scratch, handler MatchHandler, context interface{}) (Stream, error) {
+	var s hsStream
+
+	err := hsExpandStream(db.db, &s, buf)
+
+	if err != nil {
+		return nil, err
+	}
+
+	ownedScratch := false
+
+	if sc == nil {
+		sc, err = NewScratch(db)
+
+		if err != nil {
+			return nil, err
+		}
+
+		ownedScratch = true
+	}
+
+	return &stream{s, flags, sc.s, hsMatchEventHandler(handler), context, ownedScratch}, nil
+}
+
+func (db *streamDatabase) ResetAndExpand(s Stream, buf []byte, flags ScanFlag, sc *Scratch, handler MatchHandler, context interface{}) (Stream, error) {
+	ss := s.(*stream)
+
+	ownedScratch := false
+
+	if sc == nil {
+		var err error
+
+		sc, err = NewScratch(db)
+
+		if err != nil {
+			return nil, err
+		}
+
+		ownedScratch = true
+	}
+
+	err := hsResetAndExpandStream(ss.stream, buf, ss.scratch, hsMatchEventHandler(ss.handler), ss.context)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &stream{ss.stream, flags, sc.s, hsMatchEventHandler(handler), context, ownedScratch}, nil
 }

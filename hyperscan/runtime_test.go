@@ -70,3 +70,111 @@ func TestBlockMatcher(t *testing.T) {
 		})
 	})
 }
+
+func TestStreamScanner(t *testing.T) {
+	Convey("Given a streaming database", t, func() {
+		sdb, err := NewStreamDatabase(NewPattern(`abc`, SomLeftMost))
+
+		So(err, ShouldBeNil)
+		So(sdb, ShouldNotBeNil)
+
+		Convey("When open a new stream", func() {
+			var matches [][]uint64
+
+			matched := func(id uint, from, to uint64, flags uint, context interface{}) error {
+				matches = append(matches, []uint64{from, to})
+
+				return nil
+			}
+
+			stream, err := sdb.Open(0, nil, matched, nil)
+
+			So(err, ShouldBeNil)
+			So(stream, ShouldNotBeNil)
+
+			Convey("When scan a stream", func() {
+				So(stream.Scan([]byte("123a")), ShouldBeNil)
+				So(stream.Scan([]byte("b")), ShouldBeNil)
+				So(stream.Scan([]byte("c456")), ShouldBeNil)
+				So(stream.Close(), ShouldBeNil)
+
+				So(matches, ShouldResemble, [][]uint64{{3, 6}})
+			})
+		})
+	})
+}
+
+func TestStreamCompressor(t *testing.T) {
+	Convey("Given a streaming database", t, func() {
+		sdb, err := NewStreamDatabase(NewPattern(`abc`, SomLeftMost))
+
+		So(err, ShouldBeNil)
+		So(sdb, ShouldNotBeNil)
+
+		Convey("When open a new stream", func() {
+			var matches [][]uint64
+
+			matched := func(id uint, from, to uint64, flags uint, context interface{}) error {
+				matches = append(matches, []uint64{from, to})
+
+				return nil
+			}
+
+			stream, err := sdb.Open(0, nil, matched, nil)
+
+			So(err, ShouldBeNil)
+			So(stream, ShouldNotBeNil)
+
+			defer stream.Close()
+
+			So(stream.Scan([]byte("123a")), ShouldBeNil)
+
+			Convey("When compress a stream", func() {
+				buf, err := sdb.Compress(stream)
+
+				So(err, ShouldBeNil)
+				So(buf, ShouldNotBeNil)
+
+				size, err := sdb.StreamSize()
+
+				So(err, ShouldBeNil)
+				So(len(buf), ShouldBeBetween, 0, size)
+
+				Convey("When expand the stream", func() {
+					stream2, err := sdb.Expand(buf, 0, nil, matched, nil)
+
+					So(err, ShouldBeNil)
+					So(stream2, ShouldNotBeNil)
+
+					Convey("When scan a stream", func() {
+						So(stream2.Scan([]byte("b")), ShouldBeNil)
+						So(stream2.Scan([]byte("c456")), ShouldBeNil)
+						So(stream2.Close(), ShouldBeNil)
+
+						So(matches, ShouldResemble, [][]uint64{{3, 6}})
+					})
+				})
+
+				Convey("When reset and expand the stream", func() {
+					stream2, err := stream.Clone()
+
+					So(err, ShouldBeNil)
+					So(stream2, ShouldNotBeNil)
+
+					stream2, err = sdb.ResetAndExpand(stream2, buf, 0, nil, matched, nil)
+
+					So(err, ShouldBeNil)
+					So(stream2, ShouldNotBeNil)
+
+					Convey("When scan a stream", func() {
+						So(stream2.Scan([]byte("b")), ShouldBeNil)
+						So(stream2.Scan([]byte("c456")), ShouldBeNil)
+						So(stream2.Close(), ShouldBeNil)
+
+						So(matches, ShouldResemble, [][]uint64{{3, 6}})
+					})
+				})
+			})
+		})
+	})
+}

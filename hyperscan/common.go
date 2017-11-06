@@ -36,6 +36,7 @@ type StreamDatabase interface {
 	Database
 	StreamScanner
 	StreamMatcher
+	StreamCompressor
 
 	StreamSize() (int, error)
 }

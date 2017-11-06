@@ -94,6 +94,11 @@ static inline
 hs_error_t hs_reset_and_copy_stream_cgo(uintptr_t to_id, uintptr_t from_id, uintptr_t scratch, uintptr_t context) {
 	return hs_reset_and_copy_stream((hs_stream_t *) to_id, (const hs_stream_t *) from_id, (hs_scratch_t *) scratch, hs_event_callback, (void *) context);
 }
+
+static inline
+hs_error_t hs_reset_and_expand_stream_cgo(uintptr_t stream, uintptr_t data, unsigned int length, uintptr_t scratch, uintptr_t context) {
+	return hs_reset_and_expand_stream((hs_stream_t *) stream, (const char *) data, length, (hs_scratch_t *) scratch, hs_event_callback, (void *) context);
+}
 */
 import "C"
 
@@ -204,14 +209,23 @@ const (
 type ModeFlag uint
 
 const (
-	BlockMode            ModeFlag = C.HS_MODE_BLOCK              // Block scan (non-streaming) database.
-	NoStreamMode         ModeFlag = C.HS_MODE_NOSTREAM           // Alias for Block.
-	StreamMode           ModeFlag = C.HS_MODE_STREAM             // Streaming database.
-	VectoredMode         ModeFlag = C.HS_MODE_VECTORED           // Vectored scanning database.
-	SomHorizonLargeMode  ModeFlag = C.HS_MODE_SOM_HORIZON_LARGE  // Use full precision to track start of match offsets in stream state.
-	SomHorizonMediumMode ModeFlag = C.HS_MODE_SOM_HORIZON_MEDIUM // Use medium precision to track start of match offsets in stream state. (within 2^32 bytes)
-	SomHorizonSmallMode  ModeFlag = C.HS_MODE_SOM_HORIZON_SMALL  // Use limited precision to track start of match offsets in stream state. (within 2^16 bytes)
+	// BlockMode for the block scan (non-streaming) database.
+	BlockMode ModeFlag = C.HS_MODE_BLOCK
+	// NoStreamMode is alias for Block.
+	NoStreamMode ModeFlag = C.HS_MODE_NOSTREAM
+	// StreamMode for the streaming database.
+	StreamMode ModeFlag = C.HS_MODE_STREAM
+	// VectoredMode for the vectored scanning database.
+	VectoredMode ModeFlag = C.HS_MODE_VECTORED
+	// SomHorizonLargeMode use full precision to track start of match offsets in stream state.
+	SomHorizonLargeMode ModeFlag = C.HS_MODE_SOM_HORIZON_LARGE
+	// SomHorizonMediumMode use medium precision to track start of match offsets in stream state. (within 2^32 bytes)
+	SomHorizonMediumMode ModeFlag = C.HS_MODE_SOM_HORIZON_MEDIUM
+	// SomHorizonSmallMode use limited precision to track start of match offsets in stream state. (within 2^16 bytes)
+	SomHorizonSmallMode ModeFlag = C.HS_MODE_SOM_HORIZON_SMALL
 )
+
+const ModeMask ModeFlag = 0xFF
 
 var modeFlags = map[string]ModeFlag{
 	"STREAM":   StreamMode,
@@ -1020,6 +1034,50 @@ func hsResetAndCopyStream(to, from hsStream, scratch hsScratch, onEvent hsMatchE
 
 	ret := C.hs_reset_and_copy_stream_cgo(C.uintptr_t(uintptr(unsafe.Pointer(to))), C.uintptr_t(uintptr(unsafe.Pointer(from))),
 		C.uintptr_t(uintptr(unsafe.Pointer(scratch))), C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
+
+	if ret != C.HS_SUCCESS {
+		return HsError(ret)
+	}
+
+	return nil
+}
+
+func hsCompressStream(stream hsStream, buf []byte) ([]byte, error) {
+	var size C.size_t
+
+	ret := C.hs_compress_stream(stream, (*C.char)(unsafe.Pointer(&buf[0])), C.size_t(len(buf)), &size)
+
+	if ret == C.HS_INSUFFICIENT_SPACE {
+		buf = make([]byte, size)
+
+		ret = C.hs_compress_stream(stream, (*C.char)(unsafe.Pointer(&buf[0])), C.size_t(len(buf)), &size)
+	}
+
+	if ret != C.HS_SUCCESS {
+		return nil, HsError(ret)
+	}
+
+	return buf[:size], nil
+}
+
+func hsExpandStream(db hsDatabase, stream *hsStream, buf []byte) error {
+	ret := C.hs_expand_stream(db, (**C.hs_stream_t)(stream), (*C.char)(unsafe.Pointer(&buf[0])), C.size_t(len(buf)))
+
+	if ret != C.HS_SUCCESS {
+		return HsError(ret)
+	}
+
+	return nil
+}
+
+func hsResetAndExpandStream(stream hsStream, buf []byte, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
+	ctxt := &hsMatchEventContext{onEvent, context}
+
+	ret := C.hs_reset_and_expand_stream_cgo(
+		C.uintptr_t(uintptr(unsafe.Pointer(stream))),
+		C.uintptr_t(uintptr(unsafe.Pointer(&buf[0]))), C.uint(len(buf)),
+		C.uintptr_t(uintptr(unsafe.Pointer(scratch))),
+		C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)

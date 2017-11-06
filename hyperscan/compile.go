@@ -137,17 +137,26 @@ func (b *DatabaseBuilder) Build() (Database, error) {
 	expressions := make([]string, len(b.Patterns))
 	flags := make([]CompileFlag, len(b.Patterns))
 	ids := make([]uint, len(b.Patterns))
+	needSomLeftMost := false
 
 	for i, pattern := range b.Patterns {
 		expressions[i] = string(pattern.Expression)
 		flags[i] = pattern.Flags
 		ids[i] = uint(pattern.Id)
+
+		if (pattern.Flags & SomLeftMost) == SomLeftMost {
+			needSomLeftMost = true
+		}
 	}
 
 	mode := b.Mode
 
 	if mode == 0 {
 		mode = BlockMode
+	}
+
+	if mode == StreamMode && needSomLeftMost {
+		mode |= SomHorizonSmallMode
 	}
 
 	platform, _ := b.Platform.(*hsPlatformInfo)
@@ -158,7 +167,7 @@ func (b *DatabaseBuilder) Build() (Database, error) {
 		return nil, err
 	}
 
-	switch mode {
+	switch mode & ModeMask {
 	case StreamMode:
 		return newStreamDatabase(db)
 	case VectoredMode:
@@ -184,6 +193,30 @@ func NewBlockDatabase(patterns ...*Pattern) (BlockDatabase, error) {
 
 func NewStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 	builder := &DatabaseBuilder{Patterns: patterns, Mode: StreamMode}
+
+	db, err := builder.Build()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return db.(*streamDatabase), err
+}
+
+func NewMediumStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
+	builder := &DatabaseBuilder{Patterns: patterns, Mode: StreamMode | SomHorizonMediumMode}
+
+	db, err := builder.Build()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return db.(*streamDatabase), err
+}
+
+func NewLargeStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
+	builder := &DatabaseBuilder{Patterns: patterns, Mode: StreamMode | SomHorizonLargeMode}
 
 	db, err := builder.Build()
 
