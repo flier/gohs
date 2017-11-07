@@ -318,8 +318,8 @@ func (bs *blockScanner) Scan(data []byte, s *Scratch, handler MatchHandler, cont
 
 type blockMatcher struct {
 	*blockScanner
-	handler *matchRecorder
-	n       int
+	*matchRecorder
+	n int
 }
 
 func newBlockMatcher(scanner *blockScanner) *blockMatcher {
@@ -330,14 +330,14 @@ func (m *blockMatcher) Handle(id uint, from, to uint64, flags uint, context inte
 	m.n--
 
 	if m.n == 0 {
-		m.handler.err = errTooManyMatches
+		m.err = errTooManyMatches
 	}
 
-	return m.handler.Handle(id, from, to, flags, context)
+	return m.matchRecorder.Handle(id, from, to, flags, context)
 }
 
 func (m *blockMatcher) scan(data []byte) error {
-	m.handler = &matchRecorder{}
+	m.matchRecorder = &matchRecorder{}
 
 	return m.blockScanner.Scan(data, nil, m.Handle, nil)
 }
@@ -351,8 +351,8 @@ func (m *blockMatcher) Find(data []byte) []byte {
 }
 
 func (m *blockMatcher) FindIndex(data []byte) []int {
-	if m.Match(data) && len(m.handler.matched) == 1 {
-		return []int{int(m.handler.matched[0].from), int(m.handler.matched[0].to)}
+	if m.Match(data) && len(m.matched) == 1 {
+		return []int{int(m.matched[0].from), int(m.matched[0].to)}
 	}
 
 	return nil
@@ -375,8 +375,8 @@ func (m *blockMatcher) FindAllIndex(data []byte, n int) (locs [][]int) {
 
 	m.n = n
 
-	if err := m.scan(data); (err == nil || err.(HsError) == ErrScanTerminated) && len(m.handler.matched) > 0 {
-		for _, e := range m.handler.matched {
+	if err := m.scan(data); (err == nil || err.(HsError) == ErrScanTerminated) && len(m.matched) > 0 {
+		for _, e := range m.matched {
 			locs = append(locs, []int{int(e.from), int(e.to)})
 		}
 	}
@@ -418,8 +418,8 @@ func (m *blockMatcher) MatchString(s string) bool {
 
 type streamMatcher struct {
 	*streamScanner
-	handler *matchRecorder
-	n       int
+	*matchRecorder
+	n int
 }
 
 func newStreamMatcher(scanner *streamScanner) *streamMatcher {
@@ -430,14 +430,14 @@ func (m *streamMatcher) Handle(id uint, from, to uint64, flags uint, context int
 	m.n--
 
 	if m.n == 0 {
-		m.handler.err = errTooManyMatches
+		m.err = errTooManyMatches
 	}
 
-	return m.handler.Handle(id, from, to, flags, context)
+	return m.matchRecorder.Handle(id, from, to, flags, context)
 }
 
 func (m *streamMatcher) scan(reader io.Reader) error {
-	m.handler = &matchRecorder{}
+	m.matchRecorder = &matchRecorder{}
 
 	stream, err := m.streamScanner.Open(0, nil, m.Handle, nil)
 
@@ -501,8 +501,8 @@ func (m *streamMatcher) Find(reader io.ReadSeeker) []byte {
 }
 
 func (m *streamMatcher) FindIndex(reader io.Reader) []int {
-	if m.Match(reader) && len(m.handler.matched) == 1 {
-		return []int{int(m.handler.matched[0].from), int(m.handler.matched[0].to)}
+	if m.Match(reader) && len(m.matched) == 1 {
+		return []int{int(m.matched[0].from), int(m.matched[0].to)}
 	}
 
 	return nil
@@ -521,8 +521,8 @@ func (m *streamMatcher) FindAll(reader io.ReadSeeker, n int) (result [][]byte) {
 func (m *streamMatcher) FindAllIndex(reader io.Reader, n int) (locs [][]int) {
 	m.n = n
 
-	if err := m.scan(reader); (err == nil || err.(HsError) == ErrScanTerminated) && len(m.handler.matched) > 0 {
-		for _, e := range m.handler.matched {
+	if err := m.scan(reader); (err == nil || err.(HsError) == ErrScanTerminated) && len(m.matched) > 0 {
+		for _, e := range m.matched {
 			locs = append(locs, []int{int(e.from), int(e.to)})
 		}
 	}
