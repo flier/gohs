@@ -504,7 +504,7 @@ func TestBlockScan(t *testing.T) {
 
 		Convey("Scan block with multi pattern", func() {
 			So(hsScan(db, []byte("abctestdeftest"), 0, s, h.Handle, nil), ShouldBeNil)
-			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}, {0, 0, 14, 0}})
+			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 14, 0}})
 		})
 
 		Convey("Scan block with multi pattern but terminated", func() {
@@ -550,7 +550,7 @@ func TestVectorScan(t *testing.T) {
 
 		Convey("Scan multi block with multi pattern", func() {
 			So(hsScanVector(db, [][]byte{[]byte("abctestdef"), []byte("123test456")}, 0, s, h.Handle, nil), ShouldBeNil)
-			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}, {0, 0, 17, 0}})
+			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 17, 0}})
 		})
 
 		Convey("Scan multi block with multi pattern but terminated", func() {

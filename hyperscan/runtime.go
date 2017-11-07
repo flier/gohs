@@ -327,13 +327,23 @@ func newBlockMatcher(scanner *blockScanner) *blockMatcher {
 }
 
 func (m *blockMatcher) Handle(id uint, from, to uint64, flags uint, context interface{}) error {
-	m.n--
+	err := m.matchRecorder.Handle(id, from, to, flags, context)
 
-	if m.n == 0 {
-		m.err = errTooManyMatches
+	if err != nil {
+		return err
 	}
 
-	return m.matchRecorder.Handle(id, from, to, flags, context)
+	if m.n < 0 {
+		return nil
+	}
+
+	if m.n < len(m.matched) {
+		m.matched = m.matched[:m.n]
+
+		return errTooManyMatches
+	}
+
+	return nil
 }
 
 func (m *blockMatcher) scan(data []byte) error {
@@ -427,13 +437,23 @@ func newStreamMatcher(scanner *streamScanner) *streamMatcher {
 }
 
 func (m *streamMatcher) Handle(id uint, from, to uint64, flags uint, context interface{}) error {
-	m.n--
+	err := m.matchRecorder.Handle(id, from, to, flags, context)
 
-	if m.n == 0 {
-		m.err = errTooManyMatches
+	if err != nil {
+		return err
 	}
 
-	return m.matchRecorder.Handle(id, from, to, flags, context)
+	if m.n < 0 {
+		return nil
+	}
+
+	if m.n < len(m.matched) {
+		m.matched = m.matched[:m.n]
+
+		return errTooManyMatches
+	}
+
+	return nil
 }
 
 func (m *streamMatcher) scan(reader io.Reader) error {

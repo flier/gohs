@@ -43,31 +43,31 @@ func TestBlockMatcher(t *testing.T) {
 		})
 
 		Convey("When find the leftmost matched string index", func() {
-			So(bdb.FindStringIndex("abc123def456"), ShouldResemble, []int{3, 4})
+			So(bdb.FindStringIndex("abc123def456"), ShouldResemble, []int{3, 6})
 		})
 
 		Convey("When find the leftmost matched string", func() {
-			So(bdb.FindString("abc123def456"), ShouldEqual, "1")
+			So(bdb.FindString("abc123def456"), ShouldEqual, "123")
 		})
 
 		Convey("When find all the matched string index", func() {
 			So(bdb.FindAllStringIndex("abc123def456", -1), ShouldResemble,
-				[][]int{{3, 4}, {3, 5}, {3, 6}, {9, 10}, {9, 11}, {9, 12}})
+				[][]int{{3, 6}, {9, 12}})
 		})
 
 		Convey("When find all the matched string", func() {
 			So(bdb.FindAllString("abc123def456", -1), ShouldResemble,
-				[]string{"1", "12", "123", "4", "45", "456"})
+				[]string{"123", "456"})
 		})
 
 		Convey("When find all the first 4 matched string index", func() {
-			So(bdb.FindAllStringIndex("abc123def456", 4), ShouldResemble,
-				[][]int{{3, 4}, {3, 5}, {3, 6}, {9, 10}})
+			So(bdb.FindAllStringIndex("abc123def456", 1), ShouldResemble,
+				[][]int{{3, 6}})
 		})
 
 		Convey("When find all the first 4 matched string", func() {
-			So(bdb.FindAllString("abc123def456", 4), ShouldResemble,
-				[]string{"1", "12", "123", "4"})
+			So(bdb.FindAllString("abc123def456", 1), ShouldResemble,
+				[]string{"123"})
 		})
 	})
 }
@@ -120,19 +120,19 @@ func TestStreamMatcher(t *testing.T) {
 			})
 
 			Convey("When `Find` a pattern", func() {
-				So(sdb.Find(r), ShouldResemble, []byte("1"))
+				So(sdb.Find(r), ShouldResemble, []byte("123"))
 			})
 
 			Convey("When `FindIndex` a pattern", func() {
-				So(sdb.FindIndex(r), ShouldResemble, []int{3, 4})
+				So(sdb.FindIndex(r), ShouldResemble, []int{3, 6})
 			})
 
 			Convey("When `FindAll` a pattern", func() {
-				So(sdb.FindAll(r, -1), ShouldResemble, [][]byte{{49}, {49, 50}, {49, 50, 51}, {52}, {52, 53}, {52, 53, 54}})
+				So(sdb.FindAll(r, -1), ShouldResemble, [][]byte{[]byte("123"), []byte("456")})
 			})
 
 			Convey("When `FindAllIndex` a pattern", func() {
-				So(sdb.FindAllIndex(r, -1), ShouldResemble, [][]int{{3, 4}, {3, 5}, {3, 6}, {9, 10}, {9, 11}, {9, 12}})
+				So(sdb.FindAllIndex(r, -1), ShouldResemble, [][]int{{3, 6}, {9, 12}})
 			})
 		})
 	})
