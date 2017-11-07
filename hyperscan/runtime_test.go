@@ -1,6 +1,7 @@
 package hyperscan
 
 import (
+	"strings"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -99,6 +100,39 @@ func TestStreamScanner(t *testing.T) {
 				So(stream.Close(), ShouldBeNil)
 
 				So(matches, ShouldResemble, [][]uint64{{3, 6}})
+			})
+		})
+	})
+}
+
+func TestStreamMatcher(t *testing.T) {
+	Convey("Given a streaming database", t, func() {
+		sdb, err := NewStreamDatabase(NewPattern(`\d+`, SomLeftMost))
+
+		So(err, ShouldBeNil)
+		So(sdb, ShouldNotBeNil)
+
+		Convey("When scan a new stream", func() {
+			r := strings.NewReader("foo123bar456")
+
+			Convey("When `Match` a pattern", func() {
+				So(sdb.Match(r), ShouldBeTrue)
+			})
+
+			Convey("When `Find` a pattern", func() {
+				So(sdb.Find(r), ShouldResemble, []byte("1"))
+			})
+
+			Convey("When `FindIndex` a pattern", func() {
+				So(sdb.FindIndex(r), ShouldResemble, []int{3, 4})
+			})
+
+			Convey("When `FindAll` a pattern", func() {
+				So(sdb.FindAll(r, -1), ShouldResemble, [][]byte{{49}, {49, 50}, {49, 50, 51}, {52}, {52, 53}, {52, 53, 54}})
+			})
+
+			Convey("When `FindAllIndex` a pattern", func() {
+				So(sdb.FindAllIndex(r, -1), ShouldResemble, [][]int{{3, 4}, {3, 5}, {3, 6}, {9, 10}, {9, 11}, {9, 12}})
 			})
 		})
 	})

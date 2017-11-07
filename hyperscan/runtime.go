@@ -2,6 +2,8 @@ package hyperscan
 
 import (
 	"errors"
+	"fmt"
+	"io"
 )
 
 var (
@@ -82,7 +84,7 @@ type BlockMatcher interface {
 
 	// FindIndex returns a two-element slice of integers defining the location of the leftmost match in b of the regular expression.
 	// The match itself is at b[loc[0]:loc[1]]. A return value of nil indicates no match.
-	FindIndex(data []byte) (loc []int)
+	FindIndex(data []byte) []int
 
 	// FindAll is the 'All' version of Find; it returns a slice of all successive matches of the expression,
 	// as defined by the 'All' description in the package comment. A return value of nil indicates no match.
@@ -99,7 +101,7 @@ type BlockMatcher interface {
 
 	// FindStringIndex returns a two-element slice of integers defining the location of the leftmost match in s of the regular expression.
 	// The match itself is at s[loc[0]:loc[1]]. A return value of nil indicates no match.
-	FindStringIndex(s string) (loc []int)
+	FindStringIndex(s string) []int
 
 	// FindAllString is the 'All' version of FindString; it returns a slice of all successive matches of the expression,
 	// as defined by the 'All' description in the package comment. A return value of nil indicates no match.
@@ -134,6 +136,24 @@ type StreamScanner interface {
 
 // StreamMatcher implements regular expression search.
 type StreamMatcher interface {
+	// Find returns a slice holding the text of the leftmost match in b of the regular expression.
+	// A return value of nil indicates no match.
+	Find(reader io.ReadSeeker) []byte
+
+	// FindIndex returns a two-element slice of integers defining the location of the leftmost match in b of the regular expression.
+	// The match itself is at b[loc[0]:loc[1]]. A return value of nil indicates no match.
+	FindIndex(reader io.Reader) []int
+
+	// FindAll is the 'All' version of Find; it returns a slice of all successive matches of the expression,
+	// as defined by the 'All' description in the package comment. A return value of nil indicates no match.
+	FindAll(reader io.ReadSeeker, n int) [][]byte
+
+	// FindAllIndex is the 'All' version of FindIndex; it returns a slice of all successive matches of the expression,
+	// as defined by the 'All' description in the package comment. A return value of nil indicates no match.
+	FindAllIndex(reader io.Reader, n int) [][]int
+
+	// Match reports whether the pattern database matches the byte slice b.
+	Match(reader io.Reader) bool
 }
 
 // StreamCompressor implements stream compressor.
@@ -349,6 +369,10 @@ func (m *blockMatcher) FindAll(data []byte, n int) (matches [][]byte) {
 }
 
 func (m *blockMatcher) FindAllIndex(data []byte, n int) (locs [][]int) {
+	if n < 0 {
+		n = len(data) + 1
+	}
+
 	m.n = n
 
 	if err := m.scan(data); (err == nil || err.(HsError) == ErrScanTerminated) && len(m.handler.matched) > 0 {
@@ -394,10 +418,124 @@ func (m *blockMatcher) MatchString(s string) bool {
 
 type streamMatcher struct {
 	*streamScanner
+	handler *matchRecorder
+	n       int
 }
 
 func newStreamMatcher(scanner *streamScanner) *streamMatcher {
 	return &streamMatcher{streamScanner: scanner}
+}
+
+func (m *streamMatcher) Handle(id uint, from, to uint64, flags uint, context interface{}) error {
+	m.n--
+
+	if m.n == 0 {
+		m.handler.err = errTooManyMatches
+	}
+
+	return m.handler.Handle(id, from, to, flags, context)
+}
+
+func (m *streamMatcher) scan(reader io.Reader) error {
+	m.handler = &matchRecorder{}
+
+	stream, err := m.streamScanner.Open(0, nil, m.Handle, nil)
+
+	if err != nil {
+		return err
+	}
+
+	buf := make([]byte, 4096)
+
+	for {
+		n, err := reader.Read(buf)
+
+		if err == io.EOF {
+			return stream.Close()
+		}
+
+		if err != nil {
+			return err
+		}
+
+		if err = stream.Scan(buf[:n]); err != nil {
+			return err
+		}
+	}
+}
+
+func (m *streamMatcher) read(reader io.ReadSeeker, loc []int) ([]byte, error) {
+	if len(loc) != 2 {
+		return nil, fmt.Errorf("invalid location")
+	}
+
+	offset := int64(loc[0])
+	size := loc[1] - loc[0]
+
+	_, err := reader.Seek(offset, io.SeekStart)
+
+	if err != nil {
+		return nil, err
+	}
+
+	buf := make([]byte, size)
+
+	_, err = reader.Read(buf)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return buf, nil
+}
+
+func (m *streamMatcher) Find(reader io.ReadSeeker) []byte {
+	loc := m.FindIndex(reader)
+	buf, err := m.read(reader, loc)
+
+	if err != nil {
+		return nil
+	}
+
+	return buf
+}
+
+func (m *streamMatcher) FindIndex(reader io.Reader) []int {
+	if m.Match(reader) && len(m.handler.matched) == 1 {
+		return []int{int(m.handler.matched[0].from), int(m.handler.matched[0].to)}
+	}
+
+	return nil
+}
+
+func (m *streamMatcher) FindAll(reader io.ReadSeeker, n int) (result [][]byte) {
+	for _, loc := range m.FindAllIndex(reader, n) {
+		if buf, err := m.read(reader, loc); err == nil {
+			result = append(result, buf)
+		}
+	}
+
+	return
+}
+
+func (m *streamMatcher) FindAllIndex(reader io.Reader, n int) (locs [][]int) {
+	m.n = n
+
+	if err := m.scan(reader); (err == nil || err.(HsError) == ErrScanTerminated) && len(m.handler.matched) > 0 {
+		for _, e := range m.handler.matched {
+			locs = append(locs, []int{int(e.from), int(e.to)})
+		}
+	}
+
+	return
+}
+
+func (m *streamMatcher) Match(reader io.Reader) bool {
+	m.n = 1
+
+	err := m.scan(reader)
+
+	return err != nil && err.(HsError) == ErrScanTerminated
 }
 
 type vectoredMatcher struct {
