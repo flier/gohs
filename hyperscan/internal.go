@@ -3,6 +3,7 @@ package hyperscan
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"sort"
 	"strings"
 	"unsafe"
@@ -595,7 +596,11 @@ func hsSerializeDatabase(db hsDatabase) ([]byte, error) {
 func hsDeserializeDatabase(data []byte) (hsDatabase, error) {
 	var db *C.hs_database_t
 
-	if ret := C.hs_deserialize_database((*C.char)(unsafe.Pointer(&data[0])), C.size_t(len(data)), &db); ret != C.HS_SUCCESS {
+	ret := C.hs_deserialize_database((*C.char)(unsafe.Pointer(&data[0])), C.size_t(len(data)), &db)
+
+	runtime.KeepAlive(data)
+
+	if ret != C.HS_SUCCESS {
 		return nil, HsError(ret)
 	}
 
@@ -603,7 +608,11 @@ func hsDeserializeDatabase(data []byte) (hsDatabase, error) {
 }
 
 func hsDeserializeDatabaseAt(data []byte, db hsDatabase) error {
-	if ret := C.hs_deserialize_database_at((*C.char)(unsafe.Pointer(&data[0])), C.size_t(len(data)), db); ret != C.HS_SUCCESS {
+	ret := C.hs_deserialize_database_at((*C.char)(unsafe.Pointer(&data[0])), C.size_t(len(data)), db)
+
+	runtime.KeepAlive(data)
+
+	if ret != C.HS_SUCCESS {
 		return HsError(ret)
 	}
 
@@ -633,7 +642,11 @@ func hsDatabaseSize(db hsDatabase) (int, error) {
 func hsSerializedDatabaseSize(data []byte) (int, error) {
 	var size C.size_t
 
-	if ret := C.hs_serialized_database_size((*C.char)(unsafe.Pointer(&data[0])), C.size_t(len(data)), &size); ret != C.HS_SUCCESS {
+	ret := C.hs_serialized_database_size((*C.char)(unsafe.Pointer(&data[0])), C.size_t(len(data)), &size)
+
+	runtime.KeepAlive(data)
+
+	if ret != C.HS_SUCCESS {
 		return 0, HsError(ret)
 	}
 
@@ -653,7 +666,11 @@ func hsDatabaseInfo(db hsDatabase) (string, error) {
 func hsSerializedDatabaseInfo(data []byte) (string, error) {
 	var info *C.char
 
-	if ret := C.hs_serialized_database_info((*C.char)(unsafe.Pointer(&data[0])), C.size_t(len(data)), &info); ret != C.HS_SUCCESS {
+	ret := C.hs_serialized_database_info((*C.char)(unsafe.Pointer(&data[0])), C.size_t(len(data)), &info)
+
+	runtime.KeepAlive(data)
+
+	if ret != C.HS_SUCCESS {
 		return "", HsError(ret)
 	}
 
@@ -729,6 +746,9 @@ func hsCompileMulti(expressions []string, flags []CompileFlag, ids []uint, mode 
 
 	ret := C.hs_compile_multi(&cexprs[0], cflags, cids, C.uint(len(cexprs)), C.uint(mode), platform, &db, &err)
 
+	runtime.KeepAlive(cflags)
+	runtime.KeepAlive(cids)
+
 	for _, expr := range cexprs {
 		C.free(unsafe.Pointer(expr))
 	}
@@ -787,7 +807,6 @@ func hsCompileExtMulti(expressions []string, flags []CompileFlag, ids []uint, ex
 	}
 
 	if exts != nil {
-
 		values := make([]C.hs_expr_ext_t, len(exts))
 		ptrs := make([]uintptr, len(exts))
 
@@ -804,6 +823,10 @@ func hsCompileExtMulti(expressions []string, flags []CompileFlag, ids []uint, ex
 	}
 
 	ret := C.hs_compile_ext_multi(&cexprs[0], cflags, cids, cexts, C.uint(len(cexprs)), C.uint(mode), platform, &db, &err)
+
+	runtime.KeepAlive(cflags)
+	runtime.KeepAlive(cids)
+	runtime.KeepAlive(cexts)
 
 	for _, expr := range cexprs {
 		C.free(unsafe.Pointer(expr))
@@ -931,6 +954,9 @@ func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEve
 	ret := C.hs_scan_cgo(C.uintptr_t(uintptr(unsafe.Pointer(db))), C.uintptr_t(uintptr(unsafe.Pointer(&data[0]))), C.uint(len(data)),
 		C.uint(flags), C.uintptr_t(uintptr(unsafe.Pointer(scratch))), C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
 
+	runtime.KeepAlive(data)
+	runtime.KeepAlive(ctxt)
+
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
 	}
@@ -960,6 +986,11 @@ func hsScanVector(db hsDatabase, data [][]byte, flags ScanFlag, scratch hsScratc
 	ret := C.hs_scan_vector_cgo(C.uintptr_t(uintptr(unsafe.Pointer(db))), C.uintptr_t(uintptr(unsafe.Pointer(&cdata[0]))), C.uintptr_t(uintptr(unsafe.Pointer(&clength[0]))),
 		C.uint(len(data)), C.uint(flags), C.uintptr_t(uintptr(unsafe.Pointer(scratch))), C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
 
+	runtime.KeepAlive(data)
+	runtime.KeepAlive(cdata)
+	runtime.KeepAlive(clength)
+	runtime.KeepAlive(ctxt)
+
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
 	}
@@ -987,6 +1018,9 @@ func hsScanStream(stream hsStream, data []byte, flags ScanFlag, scratch hsScratc
 	ret := C.hs_scan_stream_cgo(C.uintptr_t(uintptr(unsafe.Pointer(stream))), C.uintptr_t(uintptr(unsafe.Pointer(&data[0]))), C.uint(len(data)),
 		C.uint(flags), C.uintptr_t(uintptr(unsafe.Pointer(scratch))), C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
 
+	runtime.KeepAlive(data)
+	runtime.KeepAlive(ctxt)
+
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
 	}
@@ -998,6 +1032,8 @@ func hsCloseStream(stream hsStream, scratch hsScratch, onEvent hsMatchEventHandl
 	ctxt := &hsMatchEventContext{onEvent, context}
 
 	ret := C.hs_close_stream_cgo(C.uintptr_t(uintptr(unsafe.Pointer(stream))), C.uintptr_t(uintptr(unsafe.Pointer(scratch))), C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
+
+	runtime.KeepAlive(ctxt)
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
@@ -1011,6 +1047,8 @@ func hsResetStream(stream hsStream, flags ScanFlag, scratch hsScratch, onEvent h
 
 	ret := C.hs_reset_stream_cgo(C.uintptr_t(uintptr(unsafe.Pointer(stream))), C.uint(flags),
 		C.uintptr_t(uintptr(unsafe.Pointer(scratch))), C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
+
+	runtime.KeepAlive(ctxt)
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
@@ -1034,6 +1072,8 @@ func hsResetAndCopyStream(to, from hsStream, scratch hsScratch, onEvent hsMatchE
 
 	ret := C.hs_reset_and_copy_stream_cgo(C.uintptr_t(uintptr(unsafe.Pointer(to))), C.uintptr_t(uintptr(unsafe.Pointer(from))),
 		C.uintptr_t(uintptr(unsafe.Pointer(scratch))), C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
+
+	runtime.KeepAlive(ctxt)
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
@@ -1063,6 +1103,8 @@ func hsCompressStream(stream hsStream, buf []byte) ([]byte, error) {
 func hsExpandStream(db hsDatabase, stream *hsStream, buf []byte) error {
 	ret := C.hs_expand_stream(db, (**C.hs_stream_t)(stream), (*C.char)(unsafe.Pointer(&buf[0])), C.size_t(len(buf)))
 
+	runtime.KeepAlive(buf)
+
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
 	}
@@ -1078,6 +1120,9 @@ func hsResetAndExpandStream(stream hsStream, buf []byte, scratch hsScratch, onEv
 		C.uintptr_t(uintptr(unsafe.Pointer(&buf[0]))), C.uint(len(buf)),
 		C.uintptr_t(uintptr(unsafe.Pointer(scratch))),
 		C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
+
+	runtime.KeepAlive(buf)
+	runtime.KeepAlive(ctxt)
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
