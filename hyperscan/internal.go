@@ -10,7 +10,7 @@ import (
 )
 
 /*
-#cgo pkg-config: libhs --static
+#cgo pkg-config: libhs
 #cgo linux LDFLAGS: -lm -lstdc++
 #cgo darwin LDFLAGS: -lstdc++
 
