@@ -1,4 +1,6 @@
-sudo: true
+sudo: false
+
+dist: precise
 
 addons:
     apt:
