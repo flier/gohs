@@ -24,7 +24,7 @@ else
 		tar -xf /tmp/boost.tar.gz -C /tmp/boost --strip-components 1
 		cd /tmp/boost
 		./bootstrap.sh
-		./b2 -q --debug-building install -j 2 --prefix=$BOOST_ROOT link=static
+		./b2 -q install -j 2 --prefix=$BOOST_ROOT link=static,shared runtime-link=shared
 	else
   		echo "Using cached boost v1.${BOOST_VERSION_MINOR}_0 @ ${BOOST_ROOT}.";
   	fi
