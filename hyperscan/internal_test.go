@@ -304,7 +304,9 @@ func TestCompileAPI(t *testing.T) {
 			})
 
 			Convey("Then compile as vector", func() {
-				db, err := hsCompileMulti([]string{`\R`}, []CompileFlag{Caseless}, []uint{1}, BlockMode, platform)
+				db, err := hsCompileMulti([]*Pattern{
+					NewPattern(`\R`, Caseless),
+				}, BlockMode, platform)
 
 				So(db, ShouldBeNil)
 				So(err, ShouldNotBeNil)
@@ -331,7 +333,11 @@ func TestCompileAPI(t *testing.T) {
 		})
 
 		Convey("Compile multi expressions", func() {
-			db, err := hsCompileMulti([]string{`^\w+`, `\d+`, `\s+`}, nil, []uint{1, 2, 3}, StreamMode, platform)
+			db, err := hsCompileMulti([]*Pattern{
+				NewPattern(`^\w+`, 0),
+				NewPattern(`\d+`, 0),
+				NewPattern(`\s+`, 0),
+			}, StreamMode, platform)
 
 			So(db, ShouldNotBeNil)
 			So(err, ShouldBeNil)

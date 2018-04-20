@@ -3,6 +3,7 @@ package hyperscan
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"runtime"
 	"sort"
 	"strings"
@@ -706,7 +707,7 @@ func hsCompile(expression string, flags CompileFlag, mode ModeFlag, info *hsPlat
 	return nil, fmt.Errorf("compile error, %d", int(ret))
 }
 
-func hsCompileMulti(expressions []string, flags []CompileFlag, ids []uint, mode ModeFlag, info *hsPlatformInfo) (hsDatabase, error) {
+func hsCompileMulti(patterns []*Pattern, mode ModeFlag, info *hsPlatformInfo) (hsDatabase, error) {
 	var db *C.hs_database_t
 	var err *C.hs_compile_error_t
 	var platform *C.hs_platform_info_t
@@ -715,49 +716,49 @@ func hsCompileMulti(expressions []string, flags []CompileFlag, ids []uint, mode 
 		platform = &info.platform
 	}
 
-	cexprs := make([]*C.char, len(expressions))
+	cexprs := (**C.char)(C.calloc(C.size_t(len(patterns)), C.size_t(unsafe.Sizeof(uintptr(0)))))
+	exprs := *(*[]*C.char)(unsafe.Pointer(&reflect.SliceHeader{
+		Data: uintptr(unsafe.Pointer(cexprs)),
+		Len:  len(patterns),
+		Cap:  len(patterns),
+	}))
 
-	for i, expr := range expressions {
-		cexprs[i] = C.CString(expr)
+	cflags := (*C.uint)(C.calloc(C.size_t(len(patterns)), C.size_t(unsafe.Sizeof(C.uint(0)))))
+	flags := *(*[]C.uint)(unsafe.Pointer(&reflect.SliceHeader{
+		Data: uintptr(unsafe.Pointer(cflags)),
+		Len:  len(patterns),
+		Cap:  len(patterns),
+	}))
+
+	cids := (*C.uint)(C.calloc(C.size_t(len(patterns)), C.size_t(unsafe.Sizeof(C.uint(0)))))
+	ids := *(*[]C.uint)(unsafe.Pointer(&reflect.SliceHeader{
+		Data: uintptr(unsafe.Pointer(cids)),
+		Len:  len(patterns),
+		Cap:  len(patterns),
+	}))
+
+	for i, pattern := range patterns {
+		exprs[i] = C.CString(string(pattern.Expression))
+		flags[i] = C.uint(pattern.Flags)
+		ids[i] = C.uint(pattern.Id)
 	}
 
-	var cflags, cids *C.uint
+	ret := C.hs_compile_multi(cexprs, cflags, cids, C.uint(len(patterns)), C.uint(mode), platform, &db, &err)
 
-	if flags != nil {
-		values := make([]C.uint, len(flags))
-
-		for i, flag := range flags {
-			values[i] = C.uint(flag)
-		}
-
-		cflags = &values[0]
-	}
-
-	if ids != nil {
-		values := make([]C.uint, len(ids))
-
-		for i, id := range ids {
-			values[i] = C.uint(id)
-		}
-
-		cids = &values[0]
-	}
-
-	ret := C.hs_compile_multi(&cexprs[0], cflags, cids, C.uint(len(cexprs)), C.uint(mode), platform, &db, &err)
-
-	runtime.KeepAlive(cflags)
-	runtime.KeepAlive(cids)
-
-	for _, expr := range cexprs {
+	for _, expr := range exprs {
 		C.free(unsafe.Pointer(expr))
+	}
+
+	C.free(unsafe.Pointer(cexprs))
+	C.free(unsafe.Pointer(cflags))
+	C.free(unsafe.Pointer(cids))
+
+	if err != nil {
+		defer C.hs_free_compile_error(err)
 	}
 
 	if ret == C.HS_SUCCESS {
 		return db, nil
-	}
-
-	if err != nil {
-		defer C.hs_free_compile_error(err)
 	}
 
 	if ret == C.HS_COMPILER_ERROR && err != nil {

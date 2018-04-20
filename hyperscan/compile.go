@@ -134,16 +134,9 @@ func (b *DatabaseBuilder) Build() (Database, error) {
 		return nil, errors.New("no patterns")
 	}
 
-	expressions := make([]string, len(b.Patterns))
-	flags := make([]CompileFlag, len(b.Patterns))
-	ids := make([]uint, len(b.Patterns))
 	needSomLeftMost := false
 
-	for i, pattern := range b.Patterns {
-		expressions[i] = string(pattern.Expression)
-		flags[i] = pattern.Flags
-		ids[i] = uint(pattern.Id)
-
+	for _, pattern := range b.Patterns {
 		if (pattern.Flags & SomLeftMost) == SomLeftMost {
 			needSomLeftMost = true
 		}
@@ -161,7 +154,7 @@ func (b *DatabaseBuilder) Build() (Database, error) {
 
 	platform, _ := b.Platform.(*hsPlatformInfo)
 
-	db, err := hsCompileMulti(expressions, flags, ids, mode, platform)
+	db, err := hsCompileMulti(b.Patterns, mode, platform)
 
 	if err != nil {
 		return nil, err

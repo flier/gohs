@@ -232,10 +232,6 @@ func newStreamScanner(db *baseDatabase) *streamScanner {
 	return &streamScanner{baseDatabase: db}
 }
 
-func (ss *streamScanner) Close() error {
-	return nil
-}
-
 func (ss *streamScanner) Open(flags ScanFlag, sc *Scratch, handler MatchHandler, context interface{}) (Stream, error) {
 	s, err := hsOpenStream(ss.db, flags)
 
@@ -265,8 +261,6 @@ type vectoredScanner struct {
 func newVectoredScanner(vdb *baseDatabase) *vectoredScanner {
 	return &vectoredScanner{vdb}
 }
-
-func (vs *vectoredScanner) Close() error { return nil }
 
 func (vs *vectoredScanner) Scan(data [][]byte, s *Scratch, handler MatchHandler, context interface{}) (err error) {
 	if s == nil {
