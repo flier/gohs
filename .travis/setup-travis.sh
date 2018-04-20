@@ -19,9 +19,9 @@ else
     export PATH=$HOME/bin:$PATH
 
 	if [ ! -f "$BOOST_ROOT/lib/libboost_graph.a" ]; then
-		wget http://downloads.sourceforge.net/project/boost/boost/1.$BOOST_VERSION_MINOR.0/boost_1_$BOOST_VERSION_MINOR\_0.tar.gz -O /tmp/boost.tar.gz
+		wget https://dl.bintray.com/boostorg/release/1.$BOOST_VERSION_MINOR.0/source/boost_1_$BOOST_VERSION_MINOR\_0.tar.gz -O /tmp/boost.tar.gz
 		mkdir -p /tmp/boost
-		tar -xzf /tmp/boost.tar.gz -C /tmp/boost --strip-components 1
+		tar -xf /tmp/boost.tar.gz -C /tmp/boost --strip-components 1
 		cd /tmp/boost
 		./bootstrap.sh
 		./b2 -q -d=0 install -j 2 --prefix=$BOOST_ROOT link=static

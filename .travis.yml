@@ -41,7 +41,7 @@ script:
 
 env:
     global:
-        - BOOST_VERSION_MINOR=66
+        - BOOST_VERSION_MINOR=67
         - BOOST_ROOT=$HOME/boost-1.$BOOST_VERSION_MINOR
         - HYPERSCAN_VERSION=4.7.0
         - HYPERSCAN_ROOT=$HOME/hyperscan-$HYPERSCAN_VERSION
