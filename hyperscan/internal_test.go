@@ -2,6 +2,7 @@ package hyperscan
 
 import (
 	"errors"
+	"regexp"
 	"testing"
 	"unsafe"
 
@@ -13,7 +14,11 @@ func TestVersion(t *testing.T) {
 		ver := hsVersion()
 
 		So(ver, ShouldNotBeEmpty)
-		So(ver, ShouldStartWith, "4.")
+
+		matched, err := regexp.MatchString(`^\d\.\d\.\d.*`, ver)
+
+		So(err, ShouldBeNil)
+		So(matched, ShouldBeTrue)
 	})
 }
 
