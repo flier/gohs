@@ -1,22 +1,33 @@
 sudo: false
 
-dist: precise
+dist: trusty
+
+os:
+    - linux
+    - osx
+
+compiler:
+    - gcc
+    - clang
+
 
 addons:
     apt:
         sources:
-        - george-edison55-precise-backports # cmake 3.2.3 / doxygen 1.8.3
-        - ubuntu-toolchain-r-test # gcc-4.8 / g++-4.8
+        - george-edison55-cmake-3.x
+        - ubuntu-toolchain-r-test
+        - sourceline: 'ppa:mhier/libboost-latest'
         packages:
         - cmake
         - cmake-data
         - g++
-        - gcc-4.8
-        - g++-4.8
+        - gcc-5
+        - g++-5
         - pkg-config
         - ragel
         - libbz2-dev
         - libpcap-dev
+        - libboost1.67-dev
         - tree
 
 language: go
@@ -44,12 +55,10 @@ script:
 
 env:
     global:
-        - BOOST_VERSION_MINOR=67
-        - BOOST_ROOT=$HOME/boost-1.$BOOST_VERSION_MINOR
         - HYPERSCAN_VERSION=4.7.0
         - HYPERSCAN_ROOT=$HOME/hyperscan-$HYPERSCAN_VERSION
-        - PKG_CONFIG_PATH=$HYPERSCAN_ROOT/lib/pkgconfig:$BOOST_ROOT/lib/pkgconfig
-        - DYLD_LIBRARY_PATH=$HYPERSCAN_ROOT/lib:$BOOST_ROOT/lib
+        - PKG_CONFIG_PATH=$HYPERSCAN_ROOT/lib/pkgconfig
+        - DYLD_LIBRARY_PATH=$HYPERSCAN_ROOT/lib
 
 after_failure:
     - echo `pwd`
@@ -57,5 +66,4 @@ after_failure:
 
 cache:
     directories:
-    - $BOOST_ROOT
     - $HYPERSCAN_ROOT

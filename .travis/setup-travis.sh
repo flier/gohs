@@ -5,27 +5,5 @@ set -e
 
 if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
 	brew update
-	brew outdated cmake || brew upgrade cmake
-	brew outdated boost || brew upgrade boost
-	brew install ragel
-	brew install tree
-else
-	mkdir -p $HOME/bin
-
-	ln -s /usr/bin/g++-4.8 $HOME/bin/g++
-	ln -s /usr/bin/gcc-4.8 $HOME/bin/gcc
-	ln -s /usr/bin/gcov-4.8 $HOME/bin/gcov
-
-    export PATH=$HOME/bin:$PATH
-
-	if [ ! -f "$BOOST_ROOT/lib/libboost_graph.a" ]; then
-		wget https://dl.bintray.com/boostorg/release/1.$BOOST_VERSION_MINOR.0/source/boost_1_$BOOST_VERSION_MINOR\_0.tar.gz -O /tmp/boost.tar.gz
-		mkdir -p /tmp/boost
-		tar -xf /tmp/boost.tar.gz -C /tmp/boost --strip-components 1
-		cd /tmp/boost
-		./bootstrap.sh
-		./b2 -q install -j 2 --prefix=$BOOST_ROOT link=static,shared runtime-link=shared
-	else
-  		echo "Using cached boost v1.${BOOST_VERSION_MINOR}_0 @ ${BOOST_ROOT}.";
-  	fi
+	brew install cmake boost ragel tree
 fi
