@@ -1,3 +1,4 @@
+sudo: false
 dist: trusty
 
 os:
@@ -36,6 +37,8 @@ before_install:
     - gcc -v
     - g++ -v
     - .travis/setup-travis.sh
+
+before_script:
     - .travis/build-hyperscan.sh
 
 script:
@@ -45,6 +48,8 @@ env:
     global:
         - HYPERSCAN_VERSION=5.0.0
         - HYPERSCAN_ROOT=$HOME/hyperscan-$HYPERSCAN_VERSION
+        - PKG_CONFIG_PATH=$HYPERSCAN_ROOT/lib/pkgconfig
+        - DYLD_LIBRARY_PATH=$HYPERSCAN_ROOT/lib
 
 after_failure:
     - echo `pwd`
