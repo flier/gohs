@@ -21,8 +21,8 @@ addons:
         - cmake
         - cmake-data
         - g++
-        - gcc-5
-        - g++-5
+        - gcc-4.8
+        - g++-4.8
         - pkg-config
         - ragel
         - libbz2-dev
@@ -55,7 +55,7 @@ script:
 
 env:
     global:
-        - HYPERSCAN_VERSION=4.7.0
+        - HYPERSCAN_VERSION=5.0.0
         - HYPERSCAN_ROOT=$HOME/hyperscan-$HYPERSCAN_VERSION
         - PKG_CONFIG_PATH=$HYPERSCAN_ROOT/lib/pkgconfig
         - DYLD_LIBRARY_PATH=$HYPERSCAN_ROOT/lib
