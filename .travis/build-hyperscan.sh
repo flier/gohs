@@ -12,7 +12,7 @@ if [ ! -f "$HYPERSCAN_ROOT/lib/libhs.a" ]; then
 			-DBUILD_STATIC_AND_SHARED=on
 
 	make
-	make install
+	sudo make install
 else
 	echo "Using cached hyperscan v${HYPERSCAN_VERSION} @ ${HYPERSCAN_ROOT}.";
 fi
