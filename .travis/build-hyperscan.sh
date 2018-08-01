@@ -9,7 +9,6 @@ if [ ! -f "$HYPERSCAN_ROOT/lib/libhs.a" ]; then
 	rm -rf tools
 
 	cmake . -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-			-DCMAKE_INSTALL_PREFIX=$HYPERSCAN_ROOT \
 			-DBUILD_STATIC_AND_SHARED=on
 
 	make
