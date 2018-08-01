@@ -1,5 +1,4 @@
 sudo: false
-
 dist: trusty
 
 os:
@@ -9,7 +8,6 @@ os:
 compiler:
     - gcc
     - clang
-
 
 addons:
     apt:
@@ -38,11 +36,6 @@ go:
     - 1.9.x
     - 1.10.x
     - master
-
-install:
-    - go get -v github.com/hashicorp/go-multierror
-    - go get -v github.com/google/gopacket
-    - go get -v github.com/smartystreets/goconvey/convey
 
 before_install:
     - .travis/setup-travis.sh
