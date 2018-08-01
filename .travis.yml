@@ -12,15 +12,11 @@ compiler:
 addons:
     apt:
         sources:
-        - george-edison55-cmake-3.x
         - ubuntu-toolchain-r-test
         - sourceline: 'ppa:mhier/libboost-latest'
         packages:
-        - cmake
-        - cmake-data
         - g++
-        - gcc-4.8
-        - g++-4.8
+        - gcc
         - pkg-config
         - ragel
         - libbz2-dev
@@ -38,6 +34,8 @@ go:
     - master
 
 before_install:
+    - gcc -v
+    - g++ -v
     - .travis/setup-travis.sh
 
 before_script:
