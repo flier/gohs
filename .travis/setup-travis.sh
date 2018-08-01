@@ -5,5 +5,7 @@ set -e
 
 if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
 	brew update
-	brew install cmake boost ragel tree
+	brew outdated cmake || brew upgrade cmake
+	brew outdated boost || brew upgrade boost
+	brew install ragel tree
 fi
