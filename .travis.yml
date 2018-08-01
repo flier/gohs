@@ -37,8 +37,6 @@ before_install:
     - gcc -v
     - g++ -v
     - .travis/setup-travis.sh
-
-before_script:
     - .travis/build-hyperscan.sh
 
 script:
