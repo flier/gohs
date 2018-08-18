@@ -273,13 +273,7 @@ func (vs *vectoredScanner) Scan(data [][]byte, s *Scratch, handler MatchHandler,
 		defer s.Free()
 	}
 
-	err = hsScanVector(vs.db, data, 0, s.s, hsMatchEventHandler(handler), context)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return hsScanVector(vs.db, data, 0, s.s, hsMatchEventHandler(handler), context)
 }
 
 type blockScanner struct {
@@ -301,13 +295,7 @@ func (bs *blockScanner) Scan(data []byte, s *Scratch, handler MatchHandler, cont
 		defer s.Free()
 	}
 
-	err = hsScan(bs.db, data, 0, s.s, hsMatchEventHandler(handler), context)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return hsScan(bs.db, data, 0, s.s, hsMatchEventHandler(handler), context)
 }
 
 type blockMatcher struct {
@@ -347,7 +335,7 @@ func (m *blockMatcher) scan(data []byte) error {
 }
 
 func (m *blockMatcher) Find(data []byte) []byte {
-	if loc := m.FindIndex(data); loc != nil && len(loc) == 2 {
+	if loc := m.FindIndex(data); len(loc) == 2 {
 		return data[loc[0]:loc[1]]
 	}
 
@@ -621,7 +609,7 @@ func (db *streamDatabase) ResetAndExpand(s Stream, buf []byte, flags ScanFlag, s
 		ownedScratch = true
 	}
 
-	err := hsResetAndExpandStream(ss.stream, buf, ss.scratch, hsMatchEventHandler(ss.handler), ss.context)
+	err := hsResetAndExpandStream(ss.stream, buf, ss.scratch, ss.handler, ss.context)
 
 	if err != nil {
 		return nil, err

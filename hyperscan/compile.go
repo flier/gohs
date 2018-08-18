@@ -66,11 +66,13 @@ func ParsePattern(s string) (*Pattern, error) {
 	} else {
 		p.Expression = Expression(s[1:n])
 
-		if flags, err := ParseCompileFlag(strings.ToLower(s[n+1:])); err != nil {
+		flags, err := ParseCompileFlag(strings.ToLower(s[n+1:]))
+
+		if err != nil {
 			return nil, errors.New("invalid pattern, " + err.Error())
-		} else {
-			p.Flags = flags
 		}
+
+		p.Flags = flags
 	}
 
 	info, err := hsExpressionInfo(string(p.Expression), p.Flags)
