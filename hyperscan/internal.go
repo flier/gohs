@@ -107,7 +107,7 @@ import "C"
 type CompileFlag uint
 
 const (
-	Caseless        CompileFlag = C.HS_FLAG_CASELESS
+	Caseless        CompileFlag = C.HS_FLAG_CASELESS     // Set case-insensitive matching.
 	DotAll          CompileFlag = C.HS_FLAG_DOTALL       // Matching a `.` will not exclude newlines.
 	MultiLine       CompileFlag = C.HS_FLAG_MULTILINE    // Set multi-line anchoring.
 	SingleMatch     CompileFlag = C.HS_FLAG_SINGLEMATCH  // Set single-match only mode.
@@ -116,6 +116,8 @@ const (
 	UnicodeProperty CompileFlag = C.HS_FLAG_UCP          // Enable Unicode property support for this expression.
 	PrefilterMode   CompileFlag = C.HS_FLAG_PREFILTER    // Enable prefiltering mode for this expression.
 	SomLeftMost     CompileFlag = C.HS_FLAG_SOM_LEFTMOST // Enable leftmost start of match reporting.
+	Combination     CompileFlag = C.HS_FLAG_COMBINATION  // Logical combination.
+	Quiet           CompileFlag = C.HS_FLAG_QUIET        // Don't do any match reporting.
 )
 
 var compileFlags = map[rune]CompileFlag{
@@ -128,6 +130,8 @@ var compileFlags = map[rune]CompileFlag{
 	'p': UnicodeProperty,
 	'f': PrefilterMode,
 	'l': SomLeftMost,
+	'C': Combination,
+	'Q': Quiet,
 }
 
 /*
@@ -175,35 +179,23 @@ func (flags CompileFlag) String() string {
 type CpuFeature int
 
 const (
-	// AVX2 is a CPU features flag indicates that the target platform supports AVX2 instructions.
-	AVX2 CpuFeature = C.HS_CPU_FEATURES_AVX2
-	// AVX512 is a CPU features flag indicates that the target platform supports AVX512 instructions,
-	// specifically AVX-512BW. Using AVX512 implies the use of AVX2.
-	AVX512 = C.HS_CPU_FEATURES_AVX512
+	AVX2   CpuFeature = C.HS_CPU_FEATURES_AVX2   // AVX2 is a CPU features flag indicates that the target platform supports AVX2 instructions.
+	AVX512 CpuFeature = C.HS_CPU_FEATURES_AVX512 // AVX512 is a CPU features flag indicates that the target platform supports AVX512 instructions, specifically AVX-512BW. Using AVX512 implies the use of AVX2.
 )
 
 // TuneFlag is the tuning flags
 type TuneFlag int
 
 const (
-	// Genericindicates that the compiled database should not be tuned for any particular target platform.
-	Generic TuneFlag = C.HS_TUNE_FAMILY_GENERIC
-	// SandyBridge indicates that the compiled database should be tuned for the Sandy Bridge microarchitecture.
-	SandyBridge = C.HS_TUNE_FAMILY_SNB
-	// IvyBridge indicates that the compiled database should be tuned for the Ivy Bridge microarchitecture.
-	IvyBridge = C.HS_TUNE_FAMILY_IVB
-	// Haswell indicates that the compiled database should be tuned for the Haswell microarchitecture.
-	Haswell = C.HS_TUNE_FAMILY_HSW
-	// Silvermont indicates that the compiled database should be tuned for the Silvermont microarchitecture.
-	Silvermont = C.HS_TUNE_FAMILY_SLM
-	// Broadwell indicates that the compiled database should be tuned for the Broadwell microarchitecture.
-	Broadwell = C.HS_TUNE_FAMILY_BDW
-	// Skylake indicates that the compiled database should be tuned for the Skylake microarchitecture.
-	Skylake = C.HS_TUNE_FAMILY_SKL
-	// SkylakeServer indicates that the compiled database should be tuned for the Skylake Server microarchitecture.
-	SkylakeServer = C.HS_TUNE_FAMILY_SKX
-	// Goldmont indicates that the compiled database should be tuned for the Goldmont microarchitecture.
-	Goldmont = C.HS_TUNE_FAMILY_GLM
+	Generic       TuneFlag = C.HS_TUNE_FAMILY_GENERIC // Genericindicates that the compiled database should not be tuned for any particular target platform.
+	SandyBridge   TuneFlag = C.HS_TUNE_FAMILY_SNB     // SandyBridge indicates that the compiled database should be tuned for the Sandy Bridge microarchitecture.
+	IvyBridge     TuneFlag = C.HS_TUNE_FAMILY_IVB     // IvyBridge indicates that the compiled database should be tuned for the Ivy Bridge microarchitecture.
+	Haswell       TuneFlag = C.HS_TUNE_FAMILY_HSW     // Haswell indicates that the compiled database should be tuned for the Haswell microarchitecture.
+	Silvermont    TuneFlag = C.HS_TUNE_FAMILY_SLM     // Silvermont indicates that the compiled database should be tuned for the Silvermont microarchitecture.
+	Broadwell     TuneFlag = C.HS_TUNE_FAMILY_BDW     // Broadwell indicates that the compiled database should be tuned for the Broadwell microarchitecture.
+	Skylake       TuneFlag = C.HS_TUNE_FAMILY_SKL     // Skylake indicates that the compiled database should be tuned for the Skylake microarchitecture.
+	SkylakeServer TuneFlag = C.HS_TUNE_FAMILY_SKX     // SkylakeServer indicates that the compiled database should be tuned for the Skylake Server microarchitecture.
+	Goldmont      TuneFlag = C.HS_TUNE_FAMILY_GLM     // Goldmont indicates that the compiled database should be tuned for the Goldmont microarchitecture.
 )
 
 // Compile mode flags
@@ -256,17 +248,15 @@ func (m ModeFlag) String() string {
 	}
 }
 
+// ExtFlag are used in ExprExt.Flags to indicate which fields are used.
 type ExtFlag uint
 
 const (
-	// MinOffset is a flag indicating that the ExprExt.MinOffset field is used.
-	MinOffset ExtFlag = C.HS_EXT_FLAG_MIN_OFFSET
-	// MaxOffset is a flag indicating that the ExprExt.MaxOffset field is used.
-	MaxOffset = C.HS_EXT_FLAG_MAX_OFFSET
-	// MinLength is a flag indicating that the ExprExt.MinLength field is used.
-	MinLength = C.HS_EXT_FLAG_MIN_LENGTH
-	// EditDistance is a flag indicating that the ExprExt.EditDistance field is used.
-	EditDistance = C.HS_EXT_FLAG_EDIT_DISTANCE
+	MinOffset       ExtFlag = C.HS_EXT_FLAG_MIN_OFFSET       // MinOffset is a flag indicating that the ExprExt.MinOffset field is used.
+	MaxOffset       ExtFlag = C.HS_EXT_FLAG_MAX_OFFSET       // MaxOffset is a flag indicating that the ExprExt.MaxOffset field is used.
+	MinLength       ExtFlag = C.HS_EXT_FLAG_MIN_LENGTH       // MinLength is a flag indicating that the ExprExt.MinLength field is used.
+	EditDistance    ExtFlag = C.HS_EXT_FLAG_EDIT_DISTANCE    // EditDistance is a flag indicating that the ExprExt.EditDistance field is used.
+	HammingDistance ExtFlag = C.HS_EXT_FLAG_HAMMING_DISTANCE // HammingDistance is a flag indicating that the ExprExt.HammingDistance field is used.
 )
 
 type ScanFlag uint
@@ -274,30 +264,18 @@ type ScanFlag uint
 type HsError int
 
 const (
-	// ErrSuccess is the error returned if the engine completed normally.
-	ErrSuccess HsError = C.HS_SUCCESS
-	// ErrInvalid is the error returned if a parameter passed to this function was invalid.
-	ErrInvalid = C.HS_INVALID
-	// ErrNoMemory is the error returned if a memory allocation failed.
-	ErrNoMemory = C.HS_NOMEM
-	// ErrScanTerminated is the error returned if the engine was terminated by callback.
-	ErrScanTerminated = C.HS_SCAN_TERMINATED
-	// ErrCompileError is the error returned if the pattern compiler failed.
-	ErrCompileError = C.HS_COMPILER_ERROR
-	// ErrDatabaseVersionError is the error returned if the given database was built for a different version of Hyperscan.
-	ErrDatabaseVersionError = C.HS_DB_VERSION_ERROR
-	// ErrDatabasePlatformError is the error returned if the given database was built for a different platform (i.e., CPU type).
-	ErrDatabasePlatformError = C.HS_DB_PLATFORM_ERROR
-	// ErrDatabaseModeError is the error returned if the given database was built for a different mode of operation.
-	ErrDatabaseModeError = C.HS_DB_MODE_ERROR
-	// ErrBadAlign is the error returned if a parameter passed to this function was not correctly aligned.
-	ErrBadAlign = C.HS_BAD_ALIGN
-	// ErrBadAlloc is the error returned if the memory allocator did not correctly return memory suitably aligned.
-	ErrBadAlloc = C.HS_BAD_ALLOC
-	// ErrScratchInUse is the error returned if the scratch region was already in use.
-	ErrScratchInUse = C.HS_SCRATCH_IN_USE
-	// ErrArchError is the error returned if unsupported CPU architecture.
-	ErrArchError = C.HS_ARCH_ERROR
+	ErrSuccess               HsError = C.HS_SUCCESS           // ErrSuccess is the error returned if the engine completed normally.
+	ErrInvalid               HsError = C.HS_INVALID           // ErrInvalid is the error returned if a parameter passed to this function was invalid.
+	ErrNoMemory              HsError = C.HS_NOMEM             // ErrNoMemory is the error returned if a memory allocation failed.
+	ErrScanTerminated        HsError = C.HS_SCAN_TERMINATED   // ErrScanTerminated is the error returned if the engine was terminated by callback.
+	ErrCompileError          HsError = C.HS_COMPILER_ERROR    // ErrCompileError is the error returned if the pattern compiler failed.
+	ErrDatabaseVersionError  HsError = C.HS_DB_VERSION_ERROR  // ErrDatabaseVersionError is the error returned if the given database was built for a different version of Hyperscan.
+	ErrDatabasePlatformError HsError = C.HS_DB_PLATFORM_ERROR // ErrDatabasePlatformError is the error returned if the given database was built for a different platform (i.e., CPU type).
+	ErrDatabaseModeError     HsError = C.HS_DB_MODE_ERROR     // ErrDatabaseModeError is the error returned if the given database was built for a different mode of operation.
+	ErrBadAlign              HsError = C.HS_BAD_ALIGN         // ErrBadAlign is the error returned if a parameter passed to this function was not correctly aligned.
+	ErrBadAlloc              HsError = C.HS_BAD_ALLOC         // ErrBadAlloc is the error returned if the memory allocator did not correctly return memory suitably aligned.
+	ErrScratchInUse          HsError = C.HS_SCRATCH_IN_USE    // ErrScratchInUse is the error returned if the scratch region was already in use.
+	ErrArchError             HsError = C.HS_ARCH_ERROR        // ErrArchError is the error returned if unsupported CPU architecture.
 )
 
 var (
@@ -382,16 +360,12 @@ const UnboundedMaxWidth = C.UINT_MAX
 
 // ExprExt is a structure containing additional parameters related to an expression.
 type ExprExt struct {
-	// Flags governing which parts of this structure are to be used by the compiler.
-	Flags ExtFlag
-	// The minimum end offset in the data stream at which this expression should match successfully.
-	MinOffset uint64
-	// The maximum end offset in the data stream at which this expression should match successfully.
-	MaxOffset uint64
-	// The minimum match length (from start to end) required to successfully match this expression.
-	MinLength uint64
-	// Allow patterns to approximately match within this edit distance.
-	EditDistance uint
+	Flags           ExtFlag // Flags governing which parts of this structure are to be used by the compiler.
+	MinOffset       uint64  // The minimum end offset in the data stream at which this expression should match successfully.
+	MaxOffset       uint64  // The maximum end offset in the data stream at which this expression should match successfully.
+	MinLength       uint64  // The minimum match length (from start to end) required to successfully match this expression.
+	EditDistance    uint    // Allow patterns to approximately match within this edit distance.
+	HammingDistance uint    // Allow patterns to approximately match within this Hamming distance.
 }
 
 type hsAllocFunc func(uint) unsafe.Pointer
