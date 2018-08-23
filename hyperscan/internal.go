@@ -116,8 +116,6 @@ const (
 	UnicodeProperty CompileFlag = C.HS_FLAG_UCP          // Enable Unicode property support for this expression.
 	PrefilterMode   CompileFlag = C.HS_FLAG_PREFILTER    // Enable prefiltering mode for this expression.
 	SomLeftMost     CompileFlag = C.HS_FLAG_SOM_LEFTMOST // Enable leftmost start of match reporting.
-	Combination     CompileFlag = C.HS_FLAG_COMBINATION  // Logical combination.
-	Quiet           CompileFlag = C.HS_FLAG_QUIET        // Don't do any match reporting.
 )
 
 var compileFlags = map[rune]CompileFlag{
@@ -130,8 +128,6 @@ var compileFlags = map[rune]CompileFlag{
 	'p': UnicodeProperty,
 	'f': PrefilterMode,
 	'l': SomLeftMost,
-	'C': Combination,
-	'Q': Quiet,
 }
 
 /*
@@ -146,6 +142,8 @@ var compileFlags = map[rune]CompileFlag{
 		p	UnicodeProperty
 		f 	PrefilterMode
 		l 	SomLeftMost
+		C 	Combination		// Hyperscan 5.0
+		Q	Quiet			// Hyperscan 5.0
 */
 func ParseCompileFlag(s string) (CompileFlag, error) {
 	var flags CompileFlag
