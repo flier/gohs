@@ -1,5 +1,6 @@
-# gohs [![traivs](https://travis-ci.org/flier/gohs.svg)](https://travis-ci.org/flier/gohs)
-GoLang Binding of HyperScan https://01.org/hyperscan
+# gohs [![travis](https://travis-ci.org/flier/gohs.svg)](https://travis-ci.org/flier/gohs)
+
+GoLang Binding of Intel's HyperScan regex matching library: https://www.hyperscan.io/
 
 [API Reference](https://godoc.org/github.com/flier/gohs/hyperscan)
 
