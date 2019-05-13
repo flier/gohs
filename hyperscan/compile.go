@@ -66,7 +66,7 @@ func ParsePattern(s string) (*Pattern, error) {
 	} else {
 		p.Expression = Expression(s[1:n])
 
-		flags, err := ParseCompileFlag(strings.ToLower(s[n+1:]))
+		flags, err := ParseCompileFlag(s[n+1:])
 
 		if err != nil {
 			return nil, errors.New("invalid pattern, " + err.Error())
