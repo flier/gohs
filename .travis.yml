@@ -10,7 +10,6 @@ compiler:
     - gcc
     - clang
 
-
 addons:
     apt:
         sources:
@@ -20,23 +19,21 @@ addons:
         packages:
         - cmake
         - cmake-data
-        - g++
-        - gcc-4.8
-        - g++-4.8
         - pkg-config
         - ragel
         - libbz2-dev
         - libpcap-dev
         - libboost1.67-dev
+        - libpcre-dev
         - tree
 
 language: go
 
 go:
-    - 1.7.x
-    - 1.8.x
     - 1.9.x
     - 1.10.x
+    - 1.11.x
+    - 1.12.x
     - master
 
 install:
@@ -55,10 +52,14 @@ script:
 
 env:
     global:
-        - HYPERSCAN_VERSION=5.0.0
         - HYPERSCAN_ROOT=$HOME/hyperscan-$HYPERSCAN_VERSION
         - PKG_CONFIG_PATH=$HYPERSCAN_ROOT/lib/pkgconfig
         - DYLD_LIBRARY_PATH=$HYPERSCAN_ROOT/lib
+
+matrix:
+    include:
+    - env: HYPERSCAN_VERSION=4.7.0  TAGS=hyperscan_v4
+    - env: HYPERSCAN_VERSION=5.1.1  TAGS=hyperscan_v5
 
 after_failure:
     - echo `pwd`
