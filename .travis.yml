@@ -13,7 +13,6 @@ compiler:
 addons:
     apt:
         sources:
-        - george-edison55-cmake-3.x
         - ubuntu-toolchain-r-test
         - sourceline: 'ppa:mhier/libboost-latest'
         packages:
@@ -23,7 +22,7 @@ addons:
         - ragel
         - libbz2-dev
         - libpcap-dev
-        - libboost1.67-dev
+        - libboost1.68-dev
         - libpcre-dev
         - tree
 
