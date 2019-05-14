@@ -54,10 +54,6 @@ script:
     - go test -tags $TAGS ./... -v
 
 env:
-    global:
-        - HYPERSCAN_ROOT=$HOME/hyperscan-$HYPERSCAN_VERSION
-        - PKG_CONFIG_PATH=$HYPERSCAN_ROOT/lib/pkgconfig
-        - DYLD_LIBRARY_PATH=$HYPERSCAN_ROOT/lib
     matrix:
         - HYPERSCAN_VERSION=4.7.0  TAGS=hyperscan_v4
         - HYPERSCAN_VERSION=5.1.1  TAGS=hyperscan_v5
@@ -69,5 +65,3 @@ after_failure:
 
 cache:
     ccache: true
-    directories:
-    - $HYPERSCAN_ROOT
