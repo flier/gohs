@@ -50,7 +50,7 @@ before_script:
     - .travis/build-hyperscan.sh
 
 script:
-    - go test ./...
+    - go test -tags $TAGS ./...
 
 env:
     global:
