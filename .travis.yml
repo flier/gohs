@@ -18,6 +18,7 @@ addons:
         - libbz2-dev
         - libpcap-dev
         - libpcre2-dev
+        - libstdc++6
         - pkg-config
         - ragel
         - tree
@@ -50,7 +51,7 @@ before_script:
     - .travis/build-hyperscan.sh
 
 script:
-    - go test -tags $TAGS ./...
+    - go test -tags $TAGS ./... -v
 
 env:
     global:
@@ -63,6 +64,7 @@ env:
 
 after_failure:
     - echo `pwd`
+    - pkg-config --debug libhs
     - tree -h
 
 cache:
