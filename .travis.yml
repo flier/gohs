@@ -17,7 +17,7 @@ addons:
         - libboost-dev
         - libbz2-dev
         - libpcap-dev
-        - libpcre-dev
+        - libpcre2-dev
         - pkg-config
         - ragel
         - tree
