@@ -1,5 +1,4 @@
 sudo: false
-
 dist: xenial
 
 os:
@@ -14,17 +13,26 @@ addons:
     apt:
         sources:
         - ubuntu-toolchain-r-test
-        - sourceline: 'ppa:mhier/libboost-latest'
         packages:
         - cmake
         - cmake-data
-        - pkg-config
-        - ragel
+        - libboost-dev
         - libbz2-dev
         - libpcap-dev
-        - libboost1.68-dev
         - libpcre-dev
+        - pkg-config
+        - ragel
         - tree
+    homebrew:
+        packages:
+        - boost
+        - ccache
+        - cmake
+        - libpcap
+        - pcre
+        - ragel
+        - tree
+        update: true
 
 language: go
 
@@ -39,9 +47,6 @@ install:
     - go get -v github.com/hashicorp/go-multierror
     - go get -v github.com/google/gopacket
     - go get -v github.com/smartystreets/goconvey/convey
-
-before_install:
-    - .travis/setup-travis.sh
 
 before_script:
     - .travis/build-hyperscan.sh
@@ -65,5 +70,6 @@ after_failure:
     - tree -h
 
 cache:
+    ccache: true
     directories:
     - $HYPERSCAN_ROOT
