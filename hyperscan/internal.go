@@ -917,13 +917,15 @@ func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, data un
 }
 
 func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
+	datalen := len(data)
+	datatoscan := data
 	if len(data) == 0 {
-		return HsError(C.HS_INVALID)
+		datatoscan = []byte{0}
 	}
 
 	ctxt := &hsMatchEventContext{onEvent, context}
 
-	ret := C.hs_scan_cgo(db, (*C.char)(unsafe.Pointer(&data[0])), C.uint(len(data)),
+	ret := C.hs_scan_cgo(db, (*C.char)(unsafe.Pointer(&datatoscan[0])), C.uint(datalen),
 		C.uint(flags), scratch, C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
 
 	runtime.KeepAlive(data)
@@ -945,12 +947,13 @@ func hsScanVector(db hsDatabase, data [][]byte, flags ScanFlag, scratch hsScratc
 	clength := make([]C.uint, len(data))
 
 	for i, d := range data {
+		datalen := len(d)
 		if len(d) == 0 {
-			return HsError(C.HS_INVALID)
+			d = []byte{0}
 		}
 
 		cdata[i] = uintptr(unsafe.Pointer(&d[0]))
-		clength[i] = C.uint(len(d))
+		clength[i] = C.uint(datalen)
 	}
 
 	ctxt := &hsMatchEventContext{onEvent, context}

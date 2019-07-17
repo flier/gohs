@@ -292,6 +292,56 @@ func TestDatabase(t *testing.T) {
 	})
 }
 
+func TestALLOWEMPTY(t *testing.T) {
+
+	Convey("Test block", t, func() {
+		platform, err := hsPopulatePlatform()
+
+		So(platform, ShouldNotBeNil)
+		So(err, ShouldBeNil)
+		db, err := hsCompile("", AllowEmpty, BlockMode, platform)
+
+		So(db, ShouldNotBeNil)
+		So(err, ShouldBeNil)
+
+		s, err := hsAllocScratch(db)
+
+		So(s, ShouldNotBeNil)
+		So(err, ShouldBeNil)
+
+		h := &matchRecorder{}
+
+		So(hsScan(db, []byte(""), 0, s, h.Handle, nil), ShouldBeNil)
+		So(h.matched, ShouldNotBeEmpty)
+
+		So(hsFreeDatabase(db), ShouldBeNil)
+	})
+
+	Convey("Test Vector", t, func() {
+		platform, err := hsPopulatePlatform()
+
+		So(platform, ShouldNotBeNil)
+		So(err, ShouldBeNil)
+		db, err := hsCompile("", AllowEmpty, VectoredMode, platform)
+
+		So(db, ShouldNotBeNil)
+		So(err, ShouldBeNil)
+
+		s, err := hsAllocScratch(db)
+
+		So(s, ShouldNotBeNil)
+		So(err, ShouldBeNil)
+
+		h := &matchRecorder{}
+
+		So(hsScanVector(db, [][]byte{[]byte(""), []byte("")}, 0, s, h.Handle, nil), ShouldBeNil)
+		So(h.matched, ShouldNotBeEmpty)
+
+		So(hsFreeDatabase(db), ShouldBeNil)
+	})
+
+}
+
 func TestCompileAPI(t *testing.T) {
 	Convey("Given a host platform", t, func() {
 		platform, err := hsPopulatePlatform()
