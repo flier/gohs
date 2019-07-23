@@ -4,6 +4,14 @@ GoLang Binding of Intel's HyperScan regex matching library: https://www.hypersca
 
 [API Reference](https://godoc.org/github.com/flier/gohs/hyperscan)
 
+# Build
+
+**Note:** `gohs` will use Hyperscan v5 API by default, you can also build for Hyperscan v4 with `hyperscan_v4` tag.
+
+```bash
+$ go get -u -tags hyperscan_v4 github.com/flier/gohs/hyperscan
+```
+
 # License
 
 This project is licensed under either of
