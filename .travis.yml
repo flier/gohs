@@ -55,7 +55,7 @@ script:
 
 env:
     global:
-        - HYPERSCAN_VERSION=5.0.0
+        - HYPERSCAN_VERSION=5.1.1
         - HYPERSCAN_ROOT=$HOME/hyperscan-$HYPERSCAN_VERSION
         - PKG_CONFIG_PATH=$HYPERSCAN_ROOT/lib/pkgconfig
         - DYLD_LIBRARY_PATH=$HYPERSCAN_ROOT/lib
