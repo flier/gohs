@@ -917,13 +917,14 @@ func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, data un
 }
 
 func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	if len(data) == 0 {
+	if data == nil {
 		return HsError(C.HS_INVALID)
 	}
 
 	ctxt := &hsMatchEventContext{onEvent, context}
+	data_hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data))
 
-	ret := C.hs_scan_cgo(db, (*C.char)(unsafe.Pointer(&data[0])), C.uint(len(data)),
+	ret := C.hs_scan_cgo(db, (*C.char)(unsafe.Pointer(data_hdr.Data)), C.uint(data_hdr.Len),
 		C.uint(flags), scratch, C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
 
 	runtime.KeepAlive(data)
@@ -937,7 +938,7 @@ func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEve
 }
 
 func hsScanVector(db hsDatabase, data [][]byte, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	if len(data) == 0 {
+	if data == nil {
 		return HsError(C.HS_INVALID)
 	}
 
@@ -954,9 +955,11 @@ func hsScanVector(db hsDatabase, data [][]byte, flags ScanFlag, scratch hsScratc
 	}
 
 	ctxt := &hsMatchEventContext{onEvent, context}
+	cdata_hdr := (*reflect.SliceHeader)(unsafe.Pointer(&cdata))
+	clength_hdr := (*reflect.SliceHeader)(unsafe.Pointer(&clength))
 
-	ret := C.hs_scan_vector_cgo(db, (**C.char)(unsafe.Pointer(&cdata[0])), (*C.uint)(unsafe.Pointer(&clength[0])),
-		C.uint(len(data)), C.uint(flags), scratch, C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
+	ret := C.hs_scan_vector_cgo(db, (**C.char)(unsafe.Pointer(cdata_hdr.Data)), (*C.uint)(unsafe.Pointer(clength_hdr.Data)),
+		C.uint(cdata_hdr.Len), C.uint(flags), scratch, C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
 
 	runtime.KeepAlive(data)
 	runtime.KeepAlive(cdata)
@@ -981,13 +984,14 @@ func hsOpenStream(db hsDatabase, flags ScanFlag) (hsStream, error) {
 }
 
 func hsScanStream(stream hsStream, data []byte, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	if len(data) == 0 {
+	if data == nil {
 		return HsError(C.HS_INVALID)
 	}
 
 	ctxt := &hsMatchEventContext{onEvent, context}
+	data_hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data))
 
-	ret := C.hs_scan_stream_cgo(stream, (*C.char)(unsafe.Pointer(&data[0])), C.uint(len(data)),
+	ret := C.hs_scan_stream_cgo(stream, (*C.char)(unsafe.Pointer(data_hdr.Data)), C.uint(data_hdr.Len),
 		C.uint(flags), scratch, C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
 
 	runtime.KeepAlive(data)

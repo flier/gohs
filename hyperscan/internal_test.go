@@ -525,6 +525,11 @@ func TestBlockScan(t *testing.T) {
 			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}})
 		})
 
+		Convey("Scan empty buffers", func() {
+			So(hsScan(db, nil, 0, s, h.Handle, nil), ShouldEqual, ErrInvalid)
+			So(hsScan(db, []byte(""), 0, s, h.Handle, nil), ShouldBeNil)
+		})
+
 		So(hsFreeScratch(s), ShouldBeNil)
 		So(hsFreeDatabase(db), ShouldBeNil)
 	})
@@ -569,6 +574,11 @@ func TestVectorScan(t *testing.T) {
 
 			So(hsScanVector(db, [][]byte{[]byte("abctestdef"), []byte("123test456")}, 0, s, h.Handle, nil), ShouldEqual, ErrScanTerminated)
 			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}})
+		})
+
+		Convey("Scan empty buffers", func() {
+			So(hsScanVector(db, nil, 0, s, h.Handle, nil), ShouldEqual, ErrInvalid)
+			So(hsScanVector(db, [][]byte{}, 0, s, h.Handle, nil), ShouldBeNil)
 		})
 
 		So(hsFreeScratch(s), ShouldBeNil)
@@ -645,6 +655,11 @@ func TestStreamScan(t *testing.T) {
 					Convey("When scan the second part, should not be matched", func() {
 						So(hsScanStream(stream, []byte("stdef"), 0, s, h.Handle, nil), ShouldBeNil)
 						So(h.matched, ShouldBeNil)
+					})
+
+					Convey("When scan empty buffers", func() {
+						So(hsScanStream(stream, nil, 0, s, h.Handle, nil), ShouldEqual, ErrInvalid)
+						So(hsScanStream(stream, []byte(""), 0, s, h.Handle, nil), ShouldBeNil)
 					})
 				})
 			})
