@@ -946,12 +946,13 @@ func hsScanVector(db hsDatabase, data [][]byte, flags ScanFlag, scratch hsScratc
 	clength := make([]C.uint, len(data))
 
 	for i, d := range data {
-		if len(d) == 0 {
+		if d == nil {
 			return HsError(C.HS_INVALID)
 		}
 
-		cdata[i] = uintptr(unsafe.Pointer(&d[0]))
-		clength[i] = C.uint(len(d))
+		hdr := (*reflect.SliceHeader)(unsafe.Pointer(&d))
+		cdata[i] = uintptr(unsafe.Pointer(hdr.Data))
+		clength[i] = C.uint(hdr.Len)
 	}
 
 	ctxt := &hsMatchEventContext{onEvent, context}

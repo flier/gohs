@@ -579,6 +579,7 @@ func TestVectorScan(t *testing.T) {
 		Convey("Scan empty buffers", func() {
 			So(hsScanVector(db, nil, 0, s, h.Handle, nil), ShouldEqual, ErrInvalid)
 			So(hsScanVector(db, [][]byte{}, 0, s, h.Handle, nil), ShouldBeNil)
+			So(hsScanVector(db, [][]byte{[]byte(""), []byte("")}, 0, s, h.Handle, nil), ShouldBeNil)
 		})
 
 		So(hsFreeScratch(s), ShouldBeNil)
