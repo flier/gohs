@@ -8,25 +8,24 @@ compiler:
     - gcc
     - clang
 
-
 addons:
     apt:
         sources:
-        - george-edison55-cmake-3.x
-        - ubuntu-toolchain-r-test
-        - sourceline: 'ppa:mhier/libboost-latest'
+            - george-edison55-cmake-3.x
+            - ubuntu-toolchain-r-test
+            - sourceline: "ppa:mhier/libboost-latest"
         packages:
-        - cmake
-        - cmake-data
-        - g++
-        - gcc-4.8
-        - g++-4.8
-        - pkg-config
-        - ragel
-        - libbz2-dev
-        - libpcap-dev
-        - libboost1.67-dev
-        - tree
+            - cmake
+            - cmake-data
+            - g++
+            - gcc-4.8
+            - g++-4.8
+            - pkg-config
+            - ragel
+            - libbz2-dev
+            - libpcap-dev
+            - libboost1.67-dev
+            - tree
 
 language: go
 
@@ -37,6 +36,8 @@ go:
     - 1.10.x
     - 1.11.x
     - 1.12.x
+    - 1.13.x
+    - 1.14.x
     - master
 
 install:
@@ -55,7 +56,7 @@ script:
 
 env:
     global:
-        - HYPERSCAN_VERSION=5.1.1
+        - HYPERSCAN_VERSION=5.2.1
         - HYPERSCAN_ROOT=$HOME/hyperscan-$HYPERSCAN_VERSION
         - PKG_CONFIG_PATH=$HYPERSCAN_ROOT/lib/pkgconfig
         - DYLD_LIBRARY_PATH=$HYPERSCAN_ROOT/lib
@@ -66,4 +67,4 @@ after_failure:
 
 cache:
     directories:
-    - $HYPERSCAN_ROOT
+        - $HYPERSCAN_ROOT
