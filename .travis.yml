@@ -1,70 +1,38 @@
-dist: trusty
+dist: bionic
 
 os:
     - linux
     - osx
 
-compiler:
-    - gcc
-    - clang
-
 addons:
     apt:
-        sources:
-            - george-edison55-cmake-3.x
-            - ubuntu-toolchain-r-test
-            - sourceline: "ppa:mhier/libboost-latest"
         packages:
-            - cmake
-            - cmake-data
-            - g++
-            - gcc-4.8
-            - g++-4.8
-            - pkg-config
-            - ragel
-            - libbz2-dev
+            - libhyperscan-dev
             - libpcap-dev
-            - libboost1.67-dev
             - tree
+    homebrew:
+        packages:
+            - pkg-config
+            - hyperscan
+            - libpcap
+            - tree
+
+env:
+    global:
+        - GO111MODULE=on
+        - PKG_CONFIG_PATH=/usr/local/lib/pkgconfig/
+install:
+    - if [ $TRAVIS_OS_NAME = osx ]; then brew install hyperscan libpcap tree; fi
 
 language: go
 
 go:
-    - 1.7.x
-    - 1.8.x
-    - 1.9.x
-    - 1.10.x
-    - 1.11.x
-    - 1.12.x
     - 1.13.x
     - 1.14.x
     - master
 
-install:
-    - go get -v github.com/hashicorp/go-multierror
-    - go get -v github.com/google/gopacket
-    - go get -v github.com/smartystreets/goconvey/convey
-
-before_install:
-    - .travis/setup-travis.sh
-
-before_script:
-    - .travis/build-hyperscan.sh
-
-script:
-    - go test ./...
-
-env:
-    global:
-        - HYPERSCAN_VERSION=5.2.1
-        - HYPERSCAN_ROOT=$HOME/hyperscan-$HYPERSCAN_VERSION
-        - PKG_CONFIG_PATH=$HYPERSCAN_ROOT/lib/pkgconfig
-        - DYLD_LIBRARY_PATH=$HYPERSCAN_ROOT/lib
+gobuild_args: -tags hyperscan_v4
 
 after_failure:
     - echo `pwd`
     - tree -h
-
-cache:
-    directories:
-        - $HYPERSCAN_ROOT
