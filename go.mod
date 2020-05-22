@@ -1,10 +1,13 @@
 module github.com/flier/gohs
 
+go 1.14
+
 require (
-	github.com/google/gopacket v1.1.14
-	github.com/gopherjs/gopherjs v0.0.0-20180825215210-0210a2f0f73c // indirect
-	github.com/hashicorp/go-multierror v1.0.0
-	github.com/jtolds/gls v4.2.1+incompatible // indirect
-	github.com/smartystreets/assertions v0.0.0-20180820201707-7c9eb446e3cf // indirect
-	github.com/smartystreets/goconvey v0.0.0-20180222194500-ef6db91d284a
+	github.com/google/gopacket v1.1.17
+	github.com/gopherjs/gopherjs v0.0.0-20200217142428-fce0ec30dd00 // indirect
+	github.com/hashicorp/go-multierror v1.1.0
+	github.com/smartystreets/assertions v1.1.0 // indirect
+	github.com/smartystreets/goconvey v1.6.4
+	golang.org/x/net v0.0.0-20200520182314-0ba52f642ac2 // indirect
+	golang.org/x/sys v0.0.0-20200519105757-fe76b779f299 // indirect
 )
