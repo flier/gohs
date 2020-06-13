@@ -1,8 +1,10 @@
 package hyperscan
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 )
@@ -12,6 +14,8 @@ type Expression string
 
 func (e Expression) String() string { return string(e) }
 
+type Patterns []*Pattern
+
 type Pattern struct {
 	Expression             // The expression to parse.
 	Flags      CompileFlag // Flags which modify the behaviour of the expression.
@@ -19,10 +23,12 @@ type Pattern struct {
 	info       *ExprInfo
 }
 
+/// NewPattern returns a new pattern base on expression and compile flags.
 func NewPattern(expr string, flags CompileFlag) *Pattern {
 	return &Pattern{Expression: Expression(expr), Flags: flags}
 }
 
+/// IsValid validate the pattern contains a regular expression.
 func (p *Pattern) IsValid() bool {
 	_, err := p.Info()
 
@@ -45,7 +51,11 @@ func (p *Pattern) Info() (*ExprInfo, error) {
 }
 
 func (p *Pattern) String() string {
-	return "/" + string(p.Expression) + "/" + p.Flags.String()
+	if p.Id > 0 {
+		return fmt.Sprintf("%d:/%s/%s", p.Id, string(p.Expression), p.Flags)
+	}
+
+	return fmt.Sprintf("/%s/%s", string(p.Expression), p.Flags)
 }
 
 /*
@@ -91,6 +101,32 @@ func ParsePattern(s string) (*Pattern, error) {
 	p.info = info
 
 	return &p, nil
+}
+
+// ParsePatterns parse lines as `Patterns`.
+func ParsePatterns(r io.Reader) (patterns Patterns, err error) {
+	s := bufio.NewScanner(r)
+
+	for s.Scan() {
+		line := strings.TrimSpace(s.Text())
+
+		if line == "" {
+			// skip empty line
+			continue
+		}
+		if strings.HasPrefix(line, "#") {
+			// skip comment
+			continue
+		}
+
+		p, err := ParsePattern(line)
+		if err != nil {
+			return nil, err
+		}
+		patterns = append(patterns, p)
+	}
+
+	return
 }
 
 // A type containing information on the target platform.
