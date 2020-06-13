@@ -122,6 +122,15 @@ var compileFlags = map[rune]CompileFlag{
 	'i': Caseless,
 	's': DotAll,
 	'm': MultiLine,
+	'H': SingleMatch,
+	'V': AllowEmpty,
+	'8': Utf8Mode,
+	'W': UnicodeProperty,
+	'P': PrefilterMode,
+	'L': SomLeftMost,
+}
+
+var deprecatedCompileFlags = map[rune]CompileFlag{
 	'o': SingleMatch,
 	'e': AllowEmpty,
 	'u': Utf8Mode,
@@ -131,25 +140,27 @@ var compileFlags = map[rune]CompileFlag{
 }
 
 /*
-	Parse the compile pattern flags from string
+Parse the compile pattern flags from string
 
-		i	Caseless 		Case-insensitive matching
-		s	DotAll			Dot (.) will match newlines
-		m	MultiLine		Multi-line anchoring
-		o	SingleMatch		Report match ID at most once
-		e	AllowEmpty		Allow patterns that can match against empty buffers
-		u	Utf8Mode		UTF-8 mode
-		p	UnicodeProperty		Unicode property support
-		f	PrefilterMode		Prefiltering mode
-		l	SomLeftMost		Leftmost start of match reporting
-		C	Combination		Logical combination of patterns (Hyperscan 5.0)
-		Q	Quiet			Quiet at matching (Hyperscan 5.0)
+	i	Caseless 		Case-insensitive matching
+	s	DotAll			Dot (.) will match newlines
+	m	MultiLine		Multi-line anchoring
+	H	SingleMatch		Report match ID at most once (`o` deprecated)
+	V	AllowEmpty		Allow patterns that can match against empty buffers (`e` deprecated)
+	8	Utf8Mode		UTF-8 mode (`u` deprecated)
+	W	UnicodeProperty		Unicode property support (`p` deprecated)
+	P	PrefilterMode		Prefiltering mode (`f` deprecated)
+	L	SomLeftMost		Leftmost start of match reporting (`l` deprecated)
+	C	Combination		Logical combination of patterns (Hyperscan 5.0)
+	Q	Quiet			Quiet at matching (Hyperscan 5.0)
 */
 func ParseCompileFlag(s string) (CompileFlag, error) {
 	var flags CompileFlag
 
 	for _, c := range s {
 		if flag, exists := compileFlags[c]; exists {
+			flags |= flag
+		} else if flag, exists := deprecatedCompileFlags[c]; exists {
 			flags |= flag
 		} else {
 			return 0, fmt.Errorf("unknown flag `%c`", c)
@@ -168,7 +179,7 @@ func (flags CompileFlag) String() string {
 		}
 	}
 
-	sort.Sort(sort.StringSlice(values))
+	sort.Strings(values)
 
 	return strings.Join(values, "")
 }
