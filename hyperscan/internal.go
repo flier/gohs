@@ -133,17 +133,17 @@ var compileFlags = map[rune]CompileFlag{
 /*
 	Parse the compile pattern flags from string
 
-		i 	Caseless
-		s 	DotAll
-		m	MultiLine
-		o 	SingleMatch
-		e 	AllowEmpty
-		u 	Utf8Mode
-		p	UnicodeProperty
-		f 	PrefilterMode
-		l 	SomLeftMost
-		C 	Combination		// Hyperscan 5.0
-		Q	Quiet			// Hyperscan 5.0
+		i	Caseless 		Case-insensitive matching
+		s	DotAll			Dot (.) will match newlines
+		m	MultiLine		Multi-line anchoring
+		o	SingleMatch		Report match ID at most once
+		e	AllowEmpty		Allow patterns that can match against empty buffers
+		u	Utf8Mode		UTF-8 mode
+		p	UnicodeProperty		Unicode property support
+		f	PrefilterMode		Prefiltering mode
+		l	SomLeftMost		Leftmost start of match reporting
+		C	Combination		Logical combination of patterns (Hyperscan 5.0)
+		Q	Quiet			Quiet at matching (Hyperscan 5.0)
 */
 func ParseCompileFlag(s string) (CompileFlag, error) {
 	var flags CompileFlag

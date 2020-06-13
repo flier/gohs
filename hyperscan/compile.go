@@ -2,6 +2,7 @@ package hyperscan
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -51,7 +52,7 @@ func (p *Pattern) String() string {
 
 Parse pattern from a formated string
 
-	/<expression>/[flags]
+	<integer id>:/<expression>/<flags>
 
 For example, the following pattern will match `test` in the caseless and multi-lines mode
 
@@ -61,26 +62,32 @@ For example, the following pattern will match `test` in the caseless and multi-l
 func ParsePattern(s string) (*Pattern, error) {
 	var p Pattern
 
-	if n := strings.LastIndex(s, "/"); n < 1 || !strings.HasPrefix(s, "/") {
-		p.Expression = Expression(s)
-	} else {
-		p.Expression = Expression(s[1:n])
-
-		flags, err := ParseCompileFlag(s[n+1:])
-
+	i := strings.Index(s, ":/")
+	j := strings.LastIndex(s, "/")
+	if i > 0 && j > i+1 {
+		id, err := strconv.ParseInt(s[:i], 10, 32)
 		if err != nil {
-			return nil, errors.New("invalid pattern, " + err.Error())
+			return nil, errors.New("invalid pattern id: " + s[:i])
 		}
-
-		p.Flags = flags
+		p.Id = int(id)
+		s = s[i+1:]
 	}
+
+	if n := strings.LastIndex(s, "/"); n > 1 && strings.HasPrefix(s, "/") {
+		flags, err := ParseCompileFlag(s[n+1:])
+		if err != nil {
+			return nil, fmt.Errorf("invalid pattern flags: %s, %w", s[n+1:], err)
+		}
+		p.Flags = flags
+		s = s[1:n]
+	}
+
+	p.Expression = Expression(s)
 
 	info, err := hsExpressionInfo(string(p.Expression), p.Flags)
-
 	if err != nil {
-		return nil, errors.New("invalid pattern, " + err.Error())
+		return nil, fmt.Errorf("invalid pattern: %s, %w", p.Expression, err)
 	}
-
 	p.info = info
 
 	return &p, nil

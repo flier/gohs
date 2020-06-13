@@ -117,4 +117,6 @@ func MatchReader(pattern string, reader io.Reader) (bool, error) {
 	return false, result.ErrorOrNil()
 }
 
-func MatchString(pattern string, s string) (matched bool, err error) { return Match(pattern, []byte(s)) }
+func MatchString(pattern string, s string) (matched bool, err error) {
+	return Match(pattern, []byte(s))
+}

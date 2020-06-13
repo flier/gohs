@@ -1,10 +1,25 @@
 package hyperscan
 
 import (
+	"fmt"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
+
+func ExampleParsePattern() {
+	p, err := ParsePattern("3:/foobar/iu")
+
+	fmt.Println(err)
+	fmt.Println(p.Id)
+	fmt.Println(p.Expression)
+	fmt.Println(p.Flags)
+	// Output:
+	// <nil>
+	// 3
+	// foobar
+	// iu
+}
 
 func TestPattern(t *testing.T) {
 	Convey("Give a pattern", t, func() {
@@ -29,6 +44,15 @@ func TestPattern(t *testing.T) {
 
 				So(p.String(), ShouldEqual, "/te/st/im")
 			})
+		})
+
+		Convey("When parse pattern with id", func() {
+			p, err := ParsePattern("3:/foobar/iu")
+
+			So(err, ShouldBeNil)
+			So(p.Id, ShouldEqual, 3)
+			So(p.Expression, ShouldEqual, "foobar")
+			So(p.Flags, ShouldEqual, Caseless|Utf8Mode)
 		})
 
 		Convey("When parse with a lot of flags", func() {
