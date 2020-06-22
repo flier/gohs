@@ -2,8 +2,6 @@ package hyperscan
 
 import (
 	"io"
-
-	"github.com/hashicorp/go-multierror"
 )
 
 type matchEvent struct {
@@ -25,6 +23,8 @@ type matchRecorder struct {
 	err     error
 }
 
+func (h *matchRecorder) Matched() bool { return h.matched != nil }
+
 func (h *matchRecorder) Handle(id uint, from, to uint64, flags uint, context interface{}) error {
 	if len(h.matched) > 0 {
 		tail := &h.matched[len(h.matched)-1]
@@ -41,80 +41,61 @@ func (h *matchRecorder) Handle(id uint, from, to uint64, flags uint, context int
 	return h.err
 }
 
+// Match reports whether the byte slice b contains any match of the regular expression pattern.
 func Match(pattern string, data []byte) (bool, error) {
-	var result *multierror.Error
+	p, err := ParsePattern(pattern)
+	if err != nil {
+		return false, err
+	}
+	p.Flags |= SingleMatch
 
-	if db, err := hsCompile(pattern, 0, BlockMode, nil); err != nil {
-		result = multierror.Append(result, err)
-	} else {
-		if scratch, err := hsAllocScratch(db); err != nil {
-			result = multierror.Append(result, err)
-		} else {
-			h := &matchRecorder{}
+	db, err := NewBlockDatabase(p)
+	if err != nil {
+		return false, err
+	}
+	defer db.Close()
 
-			if err = hsScan(db, data, 0, scratch, h.Handle, nil); err != nil {
-				result = multierror.Append(result, err)
-			}
+	s, err := NewScratch(db)
+	if err != nil {
+		return false, err
+	}
+	defer s.Free()
 
-			if err := hsFreeScratch(scratch); err != nil {
-				result = multierror.Append(result, err)
-			}
-
-			return h.matched != nil, result.ErrorOrNil()
-		}
-
-		if err := hsFreeDatabase(db); err != nil {
-			result = multierror.Append(result, err)
-		}
+	h := &matchRecorder{}
+	err = db.Scan(data, s, h.Handle, nil)
+	if err != nil {
+		return false, err
 	}
 
-	return false, result.ErrorOrNil()
+	return h.Matched(), h.err
 }
 
+// MatchReader reports whether the text returned by the Reader contains any match of the regular expression pattern.
 func MatchReader(pattern string, reader io.Reader) (bool, error) {
-	var result *multierror.Error
-
-	if db, err := hsCompile(pattern, 0, StreamMode, nil); err != nil {
-		result = multierror.Append(result, err)
-	} else {
-		if scratch, err := hsAllocScratch(db); err != nil {
-			result = multierror.Append(result, err)
-		} else {
-			if stream, err := hsOpenStream(db, 0); err != nil {
-				result = multierror.Append(result, err)
-			} else {
-				buf := make([]byte, 4096)
-
-				h := &matchRecorder{}
-
-				for result == nil {
-					if read, err := reader.Read(buf); err == io.EOF {
-						break
-					} else if err != nil {
-						result = multierror.Append(result, err)
-					} else if err := hsScanStream(stream, buf[:read], 0, scratch, h.Handle, nil); err != nil {
-						result = multierror.Append(result, err)
-					}
-				}
-
-				if err := hsCloseStream(stream, scratch, h.Handle, nil); err != nil {
-					result = multierror.Append(result, err)
-				}
-
-				return h.matched != nil, result.ErrorOrNil()
-			}
-
-			if err := hsFreeScratch(scratch); err != nil {
-				result = multierror.Append(result, err)
-			}
-		}
-
-		if err := hsFreeDatabase(db); err != nil {
-			result = multierror.Append(result, err)
-		}
+	p, err := ParsePattern(pattern)
+	if err != nil {
+		return false, err
 	}
+	p.Flags |= SingleMatch
 
-	return false, result.ErrorOrNil()
+	db, err := NewStreamDatabase(p)
+	if err != nil {
+		return false, err
+	}
+	defer db.Close()
+
+	s, err := NewScratch(db)
+	if err != nil {
+		return false, err
+	}
+	defer s.Free()
+
+	h := &matchRecorder{}
+	err = db.Scan(reader, s, h.Handle, nil)
+	if err != nil {
+		return false, err
+	}
+	return h.Matched(), h.err
 }
 
 func MatchString(pattern string, s string) (matched bool, err error) {

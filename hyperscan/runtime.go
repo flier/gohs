@@ -132,6 +132,8 @@ type Stream interface {
 // StreamScanner is the streaming regular expression scanner.
 type StreamScanner interface {
 	Open(flags ScanFlag, scratch *Scratch, handler MatchHandler, context interface{}) (Stream, error)
+
+	Scan(reader io.Reader, scratch *Scratch, handler MatchHandler, context interface{}) error
 }
 
 // StreamMatcher implements regular expression search.
@@ -252,6 +254,32 @@ func (ss *streamScanner) Open(flags ScanFlag, sc *Scratch, handler MatchHandler,
 	}
 
 	return &stream{s, flags, sc.s, hsMatchEventHandler(handler), context, ownedScratch}, nil
+}
+
+func (ss *streamScanner) Scan(reader io.Reader, scratch *Scratch, handler MatchHandler, context interface{}) error {
+	stream, err := ss.Open(0, nil, handler, context)
+	if err != nil {
+		return err
+	}
+	defer stream.Close()
+
+	buf := make([]byte, 4096)
+
+	for {
+		n, err := reader.Read(buf)
+
+		if err == io.EOF {
+			return nil
+		}
+
+		if err != nil {
+			return err
+		}
+
+		if err = stream.Scan(buf[:n]); err != nil {
+			return err
+		}
+	}
 }
 
 type vectoredScanner struct {
@@ -442,10 +470,10 @@ func (m *streamMatcher) scan(reader io.Reader) error {
 	m.matchRecorder = &matchRecorder{}
 
 	stream, err := m.streamScanner.Open(0, nil, m.Handle, nil)
-
 	if err != nil {
 		return err
 	}
+	defer stream.Close()
 
 	buf := make([]byte, 4096)
 
