@@ -48,7 +48,7 @@ func TestCompileFlag(t *testing.T) {
 	Convey("Given a compile flags", t, func() {
 		flags := Caseless | DotAll | MultiLine | SingleMatch | AllowEmpty | Utf8Mode | UnicodeProperty | PrefilterMode
 
-		So(flags.String(), ShouldEqual, "efimopsu")
+		So(flags.String(), ShouldEqual, "8HPVWims")
 
 		Convey("When parse valid flags", func() {
 			f, err := ParseCompileFlag("ifemopus")

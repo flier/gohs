@@ -31,6 +31,15 @@ func TestPattern(t *testing.T) {
 			})
 		})
 
+		Convey("When parse pattern with id", func() {
+			p, err := ParsePattern("3:/foobar/iu")
+
+			So(err, ShouldBeNil)
+			So(p.Id, ShouldEqual, 3)
+			So(p.Expression, ShouldEqual, "foobar")
+			So(p.Flags, ShouldEqual, Caseless|Utf8Mode)
+		})
+
 		Convey("When parse with a lot of flags", func() {
 			p, err := ParsePattern(`/test/ismoeupf`)
 
@@ -39,8 +48,8 @@ func TestPattern(t *testing.T) {
 			So(p.Expression, ShouldEqual, "test")
 			So(p.Flags, ShouldEqual, Caseless|DotAll|MultiLine|SingleMatch|AllowEmpty|Utf8Mode|UnicodeProperty|PrefilterMode)
 
-			So(p.Flags.String(), ShouldEqual, "efimopsu")
-			So(p.String(), ShouldEqual, "/test/efimopsu")
+			So(p.Flags.String(), ShouldEqual, "8HPVWims")
+			So(p.String(), ShouldEqual, "/test/8HPVWims")
 		})
 
 		Convey("When parse without flags", func() {
