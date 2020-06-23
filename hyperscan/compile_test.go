@@ -31,13 +31,27 @@ func TestPattern(t *testing.T) {
 			})
 		})
 
-		Convey("When parse pattern with id", func() {
+		Convey("When parse pattern with id and flags", func() {
 			p, err := ParsePattern("3:/foobar/iu")
 
 			So(err, ShouldBeNil)
 			So(p.Id, ShouldEqual, 3)
 			So(p.Expression, ShouldEqual, "foobar")
 			So(p.Flags, ShouldEqual, Caseless|Utf8Mode)
+		})
+
+		Convey("When parse pattern with id, flags and extensions", func() {
+			p, err := ParsePattern("3:/foobar/iu{min_offset=4,min_length=8}")
+			So(err, ShouldBeNil)
+			So(p.Id, ShouldEqual, 3)
+			So(p.Expression, ShouldEqual, "foobar")
+			So(p.Flags, ShouldEqual, Caseless|Utf8Mode)
+
+			ext, err := p.Ext()
+			So(err, ShouldBeNil)
+			So(ext, ShouldResemble, &ExprExt{Flags: MinOffset | MinLength, MinOffset: 4, MinLength: 8})
+
+			So(p.String(), ShouldEqual, "3:/foobar/8i{min_offset=4,min_length=8}")
 		})
 
 		Convey("When parse with a lot of flags", func() {
