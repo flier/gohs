@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"unsafe"
+	"sync"
 )
 
 /*
@@ -915,10 +916,20 @@ type hsMatchEventContext struct {
 	handler hsMatchEventHandler
 	context interface{}
 }
+// Provide mechanism to pass go pointers without worry of stack resizing (go 1.14+ exposure)
+var mux sync.Mutex
+var memMap map[unsafe.Pointer]*hsMatchEventContext = make(map[unsafe.Pointer]*hsMatchEventContext)
 
 //export hsMatchEventCallback
 func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, data unsafe.Pointer) C.int {
-	ctxt := (*hsMatchEventContext)(data)
+	//
+	// Retrieve gopointer from map that was
+	// threaded through the c-stack.  This method
+	// is resilient to unexpected stack resizing
+	//
+	mux.Lock()
+        ctxt := memMap[data]
+        mux.Unlock()
 
 	if err := ctxt.handler(uint(id), uint64(from), uint64(to), uint(flags), ctxt.context); err != nil {
 		return -1
@@ -934,9 +945,34 @@ func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEve
 
 	ctxt := &hsMatchEventContext{onEvent, context}
 	data_hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data))
-
-	ret := C.hs_scan_cgo(db, (*C.char)(unsafe.Pointer(data_hdr.Data)), C.uint(data_hdr.Len),
-		C.uint(flags), scratch, C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
+	//
+	// Store original stack address in a map
+	// to prevent stack resizing from creating
+	// invalid gopointers while in native code.
+	//
+	// This is per the rule in https://golang.org/cmd/cgo/:
+	//      A Go function called by C code may not return a 
+	//      Go pointer (which implies that it may not return a 
+	//      string, slice, channel, and so forth). A Go function 
+	//      called by C code may take C pointers as arguments, and 
+	//      it may store non-pointer or C pointer data through those 
+	//      pointers, but it may not store a Go pointer in memory 
+	//      pointed to by a C pointer. A Go function called by C 
+	//      code may take a Go pointer as an argument, but it must 
+	//      preserve the property that the Go memory to which it 
+	//      points does not contain any Go pointers.
+	//
+	ptr := unsafe.Pointer(ctxt)
+        mux.Lock()
+        memMap[ptr] = ctxt
+        mux.Unlock()
+        defer func() {
+                mux.Lock()
+                delete(memMap,ptr)
+                mux.Unlock()
+        }()
+        ret := C.hs_scan_cgo(db, (*C.char)(unsafe.Pointer(data_hdr.Data)), C.uint(data_hdr.Len),
+                C.uint(flags), scratch, C.uintptr_t(uintptr(ptr)))
 
 	runtime.KeepAlive(data)
 	runtime.KeepAlive(ctxt)
