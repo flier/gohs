@@ -917,8 +917,8 @@ type hsMatchEventContext struct {
 	context interface{}
 }
 // Provide mechanism to pass go pointers without worry of stack resizing (go 1.14+ exposure)
-var mux sync.Mutex
-var memMap map[unsafe.Pointer]*hsMatchEventContext = make(map[unsafe.Pointer]*hsMatchEventContext)
+var contextMux sync.Mutex
+var contextMemMap map[unsafe.Pointer]*hsMatchEventContext = make(map[unsafe.Pointer]*hsMatchEventContext)
 
 //export hsMatchEventCallback
 func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, data unsafe.Pointer) C.int {
@@ -927,9 +927,9 @@ func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, data un
 	// threaded through the c-stack.  This method
 	// is resilient to unexpected stack resizing
 	//
-	mux.Lock()
-	ctxt := memMap[data]
-	mux.Unlock()
+	contextMux.Lock()
+	ctxt := contextMemMap[data]
+	contextMux.Unlock()
 
 	if err := ctxt.handler(uint(id), uint64(from), uint64(to), uint(flags), ctxt.context); err != nil {
 		return -1
@@ -963,13 +963,13 @@ func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEve
 	//      points does not contain any Go pointers.
 	//
 	ptr := unsafe.Pointer(ctxt)
-	mux.Lock()
-	memMap[ptr] = ctxt
-	mux.Unlock()
+	contextMux.Lock()
+	contextMemMap[ptr] = ctxt
+	contextMux.Unlock()
 	defer func() {
-		mux.Lock()
-		delete(memMap,ptr)
-		mux.Unlock()
+		contextMux.Lock()
+		delete(contextMemMap,ptr)
+		contextMux.Unlock()
 	}()
 	ret := C.hs_scan_cgo(db, (*C.char)(unsafe.Pointer(data_hdr.Data)), C.uint(data_hdr.Len),
 		C.uint(flags), scratch, C.uintptr_t(uintptr(ptr)))
@@ -1006,8 +1006,18 @@ func hsScanVector(db hsDatabase, data [][]byte, flags ScanFlag, scratch hsScratc
 	cdata_hdr := (*reflect.SliceHeader)(unsafe.Pointer(&cdata))
 	clength_hdr := (*reflect.SliceHeader)(unsafe.Pointer(&clength))
 
+	// See hsScan
+	ptr := unsafe.Pointer(ctxt)
+	contextMux.Lock()
+	contextMemMap[ptr] = ctxt
+	contextMux.Unlock()
+	defer func() {
+		contextMux.Lock()
+		delete(contextMemMap,ptr)
+		contextMux.Unlock()
+	}()
 	ret := C.hs_scan_vector_cgo(db, (**C.char)(unsafe.Pointer(cdata_hdr.Data)), (*C.uint)(unsafe.Pointer(clength_hdr.Data)),
-		C.uint(cdata_hdr.Len), C.uint(flags), scratch, C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
+		C.uint(cdata_hdr.Len), C.uint(flags), scratch, C.uintptr_t(uintptr(ptr)))
 
 	runtime.KeepAlive(data)
 	runtime.KeepAlive(cdata)
@@ -1039,8 +1049,19 @@ func hsScanStream(stream hsStream, data []byte, flags ScanFlag, scratch hsScratc
 	ctxt := &hsMatchEventContext{onEvent, context}
 	data_hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data))
 
+	// See hsScan
+	ptr := unsafe.Pointer(ctxt)
+	contextMux.Lock()
+	contextMemMap[ptr] = ctxt
+	contextMux.Unlock()
+	defer func() {
+		contextMux.Lock()
+		delete(contextMemMap,ptr)
+		contextMux.Unlock()
+	}()
+
 	ret := C.hs_scan_stream_cgo(stream, (*C.char)(unsafe.Pointer(data_hdr.Data)), C.uint(data_hdr.Len),
-		C.uint(flags), scratch, C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
+		C.uint(flags), scratch, C.uintptr_t(uintptr(ptr)))
 
 	runtime.KeepAlive(data)
 	runtime.KeepAlive(ctxt)
