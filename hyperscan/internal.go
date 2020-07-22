@@ -928,8 +928,8 @@ func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, data un
 	// is resilient to unexpected stack resizing
 	//
 	mux.Lock()
-        ctxt := memMap[data]
-        mux.Unlock()
+	ctxt := memMap[data]
+	mux.Unlock()
 
 	if err := ctxt.handler(uint(id), uint64(from), uint64(to), uint(flags), ctxt.context); err != nil {
 		return -1
@@ -963,16 +963,16 @@ func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEve
 	//      points does not contain any Go pointers.
 	//
 	ptr := unsafe.Pointer(ctxt)
-        mux.Lock()
-        memMap[ptr] = ctxt
-        mux.Unlock()
-        defer func() {
-                mux.Lock()
-                delete(memMap,ptr)
-                mux.Unlock()
-        }()
-        ret := C.hs_scan_cgo(db, (*C.char)(unsafe.Pointer(data_hdr.Data)), C.uint(data_hdr.Len),
-                C.uint(flags), scratch, C.uintptr_t(uintptr(ptr)))
+	mux.Lock()
+	memMap[ptr] = ctxt
+	mux.Unlock()
+	defer func() {
+		mux.Lock()
+		delete(memMap,ptr)
+		mux.Unlock()
+	}()
+	ret := C.hs_scan_cgo(db, (*C.char)(unsafe.Pointer(data_hdr.Data)), C.uint(data_hdr.Len),
+		C.uint(flags), scratch, C.uintptr_t(uintptr(ptr)))
 
 	runtime.KeepAlive(data)
 	runtime.KeepAlive(ctxt)
