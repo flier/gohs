@@ -816,32 +816,34 @@ func hsCompileMulti(patterns []*Pattern, mode ModeFlag, info *hsPlatformInfo) (h
 		platform = &info.platform
 	}
 
-	cexprs := (**C.char)(C.calloc(C.size_t(len(patterns)), C.size_t(unsafe.Sizeof(uintptr(0)))))
+	count := len(patterns)
+
+	cexprs := (**C.char)(C.calloc(C.size_t(count), C.size_t(unsafe.Sizeof(uintptr(0)))))
 	exprs := *(*[]*C.char)(unsafe.Pointer(&reflect.SliceHeader{
 		Data: uintptr(unsafe.Pointer(cexprs)),
-		Len:  len(patterns),
-		Cap:  len(patterns),
+		Len:  count,
+		Cap:  count,
 	}))
 
-	cflags := (*C.uint)(C.calloc(C.size_t(len(patterns)), C.size_t(unsafe.Sizeof(C.uint(0)))))
+	cflags := (*C.uint)(C.calloc(C.size_t(count), C.size_t(unsafe.Sizeof(C.uint(0)))))
 	flags := *(*[]C.uint)(unsafe.Pointer(&reflect.SliceHeader{
 		Data: uintptr(unsafe.Pointer(cflags)),
-		Len:  len(patterns),
-		Cap:  len(patterns),
+		Len:  count,
+		Cap:  count,
 	}))
 
-	cids := (*C.uint)(C.calloc(C.size_t(len(patterns)), C.size_t(unsafe.Sizeof(C.uint(0)))))
+	cids := (*C.uint)(C.calloc(C.size_t(count), C.size_t(unsafe.Sizeof(C.uint(0)))))
 	ids := *(*[]C.uint)(unsafe.Pointer(&reflect.SliceHeader{
 		Data: uintptr(unsafe.Pointer(cids)),
-		Len:  len(patterns),
-		Cap:  len(patterns),
+		Len:  count,
+		Cap:  count,
 	}))
 
-	cexts := (**C.hs_expr_ext_t)(C.calloc(C.size_t(len(patterns)), C.size_t(unsafe.Sizeof(uintptr(0)))))
+	cexts := (**C.hs_expr_ext_t)(C.calloc(C.size_t(count), C.size_t(unsafe.Sizeof(uintptr(0)))))
 	exts := *(*[]*C.hs_expr_ext_t)(unsafe.Pointer(&reflect.SliceHeader{
 		Data: uintptr(unsafe.Pointer(cexts)),
-		Len:  len(patterns),
-		Cap:  len(patterns),
+		Len:  count,
+		Cap:  count,
 	}))
 
 	for i, pattern := range patterns {
@@ -853,7 +855,7 @@ func hsCompileMulti(patterns []*Pattern, mode ModeFlag, info *hsPlatformInfo) (h
 		}
 	}
 
-	ret := C.hs_compile_ext_multi(cexprs, cflags, cids, cexts, C.uint(len(patterns)), C.uint(mode), platform, &db, &err)
+	ret := C.hs_compile_ext_multi(cexprs, cflags, cids, cexts, C.uint(count), C.uint(mode), platform, &db, &err)
 
 	for _, expr := range exprs {
 		C.free(unsafe.Pointer(expr))

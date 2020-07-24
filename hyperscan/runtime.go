@@ -429,7 +429,7 @@ func (m *blockMatcher) Match(data []byte) bool {
 
 	err := m.scan(data)
 
-	return err != nil && err.(HsError) == ErrScanTerminated
+	return len(m.matched) == 1 || (err != nil && err.(HsError) == ErrScanTerminated)
 }
 
 func (m *blockMatcher) MatchString(s string) bool {

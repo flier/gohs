@@ -7,6 +7,23 @@ import (
 	"github.com/flier/gohs/hyperscan"
 )
 
+// This example demonstrates construct and match a pattern.
+func ExamplePattern() {
+	p := hyperscan.NewPattern(`foo.*bar`, hyperscan.Caseless)
+	fmt.Println(p)
+
+	db, err := hyperscan.NewBlockDatabase(p)
+	fmt.Println(err)
+
+	found := db.MatchString("fooxyzbarbar")
+	fmt.Println(found)
+
+	// Output:
+	// /foo.*bar/i
+	// <nil>
+	// true
+}
+
 // This example demonstrates parsing pattern with id and flags
 func ExampleParsePattern() {
 	p, err := hyperscan.ParsePattern("3:/foobar/i8")

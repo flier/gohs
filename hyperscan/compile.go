@@ -24,12 +24,16 @@ type Pattern struct {
 	ext        *ExprExt
 }
 
-/// NewPattern returns a new pattern base on expression and compile flags.
-func NewPattern(expr string, flags CompileFlag) *Pattern {
-	return &Pattern{Expression: Expression(expr), Flags: flags}
+// NewPattern returns a new pattern base on expression and compile flags.
+func NewPattern(expr string, flags ...CompileFlag) *Pattern {
+	var v CompileFlag
+	for _, f := range flags {
+		v |= f
+	}
+	return &Pattern{Expression: Expression(expr), Flags: v}
 }
 
-/// IsValid validate the pattern contains a regular expression.
+// IsValid validate the pattern contains a regular expression.
 func (p *Pattern) IsValid() bool {
 	_, err := p.Info()
 
@@ -183,6 +187,30 @@ func PopulatePlatform() Platform {
 	return platform
 }
 
+type Builder interface {
+	Build(mode ModeFlag) (Database, error)
+
+	ForPlatform(mode ModeFlag, platform Platform) (Database, error)
+}
+
+func (p *Pattern) Build(mode ModeFlag) (Database, error) {
+	return p.ForPlatform(mode, nil)
+}
+
+func (p *Pattern) ForPlatform(mode ModeFlag, platform Platform) (Database, error) {
+	b := DatabaseBuilder{Patterns: []*Pattern{p}, Mode: mode, Platform: platform}
+	return b.Build()
+}
+
+func (p Patterns) Build(mode ModeFlag) (Database, error) {
+	return p.ForPlatform(mode, nil)
+}
+
+func (p Patterns) ForPlatform(mode ModeFlag, platform Platform) (Database, error) {
+	b := DatabaseBuilder{Patterns: p, Mode: mode, Platform: platform}
+	return b.Build()
+}
+
 // A type to help to build up a database
 type DatabaseBuilder struct {
 	// Array of patterns to compile.
@@ -254,9 +282,7 @@ func (b *DatabaseBuilder) Build() (Database, error) {
 }
 
 func NewBlockDatabase(patterns ...*Pattern) (BlockDatabase, error) {
-	builder := &DatabaseBuilder{Patterns: patterns, Mode: BlockMode}
-
-	db, err := builder.Build()
+	db, err := Patterns(patterns).Build(BlockMode)
 
 	if err != nil {
 		return nil, err
@@ -266,9 +292,7 @@ func NewBlockDatabase(patterns ...*Pattern) (BlockDatabase, error) {
 }
 
 func NewStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
-	builder := &DatabaseBuilder{Patterns: patterns, Mode: StreamMode}
-
-	db, err := builder.Build()
+	db, err := Patterns(patterns).Build(StreamMode)
 
 	if err != nil {
 		return nil, err
@@ -278,9 +302,7 @@ func NewStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 }
 
 func NewMediumStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
-	builder := &DatabaseBuilder{Patterns: patterns, Mode: StreamMode | SomHorizonMediumMode}
-
-	db, err := builder.Build()
+	db, err := Patterns(patterns).Build(StreamMode | SomHorizonMediumMode)
 
 	if err != nil {
 		return nil, err
@@ -290,9 +312,7 @@ func NewMediumStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 }
 
 func NewLargeStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
-	builder := &DatabaseBuilder{Patterns: patterns, Mode: StreamMode | SomHorizonLargeMode}
-
-	db, err := builder.Build()
+	db, err := Patterns(patterns).Build(StreamMode | SomHorizonLargeMode)
 
 	if err != nil {
 		return nil, err
@@ -302,9 +322,7 @@ func NewLargeStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 }
 
 func NewVectoredDatabase(patterns ...*Pattern) (VectoredDatabase, error) {
-	builder := &DatabaseBuilder{Patterns: patterns, Mode: VectoredMode}
-
-	db, err := builder.Build()
+	db, err := Patterns(patterns).Build(VectoredMode)
 
 	if err != nil {
 		return nil, err
