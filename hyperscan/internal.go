@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"unsafe"
 )
 
@@ -916,11 +917,38 @@ type hsMatchEventContext struct {
 	context interface{}
 }
 
+var matchEventContexts sync.Map
+
+func newMatchEventContext(handler hsMatchEventHandler, context interface{}) (unsafe.Pointer, func()) {
+	ctxt := &hsMatchEventContext{handler, context}
+	ptr := unsafe.Pointer(ctxt)
+	matchEventContexts.Store(ptr, ctxt)
+	return ptr, func() { matchEventContexts.Delete(ptr) }
+}
+
+func extractMatchEventContext(data unsafe.Pointer) (hsMatchEventHandler, interface{}) {
+	value, ok := matchEventContexts.Load(data)
+
+	if !ok {
+		panic(data)
+	}
+
+	ctxt, ok := value.(*hsMatchEventContext)
+
+	if !ok && ctxt == nil {
+		panic(value)
+	}
+
+	return ctxt.handler, ctxt.context
+}
+
 //export hsMatchEventCallback
 func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, data unsafe.Pointer) C.int {
-	ctxt := (*hsMatchEventContext)(data)
+	handler, context := extractMatchEventContext(data)
 
-	if err := ctxt.handler(uint(id), uint64(from), uint64(to), uint(flags), ctxt.context); err != nil {
+	err := handler(uint(id), uint64(from), uint64(to), uint(flags), context)
+
+	if err != nil {
 		return -1
 	}
 
@@ -932,11 +960,12 @@ func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEve
 		return HsError(C.HS_INVALID)
 	}
 
-	ctxt := &hsMatchEventContext{onEvent, context}
+	ctxt, free := newMatchEventContext(onEvent, context)
+	defer free()
 	data_hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data))
 
 	ret := C.hs_scan_cgo(db, (*C.char)(unsafe.Pointer(data_hdr.Data)), C.uint(data_hdr.Len),
-		C.uint(flags), scratch, C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
+		C.uint(flags), scratch, C.uintptr_t(uintptr(ctxt)))
 
 	runtime.KeepAlive(data)
 	runtime.KeepAlive(ctxt)
@@ -966,12 +995,13 @@ func hsScanVector(db hsDatabase, data [][]byte, flags ScanFlag, scratch hsScratc
 		clength[i] = C.uint(hdr.Len)
 	}
 
-	ctxt := &hsMatchEventContext{onEvent, context}
+	ctxt, free := newMatchEventContext(onEvent, context)
+	defer free()
 	cdata_hdr := (*reflect.SliceHeader)(unsafe.Pointer(&cdata))
 	clength_hdr := (*reflect.SliceHeader)(unsafe.Pointer(&clength))
 
 	ret := C.hs_scan_vector_cgo(db, (**C.char)(unsafe.Pointer(cdata_hdr.Data)), (*C.uint)(unsafe.Pointer(clength_hdr.Data)),
-		C.uint(cdata_hdr.Len), C.uint(flags), scratch, C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
+		C.uint(cdata_hdr.Len), C.uint(flags), scratch, C.uintptr_t(uintptr(ctxt)))
 
 	runtime.KeepAlive(data)
 	runtime.KeepAlive(cdata)
@@ -1000,11 +1030,12 @@ func hsScanStream(stream hsStream, data []byte, flags ScanFlag, scratch hsScratc
 		return HsError(C.HS_INVALID)
 	}
 
-	ctxt := &hsMatchEventContext{onEvent, context}
+	ctxt, free := newMatchEventContext(onEvent, context)
+	defer free()
 	data_hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data))
 
 	ret := C.hs_scan_stream_cgo(stream, (*C.char)(unsafe.Pointer(data_hdr.Data)), C.uint(data_hdr.Len),
-		C.uint(flags), scratch, C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
+		C.uint(flags), scratch, C.uintptr_t(uintptr(ctxt)))
 
 	runtime.KeepAlive(data)
 	runtime.KeepAlive(ctxt)
@@ -1017,9 +1048,10 @@ func hsScanStream(stream hsStream, data []byte, flags ScanFlag, scratch hsScratc
 }
 
 func hsCloseStream(stream hsStream, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	ctxt := &hsMatchEventContext{onEvent, context}
+	ctxt, free := newMatchEventContext(onEvent, context)
+	defer free()
 
-	ret := C.hs_close_stream_cgo(stream, scratch, C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
+	ret := C.hs_close_stream_cgo(stream, scratch, C.uintptr_t(uintptr(ctxt)))
 
 	runtime.KeepAlive(ctxt)
 
@@ -1031,9 +1063,10 @@ func hsCloseStream(stream hsStream, scratch hsScratch, onEvent hsMatchEventHandl
 }
 
 func hsResetStream(stream hsStream, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	ctxt := &hsMatchEventContext{onEvent, context}
+	ctxt, free := newMatchEventContext(onEvent, context)
+	defer free()
 
-	ret := C.hs_reset_stream_cgo(stream, C.uint(flags), scratch, C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
+	ret := C.hs_reset_stream_cgo(stream, C.uint(flags), scratch, C.uintptr_t(uintptr(ctxt)))
 
 	runtime.KeepAlive(ctxt)
 
@@ -1055,9 +1088,10 @@ func hsCopyStream(stream hsStream) (hsStream, error) {
 }
 
 func hsResetAndCopyStream(to, from hsStream, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	ctxt := &hsMatchEventContext{onEvent, context}
+	ctxt, free := newMatchEventContext(onEvent, context)
+	defer free()
 
-	ret := C.hs_reset_and_copy_stream_cgo(to, from, scratch, C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
+	ret := C.hs_reset_and_copy_stream_cgo(to, from, scratch, C.uintptr_t(uintptr(ctxt)))
 
 	runtime.KeepAlive(ctxt)
 
@@ -1099,10 +1133,11 @@ func hsExpandStream(db hsDatabase, stream *hsStream, buf []byte) error {
 }
 
 func hsResetAndExpandStream(stream hsStream, buf []byte, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	ctxt := &hsMatchEventContext{onEvent, context}
+	ctxt, free := newMatchEventContext(onEvent, context)
+	defer free()
 
 	ret := C.hs_reset_and_expand_stream_cgo(stream, (*C.char)(unsafe.Pointer(&buf[0])), C.uint(len(buf)),
-		scratch, C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
+		scratch, C.uintptr_t(uintptr(ctxt)))
 
 	runtime.KeepAlive(buf)
 	runtime.KeepAlive(ctxt)
