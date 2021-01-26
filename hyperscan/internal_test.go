@@ -319,7 +319,9 @@ func TestCompileAPI(t *testing.T) {
 			})
 
 			Convey("Then compile as extended vector", func() {
-				db, err := hsCompileExtMulti([]string{`\R`}, []CompileFlag{Caseless}, []uint{1}, []ExprExt{{Flags: MinOffset, MinOffset: 10}}, VectoredMode, platform)
+				db, err := hsCompileMulti([]*Pattern{
+					NewPattern(`\R`, Caseless).WithExt(MinOffset(10)),
+				}, VectoredMode, platform)
 
 				So(db, ShouldBeNil)
 				So(err, ShouldNotBeNil)
@@ -358,13 +360,11 @@ func TestCompileAPI(t *testing.T) {
 		})
 
 		Convey("Compile multi expressions with extension", func() {
-			exts := []ExprExt{
-				{Flags: MinOffset, MinOffset: 10},
-				{Flags: MaxOffset, MaxOffset: 10},
-				{Flags: MinLength, MinLength: 10},
-				{Flags: EditDistance, EditDistance: 10},
-			}
-			db, err := hsCompileExtMulti([]string{`^\w+`, `\d+`, `\s+`}, nil, []uint{1, 2, 3}, exts, StreamMode, platform)
+			db, err := hsCompileMulti([]*Pattern{
+				NewPattern(`^\w+`, 0).WithExt(MinOffset(10)),
+				NewPattern(`\d+`, 0).WithExt(MaxOffset(10)),
+				NewPattern(`\s+`, 0).WithExt(MinLength(10)),
+			}, StreamMode, platform)
 
 			So(db, ShouldNotBeNil)
 			So(err, ShouldBeNil)

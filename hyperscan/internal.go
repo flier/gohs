@@ -258,17 +258,6 @@ func (m ModeFlag) String() string {
 	}
 }
 
-// ExtFlag are used in ExprExt.Flags to indicate which fields are used.
-type ExtFlag uint
-
-const (
-	MinOffset       ExtFlag = C.HS_EXT_FLAG_MIN_OFFSET       // MinOffset is a flag indicating that the ExprExt.MinOffset field is used.
-	MaxOffset       ExtFlag = C.HS_EXT_FLAG_MAX_OFFSET       // MaxOffset is a flag indicating that the ExprExt.MaxOffset field is used.
-	MinLength       ExtFlag = C.HS_EXT_FLAG_MIN_LENGTH       // MinLength is a flag indicating that the ExprExt.MinLength field is used.
-	EditDistance    ExtFlag = C.HS_EXT_FLAG_EDIT_DISTANCE    // EditDistance is a flag indicating that the ExprExt.EditDistance field is used.
-	HammingDistance ExtFlag = C.HS_EXT_FLAG_HAMMING_DISTANCE // HammingDistance is a flag indicating that the ExprExt.HammingDistance field is used.
-)
-
 type ScanFlag uint
 
 type HsError int
@@ -367,6 +356,17 @@ type ExprInfo struct {
 
 // If the pattern expression has an unbounded maximum width
 const UnboundedMaxWidth = C.UINT_MAX
+
+// ExtFlag are used in ExprExt.Flags to indicate which fields are used.
+type ExtFlag uint64
+
+const (
+	ExtMinOffset       ExtFlag = C.HS_EXT_FLAG_MIN_OFFSET       // MinOffset is a flag indicating that the ExprExt.MinOffset field is used.
+	ExtMaxOffset       ExtFlag = C.HS_EXT_FLAG_MAX_OFFSET       // MaxOffset is a flag indicating that the ExprExt.MaxOffset field is used.
+	ExtMinLength       ExtFlag = C.HS_EXT_FLAG_MIN_LENGTH       // MinLength is a flag indicating that the ExprExt.MinLength field is used.
+	ExtEditDistance    ExtFlag = C.HS_EXT_FLAG_EDIT_DISTANCE    // EditDistance is a flag indicating that the ExprExt.EditDistance field is used.
+	ExtHammingDistance ExtFlag = C.HS_EXT_FLAG_HAMMING_DISTANCE // HammingDistance is a flag indicating that the ExprExt.HammingDistance field is used.
+)
 
 // ExprExt is a structure containing additional parameters related to an expression.
 type ExprExt struct {
@@ -708,13 +708,20 @@ func hsCompileMulti(patterns []*Pattern, mode ModeFlag, info *hsPlatformInfo) (h
 	cids := (*C.uint)(C.calloc(C.size_t(len(patterns)), C.size_t(unsafe.Sizeof(C.uint(0)))))
 	ids := (*[1 << 30]C.uint)(unsafe.Pointer(cids))[:len(patterns):len(patterns)]
 
+	cexts := (**C.hs_expr_ext_t)(C.calloc(C.size_t(len(patterns)), C.size_t(unsafe.Sizeof(uintptr(0)))))
+	exts := (*[1 << 30]*C.hs_expr_ext_t)(unsafe.Pointer(cexts))[:len(patterns):len(patterns)]
+
 	for i, pattern := range patterns {
 		exprs[i] = C.CString(string(pattern.Expression))
 		flags[i] = C.uint(pattern.Flags)
 		ids[i] = C.uint(pattern.Id)
+
+		if pattern.Ext != nil {
+			exts[i] = (*C.hs_expr_ext_t)(unsafe.Pointer(pattern.Ext))
+		}
 	}
 
-	ret := C.hs_compile_multi(cexprs, cflags, cids, C.uint(len(patterns)), C.uint(mode), platform, &db, &err)
+	ret := C.hs_compile_ext_multi(cexprs, cflags, cids, cexts, C.uint(len(patterns)), C.uint(mode), platform, &db, &err)
 
 	for _, expr := range exprs {
 		C.free(unsafe.Pointer(expr))
@@ -722,6 +729,7 @@ func hsCompileMulti(patterns []*Pattern, mode ModeFlag, info *hsPlatformInfo) (h
 
 	C.free(unsafe.Pointer(cexprs))
 	C.free(unsafe.Pointer(cflags))
+	C.free(unsafe.Pointer(cexts))
 	C.free(unsafe.Pointer(cids))
 
 	if err != nil {
@@ -730,85 +738,6 @@ func hsCompileMulti(patterns []*Pattern, mode ModeFlag, info *hsPlatformInfo) (h
 
 	if ret == C.HS_SUCCESS {
 		return db, nil
-	}
-
-	if ret == C.HS_COMPILER_ERROR && err != nil {
-		return nil, &compileError{C.GoString(err.message), int(err.expression)}
-	}
-
-	return nil, fmt.Errorf("compile error, %d", int(ret))
-}
-
-func hsCompileExtMulti(expressions []string, flags []CompileFlag, ids []uint, exts []ExprExt, mode ModeFlag, info *hsPlatformInfo) (hsDatabase, error) {
-	var db *C.hs_database_t
-	var err *C.hs_compile_error_t
-	var platform *C.hs_platform_info_t
-
-	if info != nil {
-		platform = &info.platform
-	}
-
-	cexprs := make([]*C.char, len(expressions))
-
-	for i, expr := range expressions {
-		cexprs[i] = C.CString(expr)
-	}
-
-	var cflags, cids *C.uint
-	var cexts **C.hs_expr_ext_t
-
-	if flags != nil {
-		values := make([]C.uint, len(flags))
-
-		for i, flag := range flags {
-			values[i] = C.uint(flag)
-		}
-
-		cflags = &values[0]
-	}
-
-	if ids != nil {
-		values := make([]C.uint, len(ids))
-
-		for i, id := range ids {
-			values[i] = C.uint(id)
-		}
-
-		cids = &values[0]
-	}
-
-	if exts != nil {
-		values := make([]C.hs_expr_ext_t, len(exts))
-		ptrs := make([]uintptr, len(exts))
-
-		for i, ext := range exts {
-			values[i].flags = C.ulonglong(ext.Flags)
-			values[i].min_offset = C.ulonglong(ext.MinOffset)
-			values[i].max_offset = C.ulonglong(ext.MaxOffset)
-			values[i].min_length = C.ulonglong(ext.MinLength)
-			values[i].edit_distance = C.uint(ext.EditDistance)
-			ptrs[i] = uintptr(unsafe.Pointer(&values[i]))
-		}
-
-		cexts = (**C.hs_expr_ext_t)(unsafe.Pointer(&ptrs[0]))
-	}
-
-	ret := C.hs_compile_ext_multi(&cexprs[0], cflags, cids, cexts, C.uint(len(cexprs)), C.uint(mode), platform, &db, &err)
-
-	runtime.KeepAlive(cflags)
-	runtime.KeepAlive(cids)
-	runtime.KeepAlive(cexts)
-
-	for _, expr := range cexprs {
-		C.free(unsafe.Pointer(expr))
-	}
-
-	if ret == C.HS_SUCCESS {
-		return db, nil
-	}
-
-	if err != nil {
-		defer C.hs_free_compile_error(err)
 	}
 
 	if ret == C.HS_COMPILER_ERROR && err != nil {
