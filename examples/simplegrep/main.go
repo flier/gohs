@@ -61,7 +61,7 @@ func eventHandler(id uint, from, to uint64, flags uint, context interface{}) err
 	if start == -1 {
 		start = 0
 	} else {
-		start += 1
+		start++
 	}
 
 	if end == -1 {

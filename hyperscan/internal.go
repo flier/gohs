@@ -387,7 +387,6 @@ type hsAllocator struct {
 }
 
 var (
-	defaultAllocator hsAllocator
 	dbAllocator      hsAllocator
 	miscAllocator    hsAllocator
 	scratchAllocator hsAllocator
@@ -701,25 +700,13 @@ func hsCompileMulti(patterns []*Pattern, mode ModeFlag, info *hsPlatformInfo) (h
 	}
 
 	cexprs := (**C.char)(C.calloc(C.size_t(len(patterns)), C.size_t(unsafe.Sizeof(uintptr(0)))))
-	exprs := *(*[]*C.char)(unsafe.Pointer(&reflect.SliceHeader{
-		Data: uintptr(unsafe.Pointer(cexprs)),
-		Len:  len(patterns),
-		Cap:  len(patterns),
-	}))
+	exprs := (*[1 << 30]*C.char)(unsafe.Pointer(cexprs))[:len(patterns):len(patterns)]
 
 	cflags := (*C.uint)(C.calloc(C.size_t(len(patterns)), C.size_t(unsafe.Sizeof(C.uint(0)))))
-	flags := *(*[]C.uint)(unsafe.Pointer(&reflect.SliceHeader{
-		Data: uintptr(unsafe.Pointer(cflags)),
-		Len:  len(patterns),
-		Cap:  len(patterns),
-	}))
+	flags := (*[1 << 30]C.uint)(unsafe.Pointer(cflags))[:len(patterns):len(patterns)]
 
 	cids := (*C.uint)(C.calloc(C.size_t(len(patterns)), C.size_t(unsafe.Sizeof(C.uint(0)))))
-	ids := *(*[]C.uint)(unsafe.Pointer(&reflect.SliceHeader{
-		Data: uintptr(unsafe.Pointer(cids)),
-		Len:  len(patterns),
-		Cap:  len(patterns),
-	}))
+	ids := (*[1 << 30]C.uint)(unsafe.Pointer(cids))[:len(patterns):len(patterns)]
 
 	for i, pattern := range patterns {
 		exprs[i] = C.CString(string(pattern.Expression))
@@ -962,11 +949,12 @@ func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEve
 
 	ctxt, free := newMatchEventContext(onEvent, context)
 	defer free()
-	data_hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data))
+	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data)) // FIXME: Zero-copy access to go data
 
-	ret := C.hs_scan_cgo(db, (*C.char)(unsafe.Pointer(data_hdr.Data)), C.uint(data_hdr.Len),
+	ret := C.hs_scan_cgo(db, (*C.char)(unsafe.Pointer(hdr.Data)), C.uint(hdr.Len),
 		C.uint(flags), scratch, C.uintptr_t(uintptr(ctxt)))
 
+	// Ensure go data is alive before the C function returns
 	runtime.KeepAlive(data)
 	runtime.KeepAlive(ctxt)
 
@@ -990,19 +978,20 @@ func hsScanVector(db hsDatabase, data [][]byte, flags ScanFlag, scratch hsScratc
 			return HsError(C.HS_INVALID)
 		}
 
-		hdr := (*reflect.SliceHeader)(unsafe.Pointer(&d))
+		hdr := (*reflect.SliceHeader)(unsafe.Pointer(&d)) // FIXME: Zero-copy access to go data
 		cdata[i] = uintptr(unsafe.Pointer(hdr.Data))
 		clength[i] = C.uint(hdr.Len)
 	}
 
 	ctxt, free := newMatchEventContext(onEvent, context)
 	defer free()
-	cdata_hdr := (*reflect.SliceHeader)(unsafe.Pointer(&cdata))
-	clength_hdr := (*reflect.SliceHeader)(unsafe.Pointer(&clength))
+	cdataHdr := (*reflect.SliceHeader)(unsafe.Pointer(&cdata))     // FIXME: Zero-copy access to go data
+	clengthHdr := (*reflect.SliceHeader)(unsafe.Pointer(&clength)) // FIXME: Zero-copy access to go data
 
-	ret := C.hs_scan_vector_cgo(db, (**C.char)(unsafe.Pointer(cdata_hdr.Data)), (*C.uint)(unsafe.Pointer(clength_hdr.Data)),
-		C.uint(cdata_hdr.Len), C.uint(flags), scratch, C.uintptr_t(uintptr(ctxt)))
+	ret := C.hs_scan_vector_cgo(db, (**C.char)(unsafe.Pointer(cdataHdr.Data)), (*C.uint)(unsafe.Pointer(clengthHdr.Data)),
+		C.uint(cdataHdr.Len), C.uint(flags), scratch, C.uintptr_t(uintptr(ctxt)))
 
+	// Ensure go data is alive before the C function returns
 	runtime.KeepAlive(data)
 	runtime.KeepAlive(cdata)
 	runtime.KeepAlive(clength)
@@ -1032,11 +1021,12 @@ func hsScanStream(stream hsStream, data []byte, flags ScanFlag, scratch hsScratc
 
 	ctxt, free := newMatchEventContext(onEvent, context)
 	defer free()
-	data_hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data))
+	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data)) // FIXME: Zero-copy access to go data
 
-	ret := C.hs_scan_stream_cgo(stream, (*C.char)(unsafe.Pointer(data_hdr.Data)), C.uint(data_hdr.Len),
+	ret := C.hs_scan_stream_cgo(stream, (*C.char)(unsafe.Pointer(hdr.Data)), C.uint(hdr.Len),
 		C.uint(flags), scratch, C.uintptr_t(uintptr(ctxt)))
 
+	// Ensure go data is alive before the C function returns
 	runtime.KeepAlive(data)
 	runtime.KeepAlive(ctxt)
 

@@ -150,7 +150,7 @@ func (b *Benchmark) ReadStreams(pcapFile string) (int, error) {
 	count := 0
 
 	for pkt := range s.Packets() {
-		count += 1
+		count++
 
 		key, payload := b.decodePacket(pkt)
 
@@ -231,7 +231,7 @@ func (b *Benchmark) DisplayStats() {
 
 // Match event handler: called every time Hyperscan finds a match.
 func (b *Benchmark) onMatch(id uint, from, to uint64, flags uint, context interface{}) error {
-	b.matchCount += 1
+	b.matchCount++
 
 	return nil
 }
@@ -339,7 +339,7 @@ func parseFile(filename string) (patterns []*hyperscan.Pattern) {
 		}
 
 		line = strings.TrimSpace(line)
-		lineno += 1
+		lineno++
 
 		// if line is empty, or a comment, we can skip it
 		if len(line) == 0 || line[0] == '#' {
