@@ -12,19 +12,19 @@ jobs:
       matrix:
         os: [ ubuntu-20.04, ubuntu-18.04, macos-latest ]
         go: [ 1.15.x, 1.14.x, 1.13.x ]
-    name: Go ${{ matrix.go }} tests
+    name: Go ${{ matrix.go }} tests @ ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     steps:
     - name: Install Linux dependencies
       if: startsWith(matrix.os, 'ubuntu-')
       run: |
         sudo apt-get update
-        sudo apt-get install -yq libhyperscan-dev
+        sudo apt-get install -yq libhyperscan-dev libpcap-dev
 
     - name: Install MacOS dependencies
       if: startsWith(matrix.os, 'macos-')
       run: |
-        brew install hyperscan
+        brew install pkg-config hyperscan libpcap
 
     - name: Install Golang ${{ matrix.go }}
       id: install-golang
