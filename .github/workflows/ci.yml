@@ -56,6 +56,10 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     steps:
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -yq libhyperscan-dev libpcap-dev
       - uses: actions/checkout@v2
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
