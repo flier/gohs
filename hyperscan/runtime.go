@@ -196,7 +196,7 @@ func (s *stream) Close() error {
 	err := hsCloseStream(s.stream, s.scratch, s.handler, s.context)
 
 	if s.ownedScratch {
-		hsFreeScratch(s.scratch)
+		_ = hsFreeScratch(s.scratch)
 	}
 
 	return err
@@ -295,10 +295,12 @@ func (vs *vectoredScanner) Scan(data [][]byte, s *Scratch, handler MatchHandler,
 		s, err = NewScratch(vs)
 
 		if err != nil {
-			return err
+			return
 		}
 
-		defer s.Free()
+		defer func() {
+			_ = s.Free()
+		}()
 	}
 
 	return hsScanVector(vs.db, data, 0, s.s, hsMatchEventHandler(handler), context)
@@ -317,10 +319,12 @@ func (bs *blockScanner) Scan(data []byte, s *Scratch, handler MatchHandler, cont
 		s, err = NewScratch(bs)
 
 		if err != nil {
-			return err
+			return
 		}
 
-		defer s.Free()
+		defer func() {
+			_ = s.Free()
+		}()
 	}
 
 	return hsScan(bs.db, data, 0, s.s, hsMatchEventHandler(handler), context)

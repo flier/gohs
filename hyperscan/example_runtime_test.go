@@ -28,7 +28,9 @@ func ExampleBlockScanner() {
 		fmt.Println("create scratch failed,", err)
 		return
 	}
-	defer s.Free()
+	defer func() {
+		_ = s.Free()
+	}()
 
 	// Record matching text
 	type Match struct {
@@ -81,7 +83,9 @@ func ExampleVectoredScanner() {
 		fmt.Println("create scratch failed,", err)
 		return
 	}
-	defer s.Free()
+	defer func() {
+		_ = s.Free()
+	}()
 
 	// Record matching text
 	type Match struct {
@@ -133,7 +137,9 @@ func ExampleStreamScanner() {
 		fmt.Println("create scratch failed,", err)
 		return
 	}
-	defer s.Free()
+	defer func() {
+		_ = s.Free()
+	}()
 
 	// Record matching text
 	type Match struct {
