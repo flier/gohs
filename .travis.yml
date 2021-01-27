@@ -4,6 +4,8 @@ os:
     - linux
     - osx
 
+osx_image: xcode12.2
+
 addons:
     apt:
         packages:
@@ -29,6 +31,7 @@ language: go
 go:
     - 1.13.x
     - 1.14.x
+    - 1.15.x
     - master
 
 gobuild_args: -tags hyperscan_v4
