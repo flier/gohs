@@ -1,14 +1,9 @@
-jobs:
-    include:
-        - os: linux
-          dist: bionic
-          gobuild_args: -tags hyperscan_v4
+dist: focal
+osx_image: xcode12.2
 
-        - os: linux
-          dist: focal
-
-        - os: osx
-          osx_image: xcode12.2
+os:
+    - linux
+    - osx
 
 addons:
     apt:
