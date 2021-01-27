@@ -46,8 +46,18 @@ jobs:
 
     - name: Test v4 API
       if: matrix.os == 'ubuntu-18.04'
-      run: go test -tags hyperscan_v4 ./...
+      run: go test -v -tags hyperscan_v4 ./...
 
     - name: Test v5 API
       if: matrix.os == 'ubuntu-20.04' || matrix.os == 'macos-latest'
-      run: go test ./...
+      run: go test -v ./...
+
+  golangci:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.31
