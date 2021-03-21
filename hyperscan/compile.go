@@ -20,7 +20,6 @@ type Pattern struct {
 	Expression             // The expression to parse.
 	Flags      CompileFlag // Flags which modify the behaviour of the expression.
 	Id         int         // The ID number to be associated with the corresponding pattern
-	Ext        *ExprExt    // The matching behaviour of a pattern
 	info       *ExprInfo
 	ext        *ExprExt
 }
@@ -52,65 +51,16 @@ func (p *Pattern) Info() (*ExprInfo, error) {
 	return p.info, nil
 }
 
-type Ext func(ext *ExprExt)
-
-func NewExprExt(exts ...Ext) (ext *ExprExt) {
-	ext = &ExprExt{}
-	for _, f := range exts {
-		f(ext)
-	}
-	return
-}
-
-// The minimum end offset in the data stream at which this expression should match successfully.
-func MinOffset(n uint64) Ext {
-	return func(ext *ExprExt) {
-		ext.Flags |= ExtMinOffset
-		ext.MinOffset = n
-	}
-}
-
-// The maximum end offset in the data stream at which this expression should match successfully.
-func MaxOffset(n uint64) Ext {
-	return func(ext *ExprExt) {
-		ext.Flags |= ExtMaxOffset
-		ext.MaxOffset = n
-	}
-}
-
-// The minimum match length (from start to end) required to successfully match this expression.
-func MinLength(n uint64) Ext {
-	return func(ext *ExprExt) {
-		ext.Flags |= ExtMinLength
-		ext.MinLength = n
-	}
-}
-
-// Allow patterns to approximately match within this edit distance.
-func EditDistance(n uint) Ext {
-	return func(ext *ExprExt) {
-		ext.Flags |= ExtEditDistance
-		ext.EditDistance = n
-	}
-}
-
-// Allow patterns to approximately match within this Hamming distance.
-func HammingDistance(n uint) Ext {
-	return func(ext *ExprExt) {
-		ext.Flags |= ExtHammingDistance
-		ext.HammingDistance = n
-	}
-}
-
 func (p *Pattern) WithExt(exts ...Ext) *Pattern {
-	if exts != nil {
-		p.Ext = NewExprExt(exts...)
+	if p.ext == nil {
+		p.ext = new(ExprExt)
 	}
+	p.ext.With(exts...)
 	return p
 }
 
 // Provides additional parameters related to an expression.
-func (p *Pattern) Exts() (*ExprExt, error) {
+func (p *Pattern) Ext() (*ExprExt, error) {
 	if p.ext == nil {
 		ext, info, err := hsExpressionExt(string(p.Expression), p.Flags)
 

@@ -49,7 +49,7 @@ func TestPattern(t *testing.T) {
 
 			ext, err := p.Ext()
 			So(err, ShouldBeNil)
-			So(ext, ShouldResemble, &ExprExt{Flags: MinOffset | MinLength, MinOffset: 4, MinLength: 8})
+			So(ext, ShouldResemble, new(ExprExt).With(MinOffset(4), MinLength(8)))
 
 			So(p.String(), ShouldEqual, "3:/foobar/8i{min_offset=4,min_length=8}")
 		})
