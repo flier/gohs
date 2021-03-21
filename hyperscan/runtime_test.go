@@ -39,20 +39,23 @@ func TestBlockMatcher(t *testing.T) {
 		So(bdb, ShouldNotBeNil)
 
 		Convey("When match the string", func() {
+			So(bdb.MatchString("123"), ShouldBeTrue)
 			So(bdb.MatchString("abc123def456"), ShouldBeTrue)
 		})
 
 		Convey("When find the leftmost matched string index", func() {
+			So(bdb.FindStringIndex("123"), ShouldResemble, []int{0, 3})
 			So(bdb.FindStringIndex("abc123def456"), ShouldResemble, []int{3, 6})
 		})
 
 		Convey("When find the leftmost matched string", func() {
+			So(bdb.FindString("123"), ShouldEqual, "123")
 			So(bdb.FindString("abc123def456"), ShouldEqual, "123")
 		})
 
 		Convey("When find all the matched string index", func() {
-			So(bdb.FindAllStringIndex("abc123def456", -1), ShouldResemble,
-				[][]int{{3, 6}, {9, 12}})
+			So(bdb.FindAllStringIndex("123", -1), ShouldResemble, [][]int{{0, 3}})
+			So(bdb.FindAllStringIndex("abc123def456", -1), ShouldResemble, [][]int{{3, 6}, {9, 12}})
 		})
 
 		Convey("When find all the matched string", func() {
@@ -111,6 +114,30 @@ func TestStreamMatcher(t *testing.T) {
 
 		So(err, ShouldBeNil)
 		So(sdb, ShouldNotBeNil)
+
+		Convey("When scan a full match", func() {
+			r := strings.NewReader("123")
+
+			Convey("When `Match` a pattern", func() {
+				So(sdb.Match(r), ShouldBeTrue)
+			})
+
+			Convey("When `Find` a pattern", func() {
+				So(sdb.Find(r), ShouldResemble, []byte("123"))
+			})
+
+			Convey("When `FindIndex` a pattern", func() {
+				So(sdb.FindIndex(r), ShouldResemble, []int{0, 3})
+			})
+
+			Convey("When `FindAll` a pattern", func() {
+				So(sdb.FindAll(r, -1), ShouldResemble, [][]byte{[]byte("123")})
+			})
+
+			Convey("When `FindAllIndex` a pattern", func() {
+				So(sdb.FindAllIndex(r, -1), ShouldResemble, [][]int{{0, 3}})
+			})
+		})
 
 		Convey("When scan a new stream", func() {
 			r := strings.NewReader("foo123bar456")

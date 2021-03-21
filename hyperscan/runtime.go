@@ -429,7 +429,7 @@ func (m *blockMatcher) Match(data []byte) bool {
 
 	err := m.scan(data)
 
-	return err != nil && err.(HsError) == ErrScanTerminated
+	return (err == nil || err.(HsError) == ErrScanTerminated) && len(m.matched) == m.n
 }
 
 func (m *blockMatcher) MatchString(s string) bool {
@@ -565,7 +565,7 @@ func (m *streamMatcher) Match(reader io.Reader) bool {
 
 	err := m.scan(reader)
 
-	return err != nil && err.(HsError) == ErrScanTerminated
+	return (err == nil || err.(HsError) == ErrScanTerminated) && len(m.matched) == m.n
 }
 
 type vectoredMatcher struct {
