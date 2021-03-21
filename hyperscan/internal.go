@@ -24,22 +24,22 @@ import (
 
 static inline void* aligned64_malloc(size_t size) {
 	void* result;
-	#ifdef _WIN32
+#ifdef _WIN32
 	result = _aligned_malloc(size, 64);
-	#else
+#else
 	if (posix_memalign(&result, 64, size)) {
 		result = 0;
 	}
-	#endif
+#endif
 	return result;
 }
 
 static inline void aligned64_free(void *ptr) {
-	#ifdef _WIN32
-		_aligned_free(ptr);
-	#else
-		free(ptr);
-	#endif
+#ifdef _WIN32
+	_aligned_free(ptr);
+#else
+	free(ptr);
+#endif
 }
 
 #define DEFINE_ALLOCTOR(ID, TYPE) \
@@ -59,47 +59,39 @@ DEFINE_ALLOCTOR(Stream, stream);
 
 extern int hsMatchEventCallback(unsigned int id, unsigned long long from, unsigned long long to, unsigned int flags, void *context);
 
-static
-int hs_event_callback(unsigned int id, unsigned long long from, unsigned long long to, unsigned int flags, void *context) {
-	return hsMatchEventCallback(id, from, to, flags, context);
+static inline
+hs_error_t hs_scan_cgo(const hs_database_t *db, const char * data, unsigned int length, unsigned int flags, hs_scratch_t * scratch, uintptr_t context) {
+	return hs_scan(db, data, length, flags, scratch, hsMatchEventCallback, (void *) context);
 }
 
 static inline
-hs_error_t hs_scan_cgo(const hs_database_t *db, const char * data, unsigned int length,
-					   unsigned int flags, hs_scratch_t * scratch, uintptr_t context) {
-	return hs_scan(db, data, length, flags, scratch, hs_event_callback, (void *) context);
+hs_error_t hs_scan_vector_cgo(const hs_database_t *db, const char *const *data, const unsigned int *length, unsigned int count, unsigned int flags, hs_scratch_t *scratch, uintptr_t context) {
+	return hs_scan_vector(db, data, length, count, flags, scratch, hsMatchEventCallback, (void *) context);
 }
 
 static inline
-hs_error_t hs_scan_vector_cgo(const hs_database_t *db, const char *const *data, const unsigned int *length,
-							  unsigned int count, unsigned int flags, hs_scratch_t *scratch, uintptr_t context) {
-	return hs_scan_vector(db, data, length, count, flags, scratch, hs_event_callback, (void *) context);
-}
-
-static inline
-hs_error_t hs_scan_stream_cgo(hs_stream_t *id, const char * data, unsigned int length,
-							  unsigned int flags, hs_scratch_t *scratch, uintptr_t context) {
-	return hs_scan_stream(id, data, length, flags, scratch, hs_event_callback, (void *) context);
+hs_error_t hs_scan_stream_cgo(hs_stream_t *id, const char * data, unsigned int length, unsigned int flags, hs_scratch_t *scratch, uintptr_t context) {
+	return hs_scan_stream(id, data, length, flags, scratch, hsMatchEventCallback, (void *) context);
 }
 
 static inline
 hs_error_t hs_close_stream_cgo(hs_stream_t *id, hs_scratch_t *scratch, uintptr_t context) {
-	return hs_close_stream(id, scratch, hs_event_callback, (void *) context);
+	return hs_close_stream(id, scratch, hsMatchEventCallback, (void *) context);
 }
 
 static inline
 hs_error_t hs_reset_stream_cgo(hs_stream_t *id, unsigned int flags, hs_scratch_t *scratch, uintptr_t context) {
-	return hs_reset_stream(id, flags, scratch, hs_event_callback, (void *) context);
+	return hs_reset_stream(id, flags, scratch, hsMatchEventCallback, (void *) context);
 }
 
 static inline
 hs_error_t hs_reset_and_copy_stream_cgo(hs_stream_t *to_id, const hs_stream_t *from_id, hs_scratch_t *scratch, uintptr_t context) {
-	return hs_reset_and_copy_stream(to_id, from_id, scratch, hs_event_callback, (void *) context);
+	return hs_reset_and_copy_stream(to_id, from_id, scratch, hsMatchEventCallback, (void *) context);
 }
 
 static inline
 hs_error_t hs_reset_and_expand_stream_cgo(hs_stream_t *stream, const char *data, unsigned int length, hs_scratch_t *scratch, uintptr_t context) {
-	return hs_reset_and_expand_stream(stream, data, length, scratch, hs_event_callback, (void *) context);
+	return hs_reset_and_expand_stream(stream, data, length, scratch, hsMatchEventCallback, (void *) context);
 }
 */
 import "C"
