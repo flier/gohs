@@ -22,6 +22,7 @@ type Pattern struct {
 	Id         int         // The ID number to be associated with the corresponding pattern
 	Ext        *ExprExt    // The matching behaviour of a pattern
 	info       *ExprInfo
+	ext        *ExprExt
 }
 
 /// NewPattern returns a new pattern base on expression and compile flags.
@@ -108,12 +109,36 @@ func (p *Pattern) WithExt(exts ...Ext) *Pattern {
 	return p
 }
 
-func (p *Pattern) String() string {
-	if p.Id > 0 {
-		return fmt.Sprintf("%d:/%s/%s", p.Id, string(p.Expression), p.Flags)
+// Provides additional parameters related to an expression.
+func (p *Pattern) Exts() (*ExprExt, error) {
+	if p.ext == nil {
+		ext, info, err := hsExpressionExt(string(p.Expression), p.Flags)
+
+		if err != nil {
+			return nil, err
+		}
+
+		p.ext = ext
+		p.info = info
 	}
 
-	return fmt.Sprintf("/%s/%s", string(p.Expression), p.Flags)
+	return p.ext, nil
+}
+
+func (p *Pattern) String() string {
+	var b strings.Builder
+
+	if p.Id > 0 {
+		fmt.Fprintf(&b, "%d:", p.Id)
+	}
+
+	fmt.Fprintf(&b, "/%s/%s", p.Expression, p.Flags)
+
+	if p.ext != nil {
+		b.WriteString(p.ext.String())
+	}
+
+	return b.String()
 }
 
 /*
@@ -142,15 +167,26 @@ func ParsePattern(s string) (*Pattern, error) {
 	}
 
 	if n := strings.LastIndex(s, "/"); n > 1 && strings.HasPrefix(s, "/") {
-		flags, err := ParseCompileFlag(s[n+1:])
+		p.Expression = Expression(s[1:n])
+		s = s[n+1:]
+
+		if n = strings.Index(s, "{"); n > 0 && strings.HasSuffix(s, "}") {
+			ext, err := ParseExprExt(s[n:])
+			if err != nil {
+				return nil, fmt.Errorf("invalid expression extensions: %s, %w", s[n:], err)
+			}
+			p.ext = ext
+			s = s[:n]
+		}
+
+		flags, err := ParseCompileFlag(s)
 		if err != nil {
-			return nil, fmt.Errorf("invalid pattern flags: %s, %w", s[n+1:], err)
+			return nil, fmt.Errorf("invalid pattern flags: %s, %w", s, err)
 		}
 		p.Flags = flags
-		s = s[1:n]
+	} else {
+		p.Expression = Expression(s)
 	}
-
-	p.Expression = Expression(s)
 
 	info, err := hsExpressionInfo(string(p.Expression), p.Flags)
 	if err != nil {
@@ -237,22 +273,22 @@ func (b *DatabaseBuilder) Build() (Database, error) {
 		return nil, errors.New("no patterns")
 	}
 
-	needSomLeftMost := false
-
-	for _, pattern := range b.Patterns {
-		if (pattern.Flags & SomLeftMost) == SomLeftMost {
-			needSomLeftMost = true
-		}
-	}
-
 	mode := b.Mode
 
 	if mode == 0 {
 		mode = BlockMode
-	}
+	} else if mode == StreamMode {
+		som := false
 
-	if mode == StreamMode && needSomLeftMost {
-		mode |= SomHorizonSmallMode
+		for _, pattern := range b.Patterns {
+			if (pattern.Flags & SomLeftMost) == SomLeftMost {
+				som = true
+			}
+		}
+
+		if som && mode&(SomHorizonSmallMode|SomHorizonMediumMode|SomHorizonLargeMode) == 0 {
+			mode |= SomHorizonSmallMode
+		}
 	}
 
 	platform, _ := b.Platform.(*hsPlatformInfo)

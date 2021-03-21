@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"unsafe"
@@ -349,25 +350,130 @@ type ExprInfo struct {
 // If the pattern expression has an unbounded maximum width
 const UnboundedMaxWidth = C.UINT_MAX
 
-// ExtFlag are used in ExprExt.Flags to indicate which fields are used.
-type ExtFlag uint64
-
-const (
-	ExtMinOffset       ExtFlag = C.HS_EXT_FLAG_MIN_OFFSET       // MinOffset is a flag indicating that the ExprExt.MinOffset field is used.
-	ExtMaxOffset       ExtFlag = C.HS_EXT_FLAG_MAX_OFFSET       // MaxOffset is a flag indicating that the ExprExt.MaxOffset field is used.
-	ExtMinLength       ExtFlag = C.HS_EXT_FLAG_MIN_LENGTH       // MinLength is a flag indicating that the ExprExt.MinLength field is used.
-	ExtEditDistance    ExtFlag = C.HS_EXT_FLAG_EDIT_DISTANCE    // EditDistance is a flag indicating that the ExprExt.EditDistance field is used.
-	ExtHammingDistance ExtFlag = C.HS_EXT_FLAG_HAMMING_DISTANCE // HammingDistance is a flag indicating that the ExprExt.HammingDistance field is used.
-)
+func newExprInfo(info *C.hs_expr_info_t) *ExprInfo {
+	return &ExprInfo{
+		MinWidth:        uint(info.min_width),
+		MaxWidth:        uint(info.max_width),
+		ReturnUnordered: info.unordered_matches != 0,
+		AtEndOfData:     info.matches_at_eod != 0,
+		OnlyAtEndOfData: info.matches_only_at_eod != 0,
+	}
+}
 
 // ExprExt is a structure containing additional parameters related to an expression.
 type ExprExt struct {
 	Flags           ExtFlag // Flags governing which parts of this structure are to be used by the compiler.
-	MinOffset       uint64  // The minimum end offset in the data stream at which this expression should match successfully.
-	MaxOffset       uint64  // The maximum end offset in the data stream at which this expression should match successfully.
-	MinLength       uint64  // The minimum match length (from start to end) required to successfully match this expression.
+	MinOffset       uint    // The minimum end offset in the data stream at which this expression should match successfully.
+	MaxOffset       uint    // The maximum end offset in the data stream at which this expression should match successfully.
+	MinLength       uint    // The minimum match length (from start to end) required to successfully match this expression.
 	EditDistance    uint    // Allow patterns to approximately match within this edit distance.
 	HammingDistance uint    // Allow patterns to approximately match within this Hamming distance.
+}
+
+func (ext *ExprExt) String() string {
+	var values []string
+
+	if (ext.Flags & MinOffset) == MinOffset {
+		values = append(values, fmt.Sprintf("min_offset=%d", ext.MinOffset))
+	}
+	if (ext.Flags & MaxOffset) == MaxOffset {
+		values = append(values, fmt.Sprintf("max_offset=%d", ext.MaxOffset))
+	}
+	if (ext.Flags & MinLength) == MinLength {
+		values = append(values, fmt.Sprintf("min_length=%d", ext.MinLength))
+	}
+	if (ext.Flags & EditDistance) == EditDistance {
+		values = append(values, fmt.Sprintf("edit_distance=%d", ext.EditDistance))
+	}
+	if (ext.Flags & HammingDistance) == HammingDistance {
+		values = append(values, fmt.Sprintf("hamming_distance=%d", ext.HammingDistance))
+	}
+
+	return "{" + strings.Join(values, ",") + "}"
+}
+
+func (ext *ExprExt) new_expr_ext() *C.hs_expr_ext_t {
+	e := (*C.hs_expr_ext_t)(C.calloc(1, C.size_t(unsafe.Sizeof(C.hs_expr_ext_t{}))))
+
+	e.flags = C.ulonglong(ext.Flags)
+	e.min_offset = C.ulonglong(ext.MinOffset)
+	e.max_offset = C.ulonglong(ext.MaxOffset)
+	e.min_length = C.ulonglong(ext.MinLength)
+	e.edit_distance = C.uint(ext.EditDistance)
+	e.hamming_distance = C.uint(ext.HammingDistance)
+
+	return e
+}
+
+func newExprExt(ext *C.hs_expr_ext_t) *ExprExt {
+	e := new(ExprExt)
+
+	if (ext.flags & C.HS_EXT_FLAG_MIN_OFFSET) == C.HS_EXT_FLAG_MIN_OFFSET {
+		e.Flags |= MinOffset
+		e.MinOffset = uint(ext.min_offset)
+	}
+	if (ext.flags & C.HS_EXT_FLAG_MAX_OFFSET) == C.HS_EXT_FLAG_MAX_OFFSET {
+		e.Flags |= MaxOffset
+		e.MaxOffset = uint(ext.max_offset)
+	}
+	if (ext.flags & C.HS_EXT_FLAG_MIN_LENGTH) == C.HS_EXT_FLAG_MIN_LENGTH {
+		e.Flags |= MinLength
+		e.MinLength = uint(ext.min_length)
+	}
+	if (ext.flags & C.HS_EXT_FLAG_EDIT_DISTANCE) == C.HS_EXT_FLAG_EDIT_DISTANCE {
+		e.Flags |= EditDistance
+		e.EditDistance = uint(ext.edit_distance)
+	}
+	if (ext.flags & C.HS_EXT_FLAG_HAMMING_DISTANCE) == C.HS_EXT_FLAG_HAMMING_DISTANCE {
+		e.Flags |= HammingDistance
+		e.HammingDistance = uint(ext.hamming_distance)
+	}
+
+	return e
+}
+
+func ParseExprExt(s string) (ext *ExprExt, err error) {
+	ext = new(ExprExt)
+
+	if strings.HasPrefix(s, "{") && strings.HasSuffix(s, "}") {
+		s = strings.TrimSuffix(strings.TrimPrefix(s, "{"), "}")
+	}
+
+	for _, s := range strings.Split(s, ",") {
+		parts := strings.SplitN(s, "=", 2)
+
+		if len(parts) != 2 {
+			continue
+		}
+
+		key := parts[0]
+		value := parts[1]
+
+		var n uint64
+		n, err = strconv.ParseUint(value, 10, 64)
+		if err != nil {
+			return
+		}
+
+		if key == "min_offset" {
+			ext.Flags |= MinOffset
+			ext.MinOffset = uint(n)
+		} else if key == "max_offset" {
+			ext.Flags |= MaxOffset
+			ext.MaxOffset = uint(n)
+		} else if key == "min_length" {
+			ext.Flags |= MinLength
+			ext.MinLength = uint(n)
+		} else if key == "edit_distance" {
+			ext.Flags |= EditDistance
+			ext.EditDistance = uint(n)
+		} else if key == "hamming_distance" {
+			ext.Flags |= HammingDistance
+			ext.HammingDistance = uint(n)
+		}
+	}
+
+	return
 }
 
 type hsAllocFunc func(uint) unsafe.Pointer
@@ -703,13 +809,19 @@ func hsCompileMulti(patterns []*Pattern, mode ModeFlag, info *hsPlatformInfo) (h
 	cexts := (**C.hs_expr_ext_t)(C.calloc(C.size_t(len(patterns)), C.size_t(unsafe.Sizeof(uintptr(0)))))
 	exts := (*[1 << 30]*C.hs_expr_ext_t)(unsafe.Pointer(cexts))[:len(patterns):len(patterns)]
 
+	cexts := (**C.hs_expr_ext_t)(C.calloc(C.size_t(len(patterns)), C.size_t(unsafe.Sizeof(uintptr(0)))))
+	exts := *(*[]*C.hs_expr_ext_t)(unsafe.Pointer(&reflect.SliceHeader{
+		Data: uintptr(unsafe.Pointer(cexts)),
+		Len:  len(patterns),
+		Cap:  len(patterns),
+	}))
+
 	for i, pattern := range patterns {
 		exprs[i] = C.CString(string(pattern.Expression))
 		flags[i] = C.uint(pattern.Flags)
 		ids[i] = C.uint(pattern.Id)
-
-		if pattern.Ext != nil {
-			exts[i] = (*C.hs_expr_ext_t)(unsafe.Pointer(pattern.Ext))
+		if pattern.ext != nil {
+			exts[i] = pattern.ext.new_expr_ext()
 		}
 	}
 
@@ -723,6 +835,12 @@ func hsCompileMulti(patterns []*Pattern, mode ModeFlag, info *hsPlatformInfo) (h
 	C.free(unsafe.Pointer(cflags))
 	C.free(unsafe.Pointer(cexts))
 	C.free(unsafe.Pointer(cids))
+
+	for _, ext := range exts {
+		if ext != nil {
+			C.free(unsafe.Pointer(ext))
+		}
+	}
 
 	if err != nil {
 		defer C.hs_free_compile_error(err)
@@ -744,21 +862,14 @@ func hsExpressionInfo(expression string, flags CompileFlag) (*ExprInfo, error) {
 	var err *C.hs_compile_error_t
 
 	expr := C.CString(expression)
+	defer C.free(unsafe.Pointer(expr))
 
 	ret := C.hs_expression_info(expr, C.uint(flags), &info, &err)
-
-	C.free(unsafe.Pointer(expr))
 
 	if ret == C.HS_SUCCESS && info != nil {
 		defer hsMiscFree(unsafe.Pointer(info))
 
-		return &ExprInfo{
-			MinWidth:        uint(info.min_width),
-			MaxWidth:        uint(info.max_width),
-			ReturnUnordered: info.unordered_matches != 0,
-			AtEndOfData:     info.matches_at_eod != 0,
-			OnlyAtEndOfData: info.matches_only_at_eod != 0,
-		}, nil
+		return newExprInfo(info), nil
 	}
 
 	if err != nil {
@@ -770,6 +881,37 @@ func hsExpressionInfo(expression string, flags CompileFlag) (*ExprInfo, error) {
 	}
 
 	return nil, fmt.Errorf("compile error, %d", int(ret))
+}
+
+func hsExpressionExt(expression string, flags CompileFlag) (ext *ExprExt, info *ExprInfo, err error) {
+	expr_ext := new(C.hs_expr_ext_t)
+	var expr_info *C.hs_expr_info_t
+	var compile_err *C.hs_compile_error_t
+
+	expr := C.CString(expression)
+
+	ret := C.hs_expression_ext_info(expr, C.uint(flags), expr_ext, &expr_info, &compile_err)
+
+	C.free(unsafe.Pointer(expr))
+
+	if ret == C.HS_SUCCESS && expr_info != nil {
+		defer hsMiscFree(unsafe.Pointer(expr_info))
+
+		ext = newExprExt(expr_ext)
+		info = newExprInfo(expr_info)
+	}
+
+	if compile_err != nil {
+		defer C.hs_free_compile_error(compile_err)
+	}
+
+	if ret == C.HS_COMPILER_ERROR && compile_err != nil {
+		err = &compileError{C.GoString(compile_err.message), int(compile_err.expression)}
+	} else {
+		err = fmt.Errorf("compile error, %d", int(ret))
+	}
+
+	return
 }
 
 func hsAllocScratch(db hsDatabase) (hsScratch, error) {
