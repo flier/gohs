@@ -59,7 +59,9 @@ func Match(pattern string, data []byte) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer s.Free()
+	defer func() {
+		_ = s.Free()
+	}()
 
 	h := &matchRecorder{}
 	err = db.Scan(data, s, h.Handle, nil)
@@ -88,7 +90,9 @@ func MatchReader(pattern string, reader io.Reader) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer s.Free()
+	defer func() {
+		_ = s.Free()
+	}()
 
 	h := &matchRecorder{}
 	err = db.Scan(reader, s, h.Handle, nil)

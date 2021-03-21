@@ -189,7 +189,7 @@ const (
 type TuneFlag int
 
 const (
-	Generic       TuneFlag = C.HS_TUNE_FAMILY_GENERIC // Genericindicates that the compiled database should not be tuned for any particular target platform.
+	Generic       TuneFlag = C.HS_TUNE_FAMILY_GENERIC // Generic indicates that the compiled database should not be tuned for any particular target platform.
 	SandyBridge   TuneFlag = C.HS_TUNE_FAMILY_SNB     // SandyBridge indicates that the compiled database should be tuned for the Sandy Bridge microarchitecture.
 	IvyBridge     TuneFlag = C.HS_TUNE_FAMILY_IVB     // IvyBridge indicates that the compiled database should be tuned for the Ivy Bridge microarchitecture.
 	Haswell       TuneFlag = C.HS_TUNE_FAMILY_HSW     // Haswell indicates that the compiled database should be tuned for the Haswell microarchitecture.

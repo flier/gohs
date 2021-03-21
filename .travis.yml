@@ -1,4 +1,5 @@
-dist: bionic
+dist: focal
+osx_image: xcode12.2
 
 os:
     - linux
@@ -21,17 +22,13 @@ env:
     global:
         - GO111MODULE=on
         - PKG_CONFIG_PATH=/usr/local/lib/pkgconfig/
-install:
-    - if [ $TRAVIS_OS_NAME = osx ]; then brew install hyperscan libpcap tree; fi
 
 language: go
 
 go:
-    - 1.13.x
     - 1.14.x
+    - 1.15.x
     - master
-
-gobuild_args: -tags hyperscan_v4
 
 after_failure:
     - echo `pwd`
