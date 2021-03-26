@@ -8,8 +8,10 @@ package hyperscan
 import "C"
 
 const (
-	Combination CompileFlag = C.HS_FLAG_COMBINATION // Logical combination.
-	Quiet       CompileFlag = C.HS_FLAG_QUIET       // Don't do any match reporting.
+	// Combination represents logical combination.
+	Combination CompileFlag = C.HS_FLAG_COMBINATION
+	// Quiet represents don't do any match reporting.
+	Quiet CompileFlag = C.HS_FLAG_QUIET
 )
 
 func init() {

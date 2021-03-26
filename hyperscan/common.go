@@ -5,6 +5,7 @@ import (
 	"regexp"
 )
 
+// Database is an immutable database that can be used by the Hyperscan scanning API.
 type Database interface {
 	// Provides information about a database.
 	Info() (DbInfo, error)
@@ -52,11 +53,12 @@ var (
 	regexInfo = regexp.MustCompile(`^Version: (\d+\.\d+\.\d+) Features: ([\w\s]+)? Mode: (\w+)$`)
 )
 
-// The version and platform information for the supplied database
+// DbInfo identify the version and platform information for the supplied database.
 type DbInfo string
 
 func (i DbInfo) String() string { return string(i) }
 
+// Version is the version for the supplied database.
 func (i DbInfo) Version() (string, error) {
 	matched := regexInfo.FindStringSubmatch(string(i))
 
@@ -67,6 +69,7 @@ func (i DbInfo) Version() (string, error) {
 	return matched[1], nil
 }
 
+// Mode is the scanning mode for the supplied database.
 func (i DbInfo) Mode() (ModeFlag, error) {
 	matched := regexInfo.FindStringSubmatch(string(i))
 

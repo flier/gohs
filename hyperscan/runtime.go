@@ -50,6 +50,7 @@ func (s *Scratch) Clone() (*Scratch, error) {
 // Free a scratch block previously allocated
 func (s *Scratch) Free() error { return hsFreeScratch(s.s) }
 
+// MatchContext represents a match context
 type MatchContext interface {
 	Database() Database
 
@@ -58,6 +59,7 @@ type MatchContext interface {
 	UserData() interface{}
 }
 
+// MatchEvent indicates a match event
 type MatchEvent interface {
 	Id() uint
 
@@ -68,6 +70,7 @@ type MatchEvent interface {
 	Flags() ScanFlag
 }
 
+// MatchHandler handles match events
 type MatchHandler hsMatchEventHandler
 
 // BlockScanner is the block (non-streaming) regular expression scanner.

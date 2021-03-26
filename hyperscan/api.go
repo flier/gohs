@@ -102,6 +102,7 @@ func MatchReader(pattern string, reader io.Reader) (bool, error) {
 	return h.Matched(), h.err
 }
 
+// MatchString reports whether the string s contains any match of the regular expression pattern.
 func MatchString(pattern string, s string) (matched bool, err error) {
 	return Match(pattern, []byte(s))
 }
