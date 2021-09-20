@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"runtime"
 )
 
 var (
@@ -26,6 +27,22 @@ func NewScratch(db Database) (*Scratch, error) {
 	}
 
 	return &Scratch{s}, nil
+}
+
+// NewManagedScratch is a wrapper for NewScratch that sets
+// a finalizer on the Scratch instance so that memory is freed
+// once the object is no longer in use.
+func NewManagedScratch(db Database) (*Scratch, error) {
+	s, err := NewScratch(db)
+
+	if err != nil {
+		return nil, err
+	}
+
+	runtime.SetFinalizer(s, func(scratch *Scratch) {
+		_ = scratch.Free()
+	})
+	return s, nil
 }
 
 // Size provides the size of the given scratch space.

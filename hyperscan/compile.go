@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"runtime"
 	"strconv"
 	"strings"
 )
@@ -280,6 +281,23 @@ func NewBlockDatabase(patterns ...*Pattern) (BlockDatabase, error) {
 	return db.(*blockDatabase), err
 }
 
+// NewManagedBlockDatabase is a wrapper for NewBlockDatabase that
+// sets a finalizer on the Scratch instance so that memory is
+// freed once the object is no longer in use.
+func NewManagedBlockDatabase(patterns ...*Pattern) (BlockDatabase, error) {
+	db, err := NewBlockDatabase(patterns...)
+
+	if err != nil {
+		return nil, err
+	}
+
+	runtime.SetFinalizer(db, func(obj BlockDatabase) {
+		_ = obj.Close()
+	})
+
+	return db, nil
+}
+
 // NewStreamDatabase create a stream database base on the patterns.
 func NewStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 	builder := &DatabaseBuilder{Patterns: patterns, Mode: StreamMode}
@@ -291,6 +309,23 @@ func NewStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 	}
 
 	return db.(*streamDatabase), err
+}
+
+// NewManagedStreamDatabase is a wrapper for NewStreamDatabase that
+// sets a finalizer on the Scratch instance so that memory is
+// freed once the object is no longer in use.
+func NewManagedStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
+	db, err := NewStreamDatabase(patterns...)
+
+	if err != nil {
+		return nil, err
+	}
+
+	runtime.SetFinalizer(db, func(obj StreamDatabase) {
+		_ = obj.Close()
+	})
+
+	return db, nil
 }
 
 // NewMediumStreamDatabase create a medium-sized stream database base on the patterns.
