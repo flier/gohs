@@ -1,7 +1,7 @@
 package hyperscan
 
 import (
-	"errors"
+	"fmt"
 	"regexp"
 )
 
@@ -61,7 +61,7 @@ func (i DbInfo) Version() (string, error) {
 	matched := regexInfo.FindStringSubmatch(string(i))
 
 	if len(matched) != 4 {
-		return "", errors.New("invalid database info")
+		return "", fmt.Errorf("database info, %w", ErrInvalid)
 	}
 
 	return matched[1], nil
@@ -72,7 +72,7 @@ func (i DbInfo) Mode() (ModeFlag, error) {
 	matched := regexInfo.FindStringSubmatch(string(i))
 
 	if len(matched) != 4 {
-		return 0, errors.New("invalid database info")
+		return 0, fmt.Errorf("database info, %w", ErrInvalid)
 	}
 	return ParseModeFlag(matched[3])
 }

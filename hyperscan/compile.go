@@ -9,6 +9,11 @@ import (
 	"strings"
 )
 
+var (
+	ErrNoFound    = errors.New("no found")
+	ErrUnexpected = errors.New("unexpected")
+)
+
 // Expression of pattern
 type Expression string
 
@@ -110,7 +115,7 @@ func ParsePattern(s string) (*Pattern, error) {
 	if i > 0 && j > i+1 {
 		id, err := strconv.ParseInt(s[:i], 10, 32)
 		if err != nil {
-			return nil, errors.New("invalid pattern id: " + s[:i])
+			return nil, fmt.Errorf("invalid pattern id: %s, %w", s[:i], ErrInvalid)
 		}
 		p.Id = int(id)
 		s = s[i+1:]
@@ -224,7 +229,7 @@ func (b *DatabaseBuilder) AddExpressionWithFlags(expr Expression, flags CompileF
 // Build a database base on the expressions and platform.
 func (b *DatabaseBuilder) Build() (Database, error) {
 	if b.Patterns == nil {
-		return nil, errors.New("no patterns")
+		return nil, ErrNoFound
 	}
 
 	mode := b.Mode
@@ -259,9 +264,9 @@ func (b *DatabaseBuilder) Build() (Database, error) {
 		return newVectoredDatabase(db)
 	case BlockMode:
 		return newBlockDatabase(db)
+	default:
+		return nil, fmt.Errorf("mode %d, %w", mode, ErrUnexpected)
 	}
-
-	return nil, errors.New("unknown mode")
 }
 
 // NewBlockDatabase create a block database base on the patterns.

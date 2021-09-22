@@ -1,7 +1,6 @@
 package hyperscan
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"runtime"
@@ -220,7 +219,7 @@ func ParseModeFlag(s string) (ModeFlag, error) {
 		return mode, nil
 	}
 
-	return BlockMode, errors.New("Unknown Mode: " + s)
+	return BlockMode, fmt.Errorf("database mode %s, %w", s, ErrUnexpected)
 }
 
 func (m ModeFlag) String() string {

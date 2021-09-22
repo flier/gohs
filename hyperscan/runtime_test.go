@@ -1,4 +1,4 @@
-testpackagepackage hyperscan_test
+package hyperscan_test
 
 import (
 	"strings"

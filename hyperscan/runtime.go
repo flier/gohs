@@ -6,7 +6,7 @@ import (
 	"io"
 )
 
-var errTooManyMatches = errors.New("too many matches")
+var ErrTooManyMatches = errors.New("too many matches")
 
 // Scratch is a Hyperscan scratch space.
 type Scratch struct {
@@ -349,7 +349,7 @@ func (m *blockMatcher) Handle(id uint, from, to uint64, flags uint, context inte
 	if m.n < len(m.matched) {
 		m.matched = m.matched[:m.n]
 
-		return errTooManyMatches
+		return ErrTooManyMatches
 	}
 
 	return nil
@@ -458,7 +458,7 @@ func (m *streamMatcher) Handle(id uint, from, to uint64, flags uint, context int
 	if m.n < len(m.matched) {
 		m.matched = m.matched[:m.n]
 
-		return errTooManyMatches
+		return ErrTooManyMatches
 	}
 
 	return nil
