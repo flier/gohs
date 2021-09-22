@@ -1,7 +1,7 @@
 //go:build go1.15 && !go1.17
 // +build go1.15,!go1.17
 
-package hyperscan
+package handle
 
 // Delete invalidates a handle. This method should only be called once
 // the program no longer needs to pass the handle to C and the C code

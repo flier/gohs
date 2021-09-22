@@ -1,7 +1,7 @@
 //go:build go1.17
 // +build go1.17
 
-package hyperscan
+package handle
 
 import "C"
 import "runtime/cgo"
@@ -10,5 +10,5 @@ import "runtime/cgo"
 // between Go and C without breaking the cgo pointer passing rules.
 type Handle = cgo.Handle
 
-// NewHandle returns a handle for a given value.
-var NewHandle = cgo.NewHandle
+// New returns a handle for a given value.
+var New = cgo.NewHandle

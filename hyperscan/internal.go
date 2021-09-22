@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"unsafe"
+
+	"github.com/flier/gohs/hyperscan/handle"
 )
 
 /*
@@ -1008,7 +1010,7 @@ type hsMatchEventContext struct {
 
 //export hsMatchEventCallback
 func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, data unsafe.Pointer) C.int {
-	ctx, ok := Handle(data).Value().(hsMatchEventContext)
+	ctx, ok := handle.Handle(data).Value().(hsMatchEventContext)
 	if !ok {
 		return C.HS_INVALID
 	}
@@ -1031,7 +1033,7 @@ func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEve
 		return HsError(C.HS_INVALID)
 	}
 
-	h := NewHandle(hsMatchEventContext{onEvent, context})
+	h := handle.New(hsMatchEventContext{onEvent, context})
 	defer h.Delete()
 
 	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data)) // FIXME: Zero-copy access to go data
@@ -1073,7 +1075,7 @@ func hsScanVector(db hsDatabase, data [][]byte, flags ScanFlag, scratch hsScratc
 		clength[i] = C.uint(hdr.Len)
 	}
 
-	h := NewHandle(hsMatchEventContext{onEvent, context})
+	h := handle.New(hsMatchEventContext{onEvent, context})
 	defer h.Delete()
 
 	cdataHdr := (*reflect.SliceHeader)(unsafe.Pointer(&cdata))     // FIXME: Zero-copy access to go data
@@ -1115,7 +1117,7 @@ func hsScanStream(stream hsStream, data []byte, flags ScanFlag, scratch hsScratc
 		return HsError(C.HS_INVALID)
 	}
 
-	h := NewHandle(hsMatchEventContext{onEvent, context})
+	h := handle.New(hsMatchEventContext{onEvent, context})
 	defer h.Delete()
 
 	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data)) // FIXME: Zero-copy access to go data
@@ -1139,7 +1141,7 @@ func hsScanStream(stream hsStream, data []byte, flags ScanFlag, scratch hsScratc
 }
 
 func hsCloseStream(stream hsStream, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	h := NewHandle(hsMatchEventContext{onEvent, context})
+	h := handle.New(hsMatchEventContext{onEvent, context})
 	defer h.Delete()
 
 	ret := C.hs_close_stream(stream,
@@ -1155,7 +1157,7 @@ func hsCloseStream(stream hsStream, scratch hsScratch, onEvent hsMatchEventHandl
 }
 
 func hsResetStream(stream hsStream, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	h := NewHandle(hsMatchEventContext{onEvent, context})
+	h := handle.New(hsMatchEventContext{onEvent, context})
 	defer h.Delete()
 
 	ret := C.hs_reset_stream(stream,
@@ -1182,7 +1184,7 @@ func hsCopyStream(stream hsStream) (hsStream, error) {
 }
 
 func hsResetAndCopyStream(to, from hsStream, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	h := NewHandle(hsMatchEventContext{onEvent, context})
+	h := handle.New(hsMatchEventContext{onEvent, context})
 	defer h.Delete()
 
 	ret := C.hs_reset_and_copy_stream(to,
@@ -1229,7 +1231,7 @@ func hsExpandStream(db hsDatabase, stream *hsStream, buf []byte) error {
 }
 
 func hsResetAndExpandStream(stream hsStream, buf []byte, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	h := NewHandle(hsMatchEventContext{onEvent, context})
+	h := handle.New(hsMatchEventContext{onEvent, context})
 	defer h.Delete()
 
 	ret := C.hs_reset_and_expand_stream(stream,

@@ -4,7 +4,7 @@
 // Copyright 2021 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-package hyperscan
+package handle
 
 import (
 	"sync"
@@ -63,7 +63,7 @@ import (
 //	}
 type Handle uintptr
 
-// NewHandle returns a handle for a given value.
+// New returns a handle for a given value.
 //
 // The handle is valid until the program calls Delete on it. The handle
 // uses resources, and this package assumes that C code may hold on to
@@ -72,7 +72,7 @@ type Handle uintptr
 //
 // The intended use is to pass the returned handle to C code, which
 // passes it back to Go, which calls Value.
-func NewHandle(v interface{}) Handle {
+func New(v interface{}) Handle {
 	h := atomic.AddUintptr(&handleIdx, 1)
 	if h == 0 {
 		panic("runtime/cgo: ran out of handle space")
