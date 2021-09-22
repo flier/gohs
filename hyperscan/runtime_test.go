@@ -178,7 +178,7 @@ func TestStreamCompressor(t *testing.T) {
 		Convey("When open a new stream", func() {
 			var matches [][]uint64
 
-			matched := func(id uint, from, to uint64, flags uint, context interface{}) error {
+			matched := func(id uint, from, to uint64, flags uint, context interface{}) error { // nolint:unparam
 				matches = append(matches, []uint64{from, to})
 
 				return nil

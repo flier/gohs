@@ -118,7 +118,7 @@ func UnmarshalBlockDatabase(data []byte) (BlockDatabase, error) {
 		return nil, err
 	}
 
-	return newBlockDatabase(db)
+	return newBlockDatabase(db), nil
 }
 
 // UnmarshalStreamDatabase reconstruct a stream database from a stream of bytes.
@@ -128,7 +128,7 @@ func UnmarshalStreamDatabase(data []byte) (StreamDatabase, error) {
 		return nil, err
 	}
 
-	return newStreamDatabase(db)
+	return newStreamDatabase(db), nil
 }
 
 // UnmarshalVectoredDatabase reconstruct a vectored database from a stream of bytes.
@@ -138,7 +138,7 @@ func UnmarshalVectoredDatabase(data []byte) (VectoredDatabase, error) {
 		return nil, err
 	}
 
-	return newVectoredDatabase(db)
+	return newVectoredDatabase(db), nil
 }
 
 // SerializedDatabaseSize reports the size that would be required by a database if it were deserialized.
@@ -171,16 +171,16 @@ type blockDatabase struct {
 	*blockMatcher
 }
 
-func newBlockDatabase(db hsDatabase) (*blockDatabase, error) {
-	return &blockDatabase{newBlockMatcher(newBlockScanner(newBaseDatabase(db)))}, nil
+func newBlockDatabase(db hsDatabase) *blockDatabase {
+	return &blockDatabase{newBlockMatcher(newBlockScanner(newBaseDatabase(db)))}
 }
 
 type streamDatabase struct {
 	*streamMatcher
 }
 
-func newStreamDatabase(db hsDatabase) (*streamDatabase, error) {
-	return &streamDatabase{newStreamMatcher(newStreamScanner(newBaseDatabase(db)))}, nil
+func newStreamDatabase(db hsDatabase) *streamDatabase {
+	return &streamDatabase{newStreamMatcher(newStreamScanner(newBaseDatabase(db)))}
 }
 
 func (db *streamDatabase) StreamSize() (int, error) { return hsStreamSize(db.db) }
@@ -189,6 +189,6 @@ type vectoredDatabase struct {
 	*vectoredMatcher
 }
 
-func newVectoredDatabase(db hsDatabase) (*vectoredDatabase, error) {
-	return &vectoredDatabase{newVectoredMatcher(newVectoredScanner(newBaseDatabase(db)))}, nil
+func newVectoredDatabase(db hsDatabase) *vectoredDatabase {
+	return &vectoredDatabase{newVectoredMatcher(newVectoredScanner(newBaseDatabase(db)))}
 }

@@ -264,11 +264,11 @@ func (b *DatabaseBuilder) Build() (Database, error) {
 
 	switch mode & ModeMask {
 	case StreamMode:
-		return newStreamDatabase(db)
+		return newStreamDatabase(db), nil
 	case VectoredMode:
-		return newVectoredDatabase(db)
+		return newVectoredDatabase(db), nil
 	case BlockMode:
-		return newBlockDatabase(db)
+		return newBlockDatabase(db), nil
 	default:
 		return nil, fmt.Errorf("mode %d, %w", mode, ErrUnexpected)
 	}
@@ -342,7 +342,7 @@ func Compile(expr string) (Database, error) {
 		return nil, err
 	}
 
-	return newBlockDatabase(db)
+	return newBlockDatabase(db), nil
 }
 
 // MustCompile is like Compile but panics if the expression cannot be parsed.
@@ -353,12 +353,7 @@ func MustCompile(expr string) Database {
 		panic(`Compile(` + Quote(expr) + `): ` + err.Error())
 	}
 
-	bdb, err := newBlockDatabase(db)
-	if err != nil {
-		panic(`Compile(` + Quote(expr) + `): ` + err.Error())
-	}
-
-	return bdb
+	return newBlockDatabase(db)
 }
 
 // Quote returns a quoted string literal representing s.
@@ -366,5 +361,6 @@ func Quote(s string) string {
 	if strconv.CanBackquote(s) {
 		return "`" + s + "`"
 	}
+
 	return strconv.Quote(s)
 }
