@@ -1,16 +1,19 @@
+//go:build !hyperscan_v4
 // +build !hyperscan_v4
 
-package hyperscan
+package hyperscan_test
 
 import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
+
+	"github.com/flier/gohs/hyperscan"
 )
 
 func TestDatabaseBuilderV5(t *testing.T) {
 	Convey("Given a DatabaseBuilder (v5)", t, func() {
-		b := DatabaseBuilder{}
+		b := hyperscan.DatabaseBuilder{}
 		Convey("When build with some combination expression", func() {
 			db, err := b.AddExpressions("101:/abc/Q", "102:/def/Q", "/(101&102)/Co").Build()
 
@@ -24,7 +27,7 @@ func TestDatabaseBuilderV5(t *testing.T) {
 			mode, err := info.Mode()
 
 			So(err, ShouldBeNil)
-			So(mode, ShouldEqual, BlockMode)
+			So(mode, ShouldEqual, hyperscan.BlockMode)
 
 			So(db.Close(), ShouldBeNil)
 		})

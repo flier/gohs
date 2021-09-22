@@ -1,15 +1,17 @@
-package hyperscan
+testpackagepackage hyperscan_test
 
 import (
 	"strings"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
+
+	"github.com/flier/gohs/hyperscan"
 )
 
 func TestBlockScanner(t *testing.T) {
 	Convey("Given a block database", t, func() {
-		bdb, err := NewBlockDatabase(NewPattern(`\d+`, SomLeftMost))
+		bdb, err := hyperscan.NewBlockDatabase(hyperscan.NewPattern(`\d+`, hyperscan.SomLeftMost))
 
 		So(err, ShouldBeNil)
 		So(bdb, ShouldNotBeNil)
@@ -33,7 +35,7 @@ func TestBlockScanner(t *testing.T) {
 
 func TestBlockMatcher(t *testing.T) {
 	Convey("Given a block database", t, func() {
-		bdb, err := NewBlockDatabase(NewPattern(`\d+`, SomLeftMost))
+		bdb, err := hyperscan.NewBlockDatabase(hyperscan.NewPattern(`\d+`, hyperscan.SomLeftMost))
 
 		So(err, ShouldBeNil)
 		So(bdb, ShouldNotBeNil)
@@ -77,7 +79,7 @@ func TestBlockMatcher(t *testing.T) {
 
 func TestStreamScanner(t *testing.T) {
 	Convey("Given a streaming database", t, func() {
-		sdb, err := NewStreamDatabase(NewPattern(`abc`, SomLeftMost))
+		sdb, err := hyperscan.NewStreamDatabase(hyperscan.NewPattern(`abc`, hyperscan.SomLeftMost))
 
 		So(err, ShouldBeNil)
 		So(sdb, ShouldNotBeNil)
@@ -110,7 +112,7 @@ func TestStreamScanner(t *testing.T) {
 
 func TestStreamMatcher(t *testing.T) {
 	Convey("Given a streaming database", t, func() {
-		sdb, err := NewStreamDatabase(NewPattern(`\d+`, SomLeftMost))
+		sdb, err := hyperscan.NewStreamDatabase(hyperscan.NewPattern(`\d+`, hyperscan.SomLeftMost))
 
 		So(err, ShouldBeNil)
 		So(sdb, ShouldNotBeNil)
@@ -167,7 +169,7 @@ func TestStreamMatcher(t *testing.T) {
 
 func TestStreamCompressor(t *testing.T) {
 	Convey("Given a streaming database", t, func() {
-		sdb, err := NewStreamDatabase(NewPattern(`abc`, SomLeftMost))
+		sdb, err := hyperscan.NewStreamDatabase(hyperscan.NewPattern(`abc`, hyperscan.SomLeftMost))
 
 		So(err, ShouldBeNil)
 		So(sdb, ShouldNotBeNil)

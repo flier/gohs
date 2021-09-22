@@ -1,16 +1,21 @@
-package hyperscan
+package hyperscan_test
 
 import (
+	"regexp"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
+
+	"github.com/flier/gohs/hyperscan"
 )
+
+var regexInfo = regexp.MustCompile(`^Version: (\d+\.\d+\.\d+) Features: ([\w\s]+)? Mode: (\w+)$`)
 
 func TestBaseDatabase(t *testing.T) {
 	Convey("Given a block database", t, func() {
-		So(ValidPlatform(), ShouldBeNil)
+		So(hyperscan.ValidPlatform(), ShouldBeNil)
 
-		bdb, err := NewBlockDatabase(&Pattern{Expression: "test"})
+		bdb, err := hyperscan.NewBlockDatabase(&hyperscan.Pattern{Expression: "test"})
 
 		So(err, ShouldBeNil)
 		So(bdb, ShouldNotBeNil)
@@ -34,14 +39,14 @@ func TestBaseDatabase(t *testing.T) {
 				ver, err := info.Version()
 
 				So(err, ShouldBeNil)
-				So(Version(), ShouldStartWith, ver)
+				So(hyperscan.Version(), ShouldStartWith, ver)
 			})
 
 			Convey("Then get mode", func() {
 				mode, err := info.Mode()
 
 				So(err, ShouldBeNil)
-				So(mode, ShouldEqual, BlockMode)
+				So(mode, ShouldEqual, hyperscan.BlockMode)
 			})
 		})
 
@@ -52,14 +57,14 @@ func TestBaseDatabase(t *testing.T) {
 			So(len(data), ShouldBeGreaterThan, 800)
 
 			Convey("When get size", func() {
-				size, err := SerializedDatabaseSize(data)
+				size, err := hyperscan.SerializedDatabaseSize(data)
 
 				So(err, ShouldBeNil)
 				So(size, ShouldBeGreaterThan, 800)
 			})
 
 			Convey("When get info", func() {
-				info, err := SerializedDatabaseInfo(data)
+				info, err := hyperscan.SerializedDatabaseInfo(data)
 
 				So(err, ShouldBeNil)
 				So(info, ShouldNotBeNil)
@@ -68,7 +73,7 @@ func TestBaseDatabase(t *testing.T) {
 			})
 
 			Convey("Then deserialize database", func() {
-				db, err := UnmarshalBlockDatabase(data)
+				db, err := hyperscan.UnmarshalBlockDatabase(data)
 
 				So(err, ShouldBeNil)
 				So(db, ShouldNotBeNil)
@@ -85,7 +90,7 @@ func TestBaseDatabase(t *testing.T) {
 						ver, err := info.Version()
 
 						So(err, ShouldBeNil)
-						So(Version(), ShouldStartWith, ver)
+						So(hyperscan.Version(), ShouldStartWith, ver)
 					})
 				})
 
@@ -107,7 +112,7 @@ func TestBaseDatabase(t *testing.T) {
 						ver, err := info.Version()
 
 						So(err, ShouldBeNil)
-						So(Version(), ShouldStartWith, ver)
+						So(hyperscan.Version(), ShouldStartWith, ver)
 					})
 				})
 			})
@@ -119,7 +124,7 @@ func TestBaseDatabase(t *testing.T) {
 
 func TestBlockDatabase(t *testing.T) {
 	Convey("Give a block database", t, func() {
-		bdb, err := NewBlockDatabase(&Pattern{Expression: "test"})
+		bdb, err := hyperscan.NewBlockDatabase(&hyperscan.Pattern{Expression: "test"})
 
 		So(err, ShouldBeNil)
 		So(bdb, ShouldNotBeNil)
@@ -136,7 +141,7 @@ func TestBlockDatabase(t *testing.T) {
 				mode, err := info.Mode()
 
 				So(err, ShouldBeNil)
-				So(mode, ShouldEqual, BlockMode)
+				So(mode, ShouldEqual, hyperscan.BlockMode)
 			})
 		})
 
@@ -146,7 +151,7 @@ func TestBlockDatabase(t *testing.T) {
 
 func TestVectoredDatabase(t *testing.T) {
 	Convey("Give a vectored database", t, func() {
-		vdb, err := NewVectoredDatabase(&Pattern{Expression: "test"})
+		vdb, err := hyperscan.NewVectoredDatabase(&hyperscan.Pattern{Expression: "test"})
 
 		So(err, ShouldBeNil)
 		So(vdb, ShouldNotBeNil)
@@ -163,7 +168,7 @@ func TestVectoredDatabase(t *testing.T) {
 				mode, err := info.Mode()
 
 				So(err, ShouldBeNil)
-				So(mode, ShouldEqual, VectoredMode)
+				So(mode, ShouldEqual, hyperscan.VectoredMode)
 			})
 		})
 
@@ -173,7 +178,7 @@ func TestVectoredDatabase(t *testing.T) {
 
 func TestStreamDatabase(t *testing.T) {
 	Convey("Give a stream database", t, func() {
-		sdb, err := NewStreamDatabase(&Pattern{Expression: "test"})
+		sdb, err := hyperscan.NewStreamDatabase(&hyperscan.Pattern{Expression: "test"})
 
 		So(err, ShouldBeNil)
 		So(sdb, ShouldNotBeNil)
@@ -190,7 +195,7 @@ func TestStreamDatabase(t *testing.T) {
 				mode, err := info.Mode()
 
 				So(err, ShouldBeNil)
-				So(mode, ShouldEqual, StreamMode)
+				So(mode, ShouldEqual, hyperscan.StreamMode)
 			})
 		})
 
