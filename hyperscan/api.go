@@ -1,6 +1,7 @@
 package hyperscan
 
 import (
+	"fmt"
 	"io"
 )
 
@@ -10,7 +11,7 @@ type matchEvent struct {
 	flags    ScanFlag
 }
 
-func (e *matchEvent) Id() uint { return e.id }
+func (e *matchEvent) Id() uint { return e.id } // nolint: golint,revive,stylecheck
 
 func (e *matchEvent) From() uint64 { return e.from }
 
@@ -45,28 +46,30 @@ func (h *matchRecorder) Handle(id uint, from, to uint64, flags uint, context int
 func Match(pattern string, data []byte) (bool, error) {
 	p, err := ParsePattern(pattern)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("parse pattern, %w", err)
 	}
+
 	p.Flags |= SingleMatch
 
 	db, err := NewBlockDatabase(p)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("create block database, %w", err)
 	}
 	defer db.Close()
 
 	s, err := NewScratch(db)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("create scratch, %w", err)
 	}
+
 	defer func() {
 		_ = s.Free()
 	}()
 
 	h := &matchRecorder{}
-	err = db.Scan(data, s, h.Handle, nil)
-	if err != nil {
-		return false, err
+
+	if err = db.Scan(data, s, h.Handle, nil); err != nil {
+		return false, err // nolint: wrapcheck
 	}
 
 	return h.Matched(), h.err
@@ -76,29 +79,32 @@ func Match(pattern string, data []byte) (bool, error) {
 func MatchReader(pattern string, reader io.Reader) (bool, error) {
 	p, err := ParsePattern(pattern)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("parse pattern, %w", err)
 	}
+
 	p.Flags |= SingleMatch
 
 	db, err := NewStreamDatabase(p)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("create stream database, %w", err)
 	}
 	defer db.Close()
 
 	s, err := NewScratch(db)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("create scratch, %w", err)
 	}
+
 	defer func() {
 		_ = s.Free()
 	}()
 
 	h := &matchRecorder{}
-	err = db.Scan(reader, s, h.Handle, nil)
-	if err != nil {
-		return false, err
+
+	if err = db.Scan(reader, s, h.Handle, nil); err != nil {
+		return false, err // nolint: wrapcheck
 	}
+
 	return h.Matched(), h.err
 }
 

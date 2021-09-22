@@ -87,7 +87,6 @@ type Benchmark struct {
 
 func NewBenchmark(streaming hyperscan.StreamDatabase, block hyperscan.BlockDatabase) (*Benchmark, error) {
 	scratch, err := hyperscan.NewScratch(streaming)
-
 	if err != nil {
 		return nil, fmt.Errorf("could not allocate scratch space, %s", err)
 	}
@@ -139,7 +138,6 @@ func (b *Benchmark) decodePacket(pkt gopacket.Packet) (key *FiveTuple, payload [
 // Read a set of streams from a pcap file
 func (b *Benchmark) ReadStreams(pcapFile string) (int, error) {
 	h, err := pcap.OpenOffline(pcapFile)
-
 	if err != nil {
 		return 0, err
 	}
@@ -244,7 +242,6 @@ func (b *Benchmark) OpenStreams() error {
 
 	for i := 0; i < len(b.streamMap); i++ {
 		stream, err := b.dbStreaming.Open(0, b.scratch, handler, nil)
-
 		if err != nil {
 			return err
 		}
@@ -315,7 +312,6 @@ func (c *Clock) Time() time.Duration { return c.stop.Sub(c.start) }
 
 func parseFile(filename string) (patterns []*hyperscan.Pattern) {
 	data, err := ioutil.ReadFile(filename)
-
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: Can't open pattern file %s\n", filename)
 		os.Exit(-1)
@@ -351,14 +347,12 @@ func parseFile(filename string) (patterns []*hyperscan.Pattern) {
 		strs := strings.SplitN(line, ":", 2)
 
 		id, err := strconv.ParseInt(strs[0], 10, 64)
-
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: Could not parse id at line %d, %s", lineno, err)
 			os.Exit(-1)
 		}
 
 		pattern, err := hyperscan.ParsePattern(strs[1])
-
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: Could not parse pattern at line %d, %s", lineno, err)
 			os.Exit(-1)
@@ -441,7 +435,6 @@ func main() {
 	dbStreaming, dbBlock := databasesFromFile(patternFile)
 
 	bench, err := NewBenchmark(dbStreaming, dbBlock)
-
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %s, Exiting.", err)
 		os.Exit(-1)

@@ -1,3 +1,4 @@
+// nolint: gocritic,godox,wsl
 package hyperscan
 
 import (
@@ -130,7 +131,7 @@ func ParseCompileFlag(s string) (CompileFlag, error) {
 		} else if flag, exists := deprecatedCompileFlags[c]; exists {
 			flags |= flag
 		} else {
-			return 0, fmt.Errorf("unknown flag `%c`", c)
+			return 0, fmt.Errorf("flag `%c`, %w", c, ErrUnexpected)
 		}
 	}
 
@@ -152,7 +153,7 @@ func (flags CompileFlag) String() string {
 }
 
 // CpuFeature is the CPU feature support flags
-type CpuFeature int
+type CpuFeature int // nolint: golint,stylecheck
 
 const (
 	// AVX2 is a CPU features flag indicates that the target platform supports AVX2 instructions.
@@ -220,7 +221,7 @@ func ParseModeFlag(s string) (ModeFlag, error) {
 		return mode, nil
 	}
 
-	return BlockMode, errors.New("Unknown Mode: " + s)
+	return BlockMode, fmt.Errorf("database mode %s, %w", s, ErrUnexpected)
 }
 
 func (m ModeFlag) String() string {
@@ -269,22 +270,20 @@ const (
 	ErrArchError HsError = C.HS_ARCH_ERROR
 )
 
-var (
-	hsErrorMessages = map[HsError]string{
-		C.HS_SUCCESS:           "The engine completed normally.",
-		C.HS_INVALID:           "A parameter passed to this function was invalid.",
-		C.HS_NOMEM:             "A memory allocation failed.",
-		C.HS_SCAN_TERMINATED:   "The engine was terminated by callback.",
-		C.HS_COMPILER_ERROR:    "The pattern compiler failed.",
-		C.HS_DB_VERSION_ERROR:  "The given database was built for a different version of Hyperscan.",
-		C.HS_DB_PLATFORM_ERROR: "The given database was built for a different platform (i.e., CPU type).",
-		C.HS_DB_MODE_ERROR:     "The given database was built for a different mode of operation.",
-		C.HS_BAD_ALIGN:         "A parameter passed to this function was not correctly aligned.",
-		C.HS_BAD_ALLOC:         "The memory allocator did not correctly return aligned memory.",
-		C.HS_SCRATCH_IN_USE:    "The scratch region was already in use.",
-		C.HS_ARCH_ERROR:        "Unsupported CPU architecture.",
-	}
-)
+var hsErrorMessages = map[HsError]string{
+	C.HS_SUCCESS:           "The engine completed normally.",
+	C.HS_INVALID:           "A parameter passed to this function was invalid.",
+	C.HS_NOMEM:             "A memory allocation failed.",
+	C.HS_SCAN_TERMINATED:   "The engine was terminated by callback.",
+	C.HS_COMPILER_ERROR:    "The pattern compiler failed.",
+	C.HS_DB_VERSION_ERROR:  "The given database was built for a different version of Hyperscan.",
+	C.HS_DB_PLATFORM_ERROR: "The given database was built for a different platform (i.e., CPU type).",
+	C.HS_DB_MODE_ERROR:     "The given database was built for a different mode of operation.",
+	C.HS_BAD_ALIGN:         "A parameter passed to this function was not correctly aligned.",
+	C.HS_BAD_ALLOC:         "The memory allocator did not correctly return aligned memory.",
+	C.HS_SCRATCH_IN_USE:    "The scratch region was already in use.",
+	C.HS_ARCH_ERROR:        "Unsupported CPU architecture.",
+}
 
 func (e HsError) Error() string {
 	if msg, exists := hsErrorMessages[e]; exists {
@@ -314,7 +313,7 @@ type hsPlatformInfo struct {
 func (i *hsPlatformInfo) Tune() TuneFlag { return TuneFlag(i.platform.tune) }
 
 // CpuFeatures returns the CPU features of the platform.
-func (i *hsPlatformInfo) CpuFeatures() CpuFeature { return CpuFeature(i.platform.cpu_features) }
+func (i *hsPlatformInfo) CpuFeatures() CpuFeature { return CpuFeature(i.platform.cpu_features) } // nolint: golint,stylecheck
 
 func newPlatformInfo(tune TuneFlag, cpu CpuFeature) *hsPlatformInfo {
 	var platform C.struct_hs_platform_info
@@ -335,9 +334,11 @@ func hsPopulatePlatform() (*hsPlatformInfo, error) {
 	return &hsPlatformInfo{platform}, nil
 }
 
-type hsDatabase *C.hs_database_t
-type hsScratch *C.hs_scratch_t
-type hsStream *C.hs_stream_t
+type (
+	hsDatabase *C.hs_database_t
+	hsScratch  *C.hs_scratch_t
+	hsStream   *C.hs_stream_t
+)
 
 // ExprInfo containing information related to an expression
 type ExprInfo struct {
@@ -435,6 +436,7 @@ func (ext *ExprExt) With(exts ...Ext) *ExprExt {
 	for _, f := range exts {
 		f(ext)
 	}
+
 	return ext
 }
 
@@ -444,21 +446,27 @@ func (ext *ExprExt) String() string {
 	if (ext.Flags & ExtMinOffset) == ExtMinOffset {
 		values = append(values, fmt.Sprintf("min_offset=%d", ext.MinOffset))
 	}
+
 	if (ext.Flags & ExtMaxOffset) == ExtMaxOffset {
 		values = append(values, fmt.Sprintf("max_offset=%d", ext.MaxOffset))
 	}
+
 	if (ext.Flags & ExtMinLength) == ExtMinLength {
 		values = append(values, fmt.Sprintf("min_length=%d", ext.MinLength))
 	}
+
 	if (ext.Flags & ExtEditDistance) == ExtEditDistance {
 		values = append(values, fmt.Sprintf("edit_distance=%d", ext.EditDistance))
 	}
+
 	if (ext.Flags & ExtHammingDistance) == ExtHammingDistance {
 		values = append(values, fmt.Sprintf("hamming_distance=%d", ext.HammingDistance))
 	}
 
 	return "{" + strings.Join(values, ",") + "}"
 }
+
+const keyValuePair = 2
 
 // ParseExprExt parse containing additional parameters from string
 func ParseExprExt(s string) (ext *ExprExt, err error) {
@@ -469,33 +477,33 @@ func ParseExprExt(s string) (ext *ExprExt, err error) {
 	}
 
 	for _, s := range strings.Split(s, ",") {
-		parts := strings.SplitN(s, "=", 2)
+		parts := strings.SplitN(s, "=", keyValuePair)
 
-		if len(parts) != 2 {
+		if len(parts) != keyValuePair {
 			continue
 		}
 
 		key := strings.ToLower(parts[0])
 		value := parts[1]
 
-		var n uint64
-		n, err = strconv.ParseUint(value, 10, 64)
-		if err != nil {
+		var n int
+
+		if n, err = strconv.Atoi(value); err != nil {
 			return
 		}
 
 		switch key {
 		case "min_offset":
 			ext.Flags |= ExtMinOffset
-			ext.MinOffset = n
+			ext.MinOffset = uint64(n)
 
 		case "max_offset":
 			ext.Flags |= ExtMaxOffset
-			ext.MaxOffset = n
+			ext.MaxOffset = uint64(n)
 
 		case "min_length":
 			ext.Flags |= ExtMinLength
-			ext.MinLength = n
+			ext.MinLength = uint64(n)
 
 		case "edit_distance":
 			ext.Flags |= ExtEditDistance
@@ -507,11 +515,13 @@ func ParseExprExt(s string) (ext *ExprExt, err error) {
 		}
 	}
 
-	return
+	return // nolint: nakedret
 }
 
-type hsAllocFunc func(uint) unsafe.Pointer
-type hsFreeFunc func(unsafe.Pointer)
+type (
+	hsAllocFunc func(uint) unsafe.Pointer
+	hsFreeFunc  func(unsafe.Pointer)
+)
 
 type hsAllocator struct {
 	Alloc hsAllocFunc
@@ -689,25 +699,28 @@ func hsValidPlatform() error {
 	return nil
 }
 
-func hsFreeDatabase(db hsDatabase) error {
+func hsFreeDatabase(db hsDatabase) (err error) {
 	if ret := C.hs_free_database(db); ret != C.HS_SUCCESS {
-		return HsError(ret)
+		err = HsError(ret)
 	}
 
-	return nil
+	return
 }
 
-func hsSerializeDatabase(db hsDatabase) ([]byte, error) {
+func hsSerializeDatabase(db hsDatabase) (b []byte, err error) {
 	var data *C.char
 	var length C.size_t
 
-	if ret := C.hs_serialize_database(db, &data, &length); ret != C.HS_SUCCESS {
-		return nil, HsError(ret)
+	ret := C.hs_serialize_database(db, &data, &length)
+	if ret != C.HS_SUCCESS {
+		err = HsError(ret)
+	} else {
+		defer C.free(unsafe.Pointer(data))
+
+		b = C.GoBytes(unsafe.Pointer(data), C.int(length))
 	}
 
-	defer C.free(unsafe.Pointer(data))
-
-	return C.GoBytes(unsafe.Pointer(data), C.int(length)), nil
+	return
 }
 
 func hsDeserializeDatabase(data []byte) (hsDatabase, error) {
@@ -809,23 +822,23 @@ func hsCompile(expression string, flags CompileFlag, mode ModeFlag, info *hsPlat
 
 	expr := C.CString(expression)
 
+	defer C.free(unsafe.Pointer(expr))
+
 	ret := C.hs_compile(expr, C.uint(flags), C.uint(mode), platform, &db, &err)
-
-	C.free(unsafe.Pointer(expr))
-
-	if ret == C.HS_SUCCESS {
-		return db, nil
-	}
 
 	if err != nil {
 		defer C.hs_free_compile_error(err)
+	}
+
+	if ret == C.HS_SUCCESS {
+		return db, nil
 	}
 
 	if ret == C.HS_COMPILER_ERROR && err != nil {
 		return nil, &compileError{C.GoString(err.message), int(err.expression)}
 	}
 
-	return nil, fmt.Errorf("compile error, %d", int(ret))
+	return nil, fmt.Errorf("compile error %d, %w", int(ret), ErrCompileError)
 }
 
 func hsCompileMulti(patterns []*Pattern, mode ModeFlag, info *hsPlatformInfo) (hsDatabase, error) {
@@ -881,7 +894,7 @@ func hsCompileMulti(patterns []*Pattern, mode ModeFlag, info *hsPlatformInfo) (h
 		return nil, &compileError{C.GoString(err.message), int(err.expression)}
 	}
 
-	return nil, fmt.Errorf("compile error, %d", int(ret))
+	return nil, fmt.Errorf("compile error %d, %w", int(ret), ErrCompileError)
 }
 
 func hsExpressionInfo(expression string, flags CompileFlag) (*ExprInfo, error) {
@@ -889,6 +902,7 @@ func hsExpressionInfo(expression string, flags CompileFlag) (*ExprInfo, error) {
 	var err *C.hs_compile_error_t
 
 	expr := C.CString(expression)
+
 	defer C.free(unsafe.Pointer(expr))
 
 	ret := C.hs_expression_info(expr, C.uint(flags), &info, &err)
@@ -907,7 +921,7 @@ func hsExpressionInfo(expression string, flags CompileFlag) (*ExprInfo, error) {
 		return nil, &compileError{C.GoString(err.message), int(err.expression)}
 	}
 
-	return nil, fmt.Errorf("compile error, %d", int(ret))
+	return nil, fmt.Errorf("compile error %d, %w", int(ret), ErrCompileError)
 }
 
 func hsExpressionExt(expression string, flags CompileFlag) (ext *ExprExt, info *ExprInfo, err error) {
@@ -917,11 +931,11 @@ func hsExpressionExt(expression string, flags CompileFlag) (ext *ExprExt, info *
 	ext = new(ExprExt)
 	expr := C.CString(expression)
 
+	defer C.free(unsafe.Pointer(expr))
+
 	ret := C.hs_expression_ext_info(expr, C.uint(flags), (*C.hs_expr_ext_t)(unsafe.Pointer(ext)), &exprInfo, &compileErr)
 
-	C.free(unsafe.Pointer(expr))
-
-	if ret == C.HS_SUCCESS && exprInfo != nil {
+	if exprInfo != nil {
 		defer hsMiscFree(unsafe.Pointer(exprInfo))
 
 		info = newExprInfo(exprInfo)
@@ -934,7 +948,7 @@ func hsExpressionExt(expression string, flags CompileFlag) (ext *ExprExt, info *
 	if ret == C.HS_COMPILER_ERROR && compileErr != nil {
 		err = &compileError{C.GoString(compileErr.message), int(compileErr.expression)}
 	} else {
-		err = fmt.Errorf("compile error, %d", int(ret))
+		err = fmt.Errorf("compile error %d, %w", int(ret), ErrCompileError)
 	}
 
 	return
@@ -995,14 +1009,22 @@ type hsMatchEventContext struct {
 
 //export hsMatchEventCallback
 func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, data unsafe.Pointer) C.int {
-	ctx := Handle(data).Value().(hsMatchEventContext)
-	err := ctx.handler(uint(id), uint64(from), uint64(to), uint(flags), ctx.context)
-
-	if err != nil {
-		return -1
+	ctx, ok := Handle(data).Value().(hsMatchEventContext)
+	if !ok {
+		return C.HS_INVALID
 	}
 
-	return 0
+	err := ctx.handler(uint(id), uint64(from), uint64(to), uint(flags), ctx.context)
+	if err != nil {
+		var hsErr HsError
+		if errors.As(err, &hsErr) {
+			return C.int(hsErr)
+		}
+
+		return C.HS_SCAN_TERMINATED
+	}
+
+	return C.HS_SUCCESS
 }
 
 func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
@@ -1046,7 +1068,8 @@ func hsScanVector(db hsDatabase, data [][]byte, flags ScanFlag, scratch hsScratc
 			return HsError(C.HS_INVALID)
 		}
 
-		hdr := (*reflect.SliceHeader)(unsafe.Pointer(&d)) // FIXME: Zero-copy access to go data
+		// FIXME: Zero-copy access to go data
+		hdr := (*reflect.SliceHeader)(unsafe.Pointer(&d)) // nolint: scopelint
 		cdata[i] = uintptr(unsafe.Pointer(hdr.Data))
 		clength[i] = C.uint(hdr.Len)
 	}
