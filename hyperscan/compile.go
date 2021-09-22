@@ -10,7 +10,9 @@ import (
 )
 
 var (
-	ErrNoFound    = errors.New("no found")
+	// ErrNoFound means patterns not found.
+	ErrNoFound = errors.New("no found")
+	// ErrUnexpected means item is unexpected.
 	ErrUnexpected = errors.New("unexpected")
 )
 
@@ -22,8 +24,8 @@ func (e Expression) String() string { return string(e) }
 // Patterns is a set of matching patterns.
 type Patterns []*Pattern
 
-// nolint: golint,revive,stylecheck
 // Pattern is a matching pattern.
+// nolint: golint,revive,stylecheck
 type Pattern struct {
 	Expression             // The expression to parse.
 	Flags      CompileFlag // Flags which modify the behaviour of the expression.

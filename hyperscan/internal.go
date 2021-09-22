@@ -1,4 +1,3 @@
-// nolint: gocritic,godox,wsl
 package hyperscan
 
 import (

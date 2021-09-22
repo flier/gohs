@@ -1,4 +1,4 @@
-// Packet hyperscan is the Golang binding for Intel's HyperScan regex matching library:
+// Package hyperscan is the Golang binding for Intel's HyperScan regex matching library:
 // [hyperscan.io](https://www.hyperscan.io/)
 //
 // Hyperscan (https://github.com/01org/hyperscan) is a software regular expression matching engine
@@ -67,5 +67,4 @@
 // 	  in one call and does not require state to be retained.
 // 	- Vectored mode: the target data consists of a list of non-contiguous blocks that are
 // 	  available all at once. As for block mode, no retention of state is required.
-
 package hyperscan

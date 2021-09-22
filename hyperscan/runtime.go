@@ -8,6 +8,7 @@ import (
 
 const bufSize = 4096
 
+// ErrTooManyMatches means too many matches.
 var ErrTooManyMatches = errors.New("too many matches")
 
 // Scratch is a Hyperscan scratch space.
