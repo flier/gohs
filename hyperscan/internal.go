@@ -129,7 +129,7 @@ func ParseCompileFlag(s string) (CompileFlag, error) {
 		} else if flag, exists := deprecatedCompileFlags[c]; exists {
 			flags |= flag
 		} else {
-			return 0, fmt.Errorf("unknown flag `%c`", c)
+			return 0, fmt.Errorf("flag `%c`, %w", c, ErrUnexpected)
 		}
 	}
 
@@ -690,12 +690,12 @@ func hsValidPlatform() error {
 	return nil
 }
 
-func hsFreeDatabase(db hsDatabase) error {
+func hsFreeDatabase(db hsDatabase) (err error) {
 	if ret := C.hs_free_database(db); ret != C.HS_SUCCESS {
-		return HsError(ret)
+		err = HsError(ret)
 	}
 
-	return nil
+	return
 }
 
 func hsSerializeDatabase(db hsDatabase) ([]byte, error) {
@@ -809,24 +809,23 @@ func hsCompile(expression string, flags CompileFlag, mode ModeFlag, info *hsPlat
 	}
 
 	expr := C.CString(expression)
+	defer C.free(unsafe.Pointer(expr))
 
 	ret := C.hs_compile(expr, C.uint(flags), C.uint(mode), platform, &db, &err)
 
-	C.free(unsafe.Pointer(expr))
+	if err != nil {
+		defer C.hs_free_compile_error(err)
+	}
 
 	if ret == C.HS_SUCCESS {
 		return db, nil
-	}
-
-	if err != nil {
-		defer C.hs_free_compile_error(err)
 	}
 
 	if ret == C.HS_COMPILER_ERROR && err != nil {
 		return nil, &compileError{C.GoString(err.message), int(err.expression)}
 	}
 
-	return nil, fmt.Errorf("compile error, %d", int(ret))
+	return nil, fmt.Errorf("compile error %d, %w", int(ret), ErrCompileError)
 }
 
 func hsCompileMulti(patterns []*Pattern, mode ModeFlag, info *hsPlatformInfo) (hsDatabase, error) {
@@ -882,7 +881,7 @@ func hsCompileMulti(patterns []*Pattern, mode ModeFlag, info *hsPlatformInfo) (h
 		return nil, &compileError{C.GoString(err.message), int(err.expression)}
 	}
 
-	return nil, fmt.Errorf("compile error, %d", int(ret))
+	return nil, fmt.Errorf("compile error %d, %w", int(ret), ErrCompileError)
 }
 
 func hsExpressionInfo(expression string, flags CompileFlag) (*ExprInfo, error) {
@@ -908,7 +907,7 @@ func hsExpressionInfo(expression string, flags CompileFlag) (*ExprInfo, error) {
 		return nil, &compileError{C.GoString(err.message), int(err.expression)}
 	}
 
-	return nil, fmt.Errorf("compile error, %d", int(ret))
+	return nil, fmt.Errorf("compile error %d, %w", int(ret), ErrCompileError)
 }
 
 func hsExpressionExt(expression string, flags CompileFlag) (ext *ExprExt, info *ExprInfo, err error) {
@@ -917,12 +916,11 @@ func hsExpressionExt(expression string, flags CompileFlag) (ext *ExprExt, info *
 
 	ext = new(ExprExt)
 	expr := C.CString(expression)
+	defer C.free(unsafe.Pointer(expr))
 
 	ret := C.hs_expression_ext_info(expr, C.uint(flags), (*C.hs_expr_ext_t)(unsafe.Pointer(ext)), &exprInfo, &compileErr)
 
-	C.free(unsafe.Pointer(expr))
-
-	if ret == C.HS_SUCCESS && exprInfo != nil {
+	if exprInfo != nil {
 		defer hsMiscFree(unsafe.Pointer(exprInfo))
 
 		info = newExprInfo(exprInfo)
@@ -935,7 +933,7 @@ func hsExpressionExt(expression string, flags CompileFlag) (ext *ExprExt, info *
 	if ret == C.HS_COMPILER_ERROR && compileErr != nil {
 		err = &compileError{C.GoString(compileErr.message), int(compileErr.expression)}
 	} else {
-		err = fmt.Errorf("compile error, %d", int(ret))
+		err = fmt.Errorf("compile error %d, %w", int(ret), ErrCompileError)
 	}
 
 	return

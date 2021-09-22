@@ -494,7 +494,7 @@ func (m *streamMatcher) scan(reader io.Reader) error {
 
 func (m *streamMatcher) read(reader io.ReadSeeker, loc []int) ([]byte, error) {
 	if len(loc) != 2 {
-		return nil, fmt.Errorf("invalid location")
+		return nil, fmt.Errorf("location, %w", ErrInvalid)
 	}
 
 	offset := int64(loc[0])
