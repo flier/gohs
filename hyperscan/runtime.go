@@ -6,6 +6,8 @@ import (
 	"io"
 )
 
+const bufSize = 4096
+
 var ErrTooManyMatches = errors.New("too many matches")
 
 // Scratch is a Hyperscan scratch space.
@@ -234,16 +236,15 @@ func newStreamScanner(db *baseDatabase) *streamScanner {
 func (ss *streamScanner) Open(flags ScanFlag, sc *Scratch, handler MatchHandler, context interface{}) (Stream, error) {
 	s, err := hsOpenStream(ss.db, flags)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open stream, %w", err)
 	}
 
 	ownedScratch := false
 
 	if sc == nil {
 		sc, err = NewScratch(ss)
-
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("create scratch, %w", err)
 		}
 
 		ownedScratch = true
@@ -259,7 +260,7 @@ func (ss *streamScanner) Scan(reader io.Reader, scratch *Scratch, handler MatchH
 	}
 	defer stream.Close()
 
-	buf := make([]byte, 4096)
+	buf := make([]byte, bufSize)
 
 	for {
 		n, err := reader.Read(buf)
@@ -269,11 +270,11 @@ func (ss *streamScanner) Scan(reader io.Reader, scratch *Scratch, handler MatchH
 		}
 
 		if err != nil {
-			return err
+			return fmt.Errorf("read stream, %w", err)
 		}
 
 		if err = stream.Scan(buf[:n]); err != nil {
-			return err
+			return err // nolint: wrapcheck
 		}
 	}
 }
@@ -394,7 +395,7 @@ func (m *blockMatcher) FindAllIndex(data []byte, n int) (locs [][]int) {
 
 	m.n = n
 
-	if err := m.scan(data); (err == nil || err.(HsError) == ErrScanTerminated) && len(m.matched) > 0 {
+	if err := m.scan(data); (err == nil || errors.Is(err, ErrScanTerminated)) && len(m.matched) > 0 {
 		for _, e := range m.matched {
 			locs = append(locs, []int{int(e.from), int(e.to)})
 		}
@@ -428,7 +429,7 @@ func (m *blockMatcher) Match(data []byte) bool {
 
 	err := m.scan(data)
 
-	return (err == nil || err.(HsError) == ErrScanTerminated) && len(m.matched) == m.n
+	return (err == nil || errors.Is(err, ErrScanTerminated)) && len(m.matched) == m.n
 }
 
 func (m *blockMatcher) MatchString(s string) bool {
@@ -473,21 +474,21 @@ func (m *streamMatcher) scan(reader io.Reader) error {
 	}
 	defer stream.Close()
 
-	buf := make([]byte, 4096)
+	buf := make([]byte, bufSize)
 
 	for {
 		n, err := reader.Read(buf)
 
 		if err == io.EOF {
-			return stream.Close()
+			return nil
 		}
 
 		if err != nil {
-			return err
+			return fmt.Errorf("read stream, %w", err)
 		}
 
 		if err = stream.Scan(buf[:n]); err != nil {
-			return err
+			return err // nolint: wrapcheck
 		}
 	}
 }
@@ -502,7 +503,7 @@ func (m *streamMatcher) read(reader io.ReadSeeker, loc []int) ([]byte, error) {
 
 	_, err := reader.Seek(offset, io.SeekStart)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("seek stream, %w", err)
 	}
 
 	buf := make([]byte, size)
@@ -510,7 +511,7 @@ func (m *streamMatcher) read(reader io.ReadSeeker, loc []int) ([]byte, error) {
 	_, err = reader.Read(buf)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read data, %w", err)
 	}
 
 	return buf, nil
@@ -547,7 +548,7 @@ func (m *streamMatcher) FindAll(reader io.ReadSeeker, n int) (result [][]byte) {
 func (m *streamMatcher) FindAllIndex(reader io.Reader, n int) (locs [][]int) {
 	m.n = n
 
-	if err := m.scan(reader); (err == nil || err.(HsError) == ErrScanTerminated) && len(m.matched) > 0 {
+	if err := m.scan(reader); (err == nil || errors.Is(err, ErrScanTerminated)) && len(m.matched) > 0 {
 		for _, e := range m.matched {
 			locs = append(locs, []int{int(e.from), int(e.to)})
 		}
@@ -561,7 +562,7 @@ func (m *streamMatcher) Match(reader io.Reader) bool {
 
 	err := m.scan(reader)
 
-	return (err == nil || err.(HsError) == ErrScanTerminated) && len(m.matched) == m.n
+	return (err == nil || errors.Is(err, ErrScanTerminated)) && len(m.matched) == m.n
 }
 
 type vectoredMatcher struct {
@@ -577,7 +578,7 @@ var _ StreamCompressor = (*streamDatabase)(nil)
 func (db *streamDatabase) Compress(s Stream) ([]byte, error) {
 	size, err := db.StreamSize()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("stream size, %w", err)
 	}
 
 	buf := make([]byte, size)
@@ -585,7 +586,7 @@ func (db *streamDatabase) Compress(s Stream) ([]byte, error) {
 	buf, err = hsCompressStream(s.(*stream).stream, buf)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("compress stream, %w", err)
 	}
 
 	return buf, nil
@@ -596,16 +597,15 @@ func (db *streamDatabase) Expand(buf []byte, flags ScanFlag, sc *Scratch, handle
 
 	err := hsExpandStream(db.db, &s, buf)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("expand stream, %w", err)
 	}
 
 	ownedScratch := false
 
 	if sc == nil {
 		sc, err = NewScratch(db)
-
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("create scratch, %w", err)
 		}
 
 		ownedScratch = true
@@ -623,9 +623,8 @@ func (db *streamDatabase) ResetAndExpand(s Stream, buf []byte, flags ScanFlag, s
 		var err error
 
 		sc, err = NewScratch(db)
-
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("create scratch, %w", err)
 		}
 
 		ownedScratch = true
@@ -633,7 +632,7 @@ func (db *streamDatabase) ResetAndExpand(s Stream, buf []byte, flags ScanFlag, s
 
 	err := hsResetAndExpandStream(ss.stream, buf, ss.scratch, ss.handler, ss.context)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reset and expand stream, %w", err)
 	}
 
 	return &stream{ss.stream, flags, sc.s, hsMatchEventHandler(handler), context, ownedScratch}, nil

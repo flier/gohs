@@ -115,7 +115,7 @@ func ParsePattern(s string) (*Pattern, error) {
 	if i > 0 && j > i+1 {
 		id, err := strconv.ParseInt(s[:i], 10, 32)
 		if err != nil {
-			return nil, fmt.Errorf("invalid pattern id: %s, %w", s[:i], ErrInvalid)
+			return nil, fmt.Errorf("invalid pattern id `%s`, %w", s[:i], ErrInvalid)
 		}
 		p.Id = int(id)
 		s = s[i+1:]
@@ -128,7 +128,7 @@ func ParsePattern(s string) (*Pattern, error) {
 		if n = strings.Index(s, "{"); n > 0 && strings.HasSuffix(s, "}") {
 			ext, err := ParseExprExt(s[n:])
 			if err != nil {
-				return nil, fmt.Errorf("invalid expression extensions: %s, %w", s[n:], err)
+				return nil, fmt.Errorf("invalid expression extensions `%s`, %w", s[n:], err)
 			}
 			p.ext = ext
 			s = s[:n]
@@ -136,7 +136,7 @@ func ParsePattern(s string) (*Pattern, error) {
 
 		flags, err := ParseCompileFlag(s)
 		if err != nil {
-			return nil, fmt.Errorf("invalid pattern flags: %s, %w", s, err)
+			return nil, fmt.Errorf("invalid pattern flags `%s`, %w", s, err)
 		}
 		p.Flags = flags
 	} else {
@@ -145,7 +145,7 @@ func ParsePattern(s string) (*Pattern, error) {
 
 	info, err := hsExpressionInfo(string(p.Expression), p.Flags)
 	if err != nil {
-		return nil, fmt.Errorf("invalid pattern: %s, %w", p.Expression, err)
+		return nil, fmt.Errorf("invalid pattern `%s`, %w", p.Expression, err)
 	}
 	p.info = info
 
@@ -163,6 +163,7 @@ func ParsePatterns(r io.Reader) (patterns Patterns, err error) {
 			// skip empty line
 			continue
 		}
+
 		if strings.HasPrefix(line, "#") {
 			// skip comment
 			continue
@@ -172,6 +173,7 @@ func ParsePatterns(r io.Reader) (patterns Patterns, err error) {
 		if err != nil {
 			return nil, err
 		}
+
 		patterns = append(patterns, p)
 	}
 
