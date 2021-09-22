@@ -434,6 +434,7 @@ func (ext *ExprExt) With(exts ...Ext) *ExprExt {
 	for _, f := range exts {
 		f(ext)
 	}
+
 	return ext
 }
 
@@ -708,7 +709,7 @@ func hsSerializeDatabase(db hsDatabase) ([]byte, error) {
 	var data *C.char
 	var length C.size_t
 
-	if ret := C.hs_serialize_database(db, &data, &length); ret != C.HS_SUCCESS {
+	if ret := C.hs_serialize_database(db, &data, &length); ret != C.HS_SUCCESS { // nolint: gocritic
 		return nil, HsError(ret)
 	}
 
@@ -720,7 +721,7 @@ func hsSerializeDatabase(db hsDatabase) ([]byte, error) {
 func hsDeserializeDatabase(data []byte) (hsDatabase, error) {
 	var db *C.hs_database_t
 
-	ret := C.hs_deserialize_database((*C.char)(unsafe.Pointer(&data[0])), C.size_t(len(data)), &db)
+	ret := C.hs_deserialize_database((*C.char)(unsafe.Pointer(&data[0])), C.size_t(len(data)), &db) // nolint: gocritic
 
 	runtime.KeepAlive(data)
 
@@ -780,7 +781,7 @@ func hsSerializedDatabaseSize(data []byte) (int, error) {
 func hsDatabaseInfo(db hsDatabase) (string, error) {
 	var info *C.char
 
-	if ret := C.hs_database_info(db, &info); ret != C.HS_SUCCESS {
+	if ret := C.hs_database_info(db, &info); ret != C.HS_SUCCESS { // nolint: gocritic
 		return "", HsError(ret)
 	}
 
