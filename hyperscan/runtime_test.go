@@ -1,10 +1,13 @@
-package hyperscan
+//nolint:funlen
+package hyperscan_test
 
 import (
 	"strings"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
+
+	"github.com/flier/gohs/hyperscan"
 )
 
 type BlockDatabaseConstructor func(patterns ...*Pattern) (BlockDatabase, error)
@@ -123,7 +126,6 @@ func TestStreamScanner(t *testing.T) {
 
 func TestStreamMatcher(t *testing.T) {
 	for dbType, dbConstructor := range streamDatabaseConstructors {
-
 		Convey("Given a "+dbType+" streaming database", t, func() {
 			sdb, err := dbConstructor(NewPattern(`\d+`, SomLeftMost))
 
@@ -192,9 +194,8 @@ func TestStreamCompressor(t *testing.T) {
 			Convey("When open a new stream", func() {
 				var matches [][]uint64
 
-				matched := func(id uint, from, to uint64, flags uint, context interface{}) error {
-					matches = append(matches, []uint64{from, to})
-
+			  matched := func(id uint, from, to uint64, flags uint, context interface{}) error { // nolint: unparam
+  				matches = append(matches, []uint64{from, to})
 					return nil
 				}
 

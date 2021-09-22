@@ -51,6 +51,9 @@ linters-settings:
   govet:
     enable:
       - nilness
+  cyclop:
+    # the maximal code complexity to report
+    max-complexity: 16
   misspell:
     # Correct spellings using locale preferences for US or UK.
     # Default is to use a neutral variety of English.
@@ -58,3 +61,20 @@ linters-settings:
     # locale: US
     ignore-words:
       - rela # This is for elf.SHT_RELA
+  nestif:
+    # minimal complexity of if statements to report, 5 by default
+    min-complexity: 6
+
+linters:
+  enable-all: true
+  disable:
+    - exhaustive
+    - exhaustivestruct
+    - gci
+    - gochecknoglobals
+    - gochecknoinits
+    - gocritic
+    - godox
+    - nlreturn
+    - paralleltest
+    - wsl

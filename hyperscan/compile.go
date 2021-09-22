@@ -10,15 +10,23 @@ import (
 	"strings"
 )
 
-// Expression of pattern
+var (
+	// ErrNoFound means patterns not found.
+	ErrNoFound = errors.New("no found")
+	// ErrUnexpected means item is unexpected.
+	ErrUnexpected = errors.New("unexpected")
+)
+
+// Expression of pattern.
 type Expression string
 
 func (e Expression) String() string { return string(e) }
 
-// Patterns is a set of matching patterns
+// Patterns is a set of matching patterns.
 type Patterns []*Pattern
 
-// Pattern is a matching pattern
+// Pattern is a matching pattern.
+// nolint: golint,revive,stylecheck
 type Pattern struct {
 	Expression             // The expression to parse.
 	Flags      CompileFlag // Flags which modify the behaviour of the expression.
@@ -43,7 +51,6 @@ func (p *Pattern) IsValid() bool {
 func (p *Pattern) Info() (*ExprInfo, error) {
 	if p.info == nil {
 		info, err := hsExpressionInfo(string(p.Expression), p.Flags)
-
 		if err != nil {
 			return nil, err
 		}
@@ -59,7 +66,9 @@ func (p *Pattern) WithExt(exts ...Ext) *Pattern {
 	if p.ext == nil {
 		p.ext = new(ExprExt)
 	}
+
 	p.ext.With(exts...)
+
 	return p
 }
 
@@ -67,7 +76,6 @@ func (p *Pattern) WithExt(exts ...Ext) *Pattern {
 func (p *Pattern) Ext() (*ExprExt, error) {
 	if p.ext == nil {
 		ext, info, err := hsExpressionExt(string(p.Expression), p.Flags)
-
 		if err != nil {
 			return nil, err
 		}
@@ -110,12 +118,14 @@ func ParsePattern(s string) (*Pattern, error) {
 
 	i := strings.Index(s, ":/")
 	j := strings.LastIndex(s, "/")
+
 	if i > 0 && j > i+1 {
-		id, err := strconv.ParseInt(s[:i], 10, 32)
+		id, err := strconv.Atoi(s[:i])
 		if err != nil {
-			return nil, errors.New("invalid pattern id: " + s[:i])
+			return nil, fmt.Errorf("invalid pattern id `%s`, %w", s[:i], ErrInvalid)
 		}
-		p.Id = int(id)
+
+		p.Id = id
 		s = s[i+1:]
 	}
 
@@ -126,16 +136,18 @@ func ParsePattern(s string) (*Pattern, error) {
 		if n = strings.Index(s, "{"); n > 0 && strings.HasSuffix(s, "}") {
 			ext, err := ParseExprExt(s[n:])
 			if err != nil {
-				return nil, fmt.Errorf("invalid expression extensions: %s, %w", s[n:], err)
+				return nil, fmt.Errorf("invalid expression extensions `%s`, %w", s[n:], err)
 			}
+
 			p.ext = ext
 			s = s[:n]
 		}
 
 		flags, err := ParseCompileFlag(s)
 		if err != nil {
-			return nil, fmt.Errorf("invalid pattern flags: %s, %w", s, err)
+			return nil, fmt.Errorf("invalid pattern flags `%s`, %w", s, err)
 		}
+
 		p.Flags = flags
 	} else {
 		p.Expression = Expression(s)
@@ -143,8 +155,9 @@ func ParsePattern(s string) (*Pattern, error) {
 
 	info, err := hsExpressionInfo(string(p.Expression), p.Flags)
 	if err != nil {
-		return nil, fmt.Errorf("invalid pattern: %s, %w", p.Expression, err)
+		return nil, fmt.Errorf("invalid pattern `%s`, %w", p.Expression, err)
 	}
+
 	p.info = info
 
 	return &p, nil
@@ -161,6 +174,7 @@ func ParsePatterns(r io.Reader) (patterns Patterns, err error) {
 			// skip empty line
 			continue
 		}
+
 		if strings.HasPrefix(line, "#") {
 			// skip comment
 			continue
@@ -170,6 +184,7 @@ func ParsePatterns(r io.Reader) (patterns Patterns, err error) {
 		if err != nil {
 			return nil, err
 		}
+
 		patterns = append(patterns, p)
 	}
 
@@ -195,7 +210,7 @@ func PopulatePlatform() Platform {
 	return platform
 }
 
-// DatabaseBuilder is a type to help to build up a database
+// DatabaseBuilder is a type to help to build up a database.
 type DatabaseBuilder struct {
 	// Array of patterns to compile.
 	Patterns []*Pattern
@@ -227,7 +242,7 @@ func (b *DatabaseBuilder) AddExpressionWithFlags(expr Expression, flags CompileF
 // Build a database base on the expressions and platform.
 func (b *DatabaseBuilder) Build() (Database, error) {
 	if b.Patterns == nil {
-		return nil, errors.New("no patterns")
+		return nil, ErrNoFound
 	}
 
 	mode := b.Mode
@@ -251,21 +266,20 @@ func (b *DatabaseBuilder) Build() (Database, error) {
 	platform, _ := b.Platform.(*hsPlatformInfo)
 
 	db, err := hsCompileMulti(b.Patterns, mode, platform)
-
 	if err != nil {
 		return nil, err
 	}
 
 	switch mode & ModeMask {
 	case StreamMode:
-		return newStreamDatabase(db)
+		return newStreamDatabase(db), nil
 	case VectoredMode:
-		return newVectoredDatabase(db)
+		return newVectoredDatabase(db), nil
 	case BlockMode:
-		return newBlockDatabase(db)
+		return newBlockDatabase(db), nil
+	default:
+		return nil, fmt.Errorf("mode %d, %w", mode, ErrUnexpected)
 	}
-
-	return nil, errors.New("unknown mode")
 }
 
 // NewBlockDatabase create a block database base on the patterns.
@@ -273,7 +287,6 @@ func NewBlockDatabase(patterns ...*Pattern) (BlockDatabase, error) {
 	builder := &DatabaseBuilder{Patterns: patterns, Mode: BlockMode}
 
 	db, err := builder.Build()
-
 	if err != nil {
 		return nil, err
 	}
@@ -303,7 +316,6 @@ func NewStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 	builder := &DatabaseBuilder{Patterns: patterns, Mode: StreamMode}
 
 	db, err := builder.Build()
-
 	if err != nil {
 		return nil, err
 	}
@@ -333,7 +345,6 @@ func NewMediumStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 	builder := &DatabaseBuilder{Patterns: patterns, Mode: StreamMode | SomHorizonMediumMode}
 
 	db, err := builder.Build()
-
 	if err != nil {
 		return nil, err
 	}
@@ -346,7 +357,6 @@ func NewLargeStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 	builder := &DatabaseBuilder{Patterns: patterns, Mode: StreamMode | SomHorizonLargeMode}
 
 	db, err := builder.Build()
-
 	if err != nil {
 		return nil, err
 	}
@@ -359,7 +369,6 @@ func NewVectoredDatabase(patterns ...*Pattern) (VectoredDatabase, error) {
 	builder := &DatabaseBuilder{Patterns: patterns, Mode: VectoredMode}
 
 	db, err := builder.Build()
-
 	if err != nil {
 		return nil, err
 	}
@@ -371,30 +380,22 @@ func NewVectoredDatabase(patterns ...*Pattern) (VectoredDatabase, error) {
 // a pattern database in the block mode that can be used to match against text.
 func Compile(expr string) (Database, error) {
 	db, err := hsCompile(expr, SomLeftMost, BlockMode, nil)
-
 	if err != nil {
 		return nil, err
 	}
 
-	return newBlockDatabase(db)
+	return newBlockDatabase(db), nil
 }
 
 // MustCompile is like Compile but panics if the expression cannot be parsed.
 // It simplifies safe initialization of global variables holding compiled regular expressions.
 func MustCompile(expr string) Database {
 	db, err := hsCompile(expr, SomLeftMost, BlockMode, nil)
-
 	if err != nil {
 		panic(`Compile(` + Quote(expr) + `): ` + err.Error())
 	}
 
-	bdb, err := newBlockDatabase(db)
-
-	if err != nil {
-		panic(`Compile(` + Quote(expr) + `): ` + err.Error())
-	}
-
-	return bdb
+	return newBlockDatabase(db)
 }
 
 // Quote returns a quoted string literal representing s.
@@ -402,5 +403,6 @@ func Quote(s string) string {
 	if strconv.CanBackquote(s) {
 		return "`" + s + "`"
 	}
+
 	return strconv.Quote(s)
 }

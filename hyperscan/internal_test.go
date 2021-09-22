@@ -1,7 +1,7 @@
+//nolint:funlen
 package hyperscan
 
 import (
-	"errors"
 	"regexp"
 	"testing"
 	"unsafe"
@@ -38,7 +38,7 @@ func TestModeFlag(t *testing.T) {
 			m, err := ParseModeFlag("test")
 
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "Unknown Mode: test")
+			So(err.Error(), ShouldContainSubstring, "database mode test")
 			So(m, ShouldEqual, BlockMode)
 		})
 	})
@@ -519,7 +519,7 @@ func TestBlockScan(t *testing.T) {
 		})
 
 		Convey("Scan block with multi pattern but terminated", func() {
-			h.err = errors.New("terminated")
+			h.err = ErrScanTerminated
 
 			So(hsScan(db, []byte("abctestdeftest"), 0, s, h.Handle, nil), ShouldEqual, ErrScanTerminated)
 			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}})
@@ -570,9 +570,10 @@ func TestVectorScan(t *testing.T) {
 		})
 
 		Convey("Scan multi block with multi pattern but terminated", func() {
-			h.err = errors.New("terminated")
+			h.err = ErrScanTerminated
 
-			So(hsScanVector(db, [][]byte{[]byte("abctestdef"), []byte("123test456")}, 0, s, h.Handle, nil), ShouldEqual, ErrScanTerminated)
+			So(hsScanVector(db, [][]byte{[]byte("abctestdef"), []byte("123test456")}, 0, s, h.Handle, nil),
+				ShouldEqual, ErrScanTerminated)
 			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}})
 		})
 

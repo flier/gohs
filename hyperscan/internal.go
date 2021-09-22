@@ -8,8 +8,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"unsafe"
+
+	"github.com/flier/gohs/hyperscan/handle"
 )
 
 /*
@@ -59,41 +60,6 @@ DEFINE_ALLOCTOR(Scratch, scratch);
 DEFINE_ALLOCTOR(Stream, stream);
 
 extern int hsMatchEventCallback(unsigned int id, unsigned long long from, unsigned long long to, unsigned int flags, void *context);
-
-static inline
-hs_error_t hs_scan_cgo(const hs_database_t *db, const char * data, unsigned int length, unsigned int flags, hs_scratch_t * scratch, uintptr_t context) {
-	return hs_scan(db, data, length, flags, scratch, hsMatchEventCallback, (void *) context);
-}
-
-static inline
-hs_error_t hs_scan_vector_cgo(const hs_database_t *db, const char *const *data, const unsigned int *length, unsigned int count, unsigned int flags, hs_scratch_t *scratch, uintptr_t context) {
-	return hs_scan_vector(db, data, length, count, flags, scratch, hsMatchEventCallback, (void *) context);
-}
-
-static inline
-hs_error_t hs_scan_stream_cgo(hs_stream_t *id, const char * data, unsigned int length, unsigned int flags, hs_scratch_t *scratch, uintptr_t context) {
-	return hs_scan_stream(id, data, length, flags, scratch, hsMatchEventCallback, (void *) context);
-}
-
-static inline
-hs_error_t hs_close_stream_cgo(hs_stream_t *id, hs_scratch_t *scratch, uintptr_t context) {
-	return hs_close_stream(id, scratch, hsMatchEventCallback, (void *) context);
-}
-
-static inline
-hs_error_t hs_reset_stream_cgo(hs_stream_t *id, unsigned int flags, hs_scratch_t *scratch, uintptr_t context) {
-	return hs_reset_stream(id, flags, scratch, hsMatchEventCallback, (void *) context);
-}
-
-static inline
-hs_error_t hs_reset_and_copy_stream_cgo(hs_stream_t *to_id, const hs_stream_t *from_id, hs_scratch_t *scratch, uintptr_t context) {
-	return hs_reset_and_copy_stream(to_id, from_id, scratch, hsMatchEventCallback, (void *) context);
-}
-
-static inline
-hs_error_t hs_reset_and_expand_stream_cgo(hs_stream_t *stream, const char *data, unsigned int length, hs_scratch_t *scratch, uintptr_t context) {
-	return hs_reset_and_expand_stream(stream, data, length, scratch, hsMatchEventCallback, (void *) context);
-}
 */
 import "C"
 
@@ -166,7 +132,7 @@ func ParseCompileFlag(s string) (CompileFlag, error) {
 		} else if flag, exists := deprecatedCompileFlags[c]; exists {
 			flags |= flag
 		} else {
-			return 0, fmt.Errorf("unknown flag `%c`", c)
+			return 0, fmt.Errorf("flag `%c`, %w", c, ErrUnexpected)
 		}
 	}
 
@@ -188,7 +154,7 @@ func (flags CompileFlag) String() string {
 }
 
 // CpuFeature is the CPU feature support flags
-type CpuFeature int
+type CpuFeature int // nolint: golint,stylecheck
 
 const (
 	// AVX2 is a CPU features flag indicates that the target platform supports AVX2 instructions.
@@ -256,7 +222,7 @@ func ParseModeFlag(s string) (ModeFlag, error) {
 		return mode, nil
 	}
 
-	return BlockMode, errors.New("Unknown Mode: " + s)
+	return BlockMode, fmt.Errorf("database mode %s, %w", s, ErrUnexpected)
 }
 
 func (m ModeFlag) String() string {
@@ -305,22 +271,20 @@ const (
 	ErrArchError HsError = C.HS_ARCH_ERROR
 )
 
-var (
-	hsErrorMessages = map[HsError]string{
-		C.HS_SUCCESS:           "The engine completed normally.",
-		C.HS_INVALID:           "A parameter passed to this function was invalid.",
-		C.HS_NOMEM:             "A memory allocation failed.",
-		C.HS_SCAN_TERMINATED:   "The engine was terminated by callback.",
-		C.HS_COMPILER_ERROR:    "The pattern compiler failed.",
-		C.HS_DB_VERSION_ERROR:  "The given database was built for a different version of Hyperscan.",
-		C.HS_DB_PLATFORM_ERROR: "The given database was built for a different platform (i.e., CPU type).",
-		C.HS_DB_MODE_ERROR:     "The given database was built for a different mode of operation.",
-		C.HS_BAD_ALIGN:         "A parameter passed to this function was not correctly aligned.",
-		C.HS_BAD_ALLOC:         "The memory allocator did not correctly return aligned memory.",
-		C.HS_SCRATCH_IN_USE:    "The scratch region was already in use.",
-		C.HS_ARCH_ERROR:        "Unsupported CPU architecture.",
-	}
-)
+var hsErrorMessages = map[HsError]string{
+	C.HS_SUCCESS:           "The engine completed normally.",
+	C.HS_INVALID:           "A parameter passed to this function was invalid.",
+	C.HS_NOMEM:             "A memory allocation failed.",
+	C.HS_SCAN_TERMINATED:   "The engine was terminated by callback.",
+	C.HS_COMPILER_ERROR:    "The pattern compiler failed.",
+	C.HS_DB_VERSION_ERROR:  "The given database was built for a different version of Hyperscan.",
+	C.HS_DB_PLATFORM_ERROR: "The given database was built for a different platform (i.e., CPU type).",
+	C.HS_DB_MODE_ERROR:     "The given database was built for a different mode of operation.",
+	C.HS_BAD_ALIGN:         "A parameter passed to this function was not correctly aligned.",
+	C.HS_BAD_ALLOC:         "The memory allocator did not correctly return aligned memory.",
+	C.HS_SCRATCH_IN_USE:    "The scratch region was already in use.",
+	C.HS_ARCH_ERROR:        "Unsupported CPU architecture.",
+}
 
 func (e HsError) Error() string {
 	if msg, exists := hsErrorMessages[e]; exists {
@@ -350,7 +314,7 @@ type hsPlatformInfo struct {
 func (i *hsPlatformInfo) Tune() TuneFlag { return TuneFlag(i.platform.tune) }
 
 // CpuFeatures returns the CPU features of the platform.
-func (i *hsPlatformInfo) CpuFeatures() CpuFeature { return CpuFeature(i.platform.cpu_features) }
+func (i *hsPlatformInfo) CpuFeatures() CpuFeature { return CpuFeature(i.platform.cpu_features) } // nolint: golint,stylecheck
 
 func newPlatformInfo(tune TuneFlag, cpu CpuFeature) *hsPlatformInfo {
 	var platform C.struct_hs_platform_info
@@ -371,9 +335,11 @@ func hsPopulatePlatform() (*hsPlatformInfo, error) {
 	return &hsPlatformInfo{platform}, nil
 }
 
-type hsDatabase *C.hs_database_t
-type hsScratch *C.hs_scratch_t
-type hsStream *C.hs_stream_t
+type (
+	hsDatabase *C.hs_database_t
+	hsScratch  *C.hs_scratch_t
+	hsStream   *C.hs_stream_t
+)
 
 // ExprInfo containing information related to an expression
 type ExprInfo struct {
@@ -471,6 +437,7 @@ func (ext *ExprExt) With(exts ...Ext) *ExprExt {
 	for _, f := range exts {
 		f(ext)
 	}
+
 	return ext
 }
 
@@ -480,21 +447,27 @@ func (ext *ExprExt) String() string {
 	if (ext.Flags & ExtMinOffset) == ExtMinOffset {
 		values = append(values, fmt.Sprintf("min_offset=%d", ext.MinOffset))
 	}
+
 	if (ext.Flags & ExtMaxOffset) == ExtMaxOffset {
 		values = append(values, fmt.Sprintf("max_offset=%d", ext.MaxOffset))
 	}
+
 	if (ext.Flags & ExtMinLength) == ExtMinLength {
 		values = append(values, fmt.Sprintf("min_length=%d", ext.MinLength))
 	}
+
 	if (ext.Flags & ExtEditDistance) == ExtEditDistance {
 		values = append(values, fmt.Sprintf("edit_distance=%d", ext.EditDistance))
 	}
+
 	if (ext.Flags & ExtHammingDistance) == ExtHammingDistance {
 		values = append(values, fmt.Sprintf("hamming_distance=%d", ext.HammingDistance))
 	}
 
 	return "{" + strings.Join(values, ",") + "}"
 }
+
+const keyValuePair = 2
 
 // ParseExprExt parse containing additional parameters from string
 func ParseExprExt(s string) (ext *ExprExt, err error) {
@@ -505,33 +478,33 @@ func ParseExprExt(s string) (ext *ExprExt, err error) {
 	}
 
 	for _, s := range strings.Split(s, ",") {
-		parts := strings.SplitN(s, "=", 2)
+		parts := strings.SplitN(s, "=", keyValuePair)
 
-		if len(parts) != 2 {
+		if len(parts) != keyValuePair {
 			continue
 		}
 
 		key := strings.ToLower(parts[0])
 		value := parts[1]
 
-		var n uint64
-		n, err = strconv.ParseUint(value, 10, 64)
-		if err != nil {
+		var n int
+
+		if n, err = strconv.Atoi(value); err != nil {
 			return
 		}
 
 		switch key {
 		case "min_offset":
 			ext.Flags |= ExtMinOffset
-			ext.MinOffset = n
+			ext.MinOffset = uint64(n)
 
 		case "max_offset":
 			ext.Flags |= ExtMaxOffset
-			ext.MaxOffset = n
+			ext.MaxOffset = uint64(n)
 
 		case "min_length":
 			ext.Flags |= ExtMinLength
-			ext.MinLength = n
+			ext.MinLength = uint64(n)
 
 		case "edit_distance":
 			ext.Flags |= ExtEditDistance
@@ -543,11 +516,13 @@ func ParseExprExt(s string) (ext *ExprExt, err error) {
 		}
 	}
 
-	return
+	return // nolint: nakedret
 }
 
-type hsAllocFunc func(uint) unsafe.Pointer
-type hsFreeFunc func(unsafe.Pointer)
+type (
+	hsAllocFunc func(uint) unsafe.Pointer
+	hsFreeFunc  func(unsafe.Pointer)
+)
 
 type hsAllocator struct {
 	Alloc hsAllocFunc
@@ -725,25 +700,28 @@ func hsValidPlatform() error {
 	return nil
 }
 
-func hsFreeDatabase(db hsDatabase) error {
+func hsFreeDatabase(db hsDatabase) (err error) {
 	if ret := C.hs_free_database(db); ret != C.HS_SUCCESS {
-		return HsError(ret)
+		err = HsError(ret)
 	}
 
-	return nil
+	return
 }
 
-func hsSerializeDatabase(db hsDatabase) ([]byte, error) {
+func hsSerializeDatabase(db hsDatabase) (b []byte, err error) {
 	var data *C.char
 	var length C.size_t
 
-	if ret := C.hs_serialize_database(db, &data, &length); ret != C.HS_SUCCESS {
-		return nil, HsError(ret)
+	ret := C.hs_serialize_database(db, &data, &length)
+	if ret != C.HS_SUCCESS {
+		err = HsError(ret)
+	} else {
+		defer C.free(unsafe.Pointer(data))
+
+		b = C.GoBytes(unsafe.Pointer(data), C.int(length))
 	}
 
-	defer C.free(unsafe.Pointer(data))
-
-	return C.GoBytes(unsafe.Pointer(data), C.int(length)), nil
+	return
 }
 
 func hsDeserializeDatabase(data []byte) (hsDatabase, error) {
@@ -845,23 +823,23 @@ func hsCompile(expression string, flags CompileFlag, mode ModeFlag, info *hsPlat
 
 	expr := C.CString(expression)
 
+	defer C.free(unsafe.Pointer(expr))
+
 	ret := C.hs_compile(expr, C.uint(flags), C.uint(mode), platform, &db, &err)
-
-	C.free(unsafe.Pointer(expr))
-
-	if ret == C.HS_SUCCESS {
-		return db, nil
-	}
 
 	if err != nil {
 		defer C.hs_free_compile_error(err)
+	}
+
+	if ret == C.HS_SUCCESS {
+		return db, nil
 	}
 
 	if ret == C.HS_COMPILER_ERROR && err != nil {
 		return nil, &compileError{C.GoString(err.message), int(err.expression)}
 	}
 
-	return nil, fmt.Errorf("compile error, %d", int(ret))
+	return nil, fmt.Errorf("compile error %d, %w", int(ret), ErrCompileError)
 }
 
 func hsCompileMulti(patterns []*Pattern, mode ModeFlag, info *hsPlatformInfo) (hsDatabase, error) {
@@ -917,7 +895,7 @@ func hsCompileMulti(patterns []*Pattern, mode ModeFlag, info *hsPlatformInfo) (h
 		return nil, &compileError{C.GoString(err.message), int(err.expression)}
 	}
 
-	return nil, fmt.Errorf("compile error, %d", int(ret))
+	return nil, fmt.Errorf("compile error %d, %w", int(ret), ErrCompileError)
 }
 
 func hsExpressionInfo(expression string, flags CompileFlag) (*ExprInfo, error) {
@@ -925,6 +903,7 @@ func hsExpressionInfo(expression string, flags CompileFlag) (*ExprInfo, error) {
 	var err *C.hs_compile_error_t
 
 	expr := C.CString(expression)
+
 	defer C.free(unsafe.Pointer(expr))
 
 	ret := C.hs_expression_info(expr, C.uint(flags), &info, &err)
@@ -943,7 +922,7 @@ func hsExpressionInfo(expression string, flags CompileFlag) (*ExprInfo, error) {
 		return nil, &compileError{C.GoString(err.message), int(err.expression)}
 	}
 
-	return nil, fmt.Errorf("compile error, %d", int(ret))
+	return nil, fmt.Errorf("compile error %d, %w", int(ret), ErrCompileError)
 }
 
 func hsExpressionExt(expression string, flags CompileFlag) (ext *ExprExt, info *ExprInfo, err error) {
@@ -953,11 +932,11 @@ func hsExpressionExt(expression string, flags CompileFlag) (ext *ExprExt, info *
 	ext = new(ExprExt)
 	expr := C.CString(expression)
 
+	defer C.free(unsafe.Pointer(expr))
+
 	ret := C.hs_expression_ext_info(expr, C.uint(flags), (*C.hs_expr_ext_t)(unsafe.Pointer(ext)), &exprInfo, &compileErr)
 
-	C.free(unsafe.Pointer(expr))
-
-	if ret == C.HS_SUCCESS && exprInfo != nil {
+	if exprInfo != nil {
 		defer hsMiscFree(unsafe.Pointer(exprInfo))
 
 		info = newExprInfo(exprInfo)
@@ -970,7 +949,7 @@ func hsExpressionExt(expression string, flags CompileFlag) (ext *ExprExt, info *
 	if ret == C.HS_COMPILER_ERROR && compileErr != nil {
 		err = &compileError{C.GoString(compileErr.message), int(compileErr.expression)}
 	} else {
-		err = fmt.Errorf("compile error, %d", int(ret))
+		err = fmt.Errorf("compile error %d, %w", int(ret), ErrCompileError)
 	}
 
 	return
@@ -1029,42 +1008,24 @@ type hsMatchEventContext struct {
 	context interface{}
 }
 
-var matchEventContexts sync.Map
-
-func newMatchEventContext(handler hsMatchEventHandler, context interface{}) (unsafe.Pointer, func()) {
-	ctxt := &hsMatchEventContext{handler, context}
-	ptr := unsafe.Pointer(ctxt)
-	matchEventContexts.Store(ptr, ctxt)
-	return ptr, func() { matchEventContexts.Delete(ptr) }
-}
-
-func extractMatchEventContext(data unsafe.Pointer) (hsMatchEventHandler, interface{}) {
-	value, ok := matchEventContexts.Load(data)
-
-	if !ok {
-		panic(data)
-	}
-
-	ctxt, ok := value.(*hsMatchEventContext)
-
-	if !ok && ctxt == nil {
-		panic(value)
-	}
-
-	return ctxt.handler, ctxt.context
-}
-
 //export hsMatchEventCallback
 func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, data unsafe.Pointer) C.int {
-	handler, context := extractMatchEventContext(data)
-
-	err := handler(uint(id), uint64(from), uint64(to), uint(flags), context)
-
-	if err != nil {
-		return -1
+	ctx, ok := handle.Handle(data).Value().(hsMatchEventContext)
+	if !ok {
+		return C.HS_INVALID
 	}
 
-	return 0
+	err := ctx.handler(uint(id), uint64(from), uint64(to), uint(flags), ctx.context)
+	if err != nil {
+		var hsErr HsError
+		if errors.As(err, &hsErr) {
+			return C.int(hsErr)
+		}
+
+		return C.HS_SCAN_TERMINATED
+	}
+
+	return C.HS_SUCCESS
 }
 
 func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
@@ -1072,16 +1033,21 @@ func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEve
 		return HsError(C.HS_INVALID)
 	}
 
-	ctxt, free := newMatchEventContext(onEvent, context)
-	defer free()
+	h := handle.New(hsMatchEventContext{onEvent, context})
+	defer h.Delete()
+
 	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data)) // FIXME: Zero-copy access to go data
 
-	ret := C.hs_scan_cgo(db, (*C.char)(unsafe.Pointer(hdr.Data)), C.uint(hdr.Len),
-		C.uint(flags), scratch, C.uintptr_t(uintptr(ctxt)))
+	ret := C.hs_scan(db,
+		(*C.char)(unsafe.Pointer(hdr.Data)),
+		C.uint(hdr.Len),
+		C.uint(flags),
+		scratch,
+		C.match_event_handler(C.hsMatchEventCallback),
+		unsafe.Pointer(h))
 
 	// Ensure go data is alive before the C function returns
 	runtime.KeepAlive(data)
-	runtime.KeepAlive(ctxt)
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
@@ -1103,24 +1069,31 @@ func hsScanVector(db hsDatabase, data [][]byte, flags ScanFlag, scratch hsScratc
 			return HsError(C.HS_INVALID)
 		}
 
-		hdr := (*reflect.SliceHeader)(unsafe.Pointer(&d)) // FIXME: Zero-copy access to go data
+		// FIXME: Zero-copy access to go data
+		hdr := (*reflect.SliceHeader)(unsafe.Pointer(&d)) // nolint: scopelint
 		cdata[i] = uintptr(unsafe.Pointer(hdr.Data))
 		clength[i] = C.uint(hdr.Len)
 	}
 
-	ctxt, free := newMatchEventContext(onEvent, context)
-	defer free()
+	h := handle.New(hsMatchEventContext{onEvent, context})
+	defer h.Delete()
+
 	cdataHdr := (*reflect.SliceHeader)(unsafe.Pointer(&cdata))     // FIXME: Zero-copy access to go data
 	clengthHdr := (*reflect.SliceHeader)(unsafe.Pointer(&clength)) // FIXME: Zero-copy access to go data
 
-	ret := C.hs_scan_vector_cgo(db, (**C.char)(unsafe.Pointer(cdataHdr.Data)), (*C.uint)(unsafe.Pointer(clengthHdr.Data)),
-		C.uint(cdataHdr.Len), C.uint(flags), scratch, C.uintptr_t(uintptr(ctxt)))
+	ret := C.hs_scan_vector(db,
+		(**C.char)(unsafe.Pointer(cdataHdr.Data)),
+		(*C.uint)(unsafe.Pointer(clengthHdr.Data)),
+		C.uint(cdataHdr.Len),
+		C.uint(flags),
+		scratch,
+		C.match_event_handler(C.hsMatchEventCallback),
+		unsafe.Pointer(h))
 
 	// Ensure go data is alive before the C function returns
 	runtime.KeepAlive(data)
 	runtime.KeepAlive(cdata)
 	runtime.KeepAlive(clength)
-	runtime.KeepAlive(ctxt)
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
@@ -1144,16 +1117,21 @@ func hsScanStream(stream hsStream, data []byte, flags ScanFlag, scratch hsScratc
 		return HsError(C.HS_INVALID)
 	}
 
-	ctxt, free := newMatchEventContext(onEvent, context)
-	defer free()
+	h := handle.New(hsMatchEventContext{onEvent, context})
+	defer h.Delete()
+
 	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data)) // FIXME: Zero-copy access to go data
 
-	ret := C.hs_scan_stream_cgo(stream, (*C.char)(unsafe.Pointer(hdr.Data)), C.uint(hdr.Len),
-		C.uint(flags), scratch, C.uintptr_t(uintptr(ctxt)))
+	ret := C.hs_scan_stream(stream,
+		(*C.char)(unsafe.Pointer(hdr.Data)),
+		C.uint(hdr.Len),
+		C.uint(flags),
+		scratch,
+		C.match_event_handler(C.hsMatchEventCallback),
+		unsafe.Pointer(h))
 
 	// Ensure go data is alive before the C function returns
 	runtime.KeepAlive(data)
-	runtime.KeepAlive(ctxt)
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
@@ -1163,12 +1141,13 @@ func hsScanStream(stream hsStream, data []byte, flags ScanFlag, scratch hsScratc
 }
 
 func hsCloseStream(stream hsStream, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	ctxt, free := newMatchEventContext(onEvent, context)
-	defer free()
+	h := handle.New(hsMatchEventContext{onEvent, context})
+	defer h.Delete()
 
-	ret := C.hs_close_stream_cgo(stream, scratch, C.uintptr_t(uintptr(ctxt)))
-
-	runtime.KeepAlive(ctxt)
+	ret := C.hs_close_stream(stream,
+		scratch,
+		C.match_event_handler(C.hsMatchEventCallback),
+		unsafe.Pointer(h))
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
@@ -1178,12 +1157,14 @@ func hsCloseStream(stream hsStream, scratch hsScratch, onEvent hsMatchEventHandl
 }
 
 func hsResetStream(stream hsStream, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	ctxt, free := newMatchEventContext(onEvent, context)
-	defer free()
+	h := handle.New(hsMatchEventContext{onEvent, context})
+	defer h.Delete()
 
-	ret := C.hs_reset_stream_cgo(stream, C.uint(flags), scratch, C.uintptr_t(uintptr(ctxt)))
-
-	runtime.KeepAlive(ctxt)
+	ret := C.hs_reset_stream(stream,
+		C.uint(flags),
+		scratch,
+		C.match_event_handler(C.hsMatchEventCallback),
+		unsafe.Pointer(h))
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
@@ -1203,12 +1184,14 @@ func hsCopyStream(stream hsStream) (hsStream, error) {
 }
 
 func hsResetAndCopyStream(to, from hsStream, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	ctxt, free := newMatchEventContext(onEvent, context)
-	defer free()
+	h := handle.New(hsMatchEventContext{onEvent, context})
+	defer h.Delete()
 
-	ret := C.hs_reset_and_copy_stream_cgo(to, from, scratch, C.uintptr_t(uintptr(ctxt)))
-
-	runtime.KeepAlive(ctxt)
+	ret := C.hs_reset_and_copy_stream(to,
+		from,
+		scratch,
+		C.match_event_handler(C.hsMatchEventCallback),
+		unsafe.Pointer(h))
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
@@ -1248,14 +1231,17 @@ func hsExpandStream(db hsDatabase, stream *hsStream, buf []byte) error {
 }
 
 func hsResetAndExpandStream(stream hsStream, buf []byte, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	ctxt, free := newMatchEventContext(onEvent, context)
-	defer free()
+	h := handle.New(hsMatchEventContext{onEvent, context})
+	defer h.Delete()
 
-	ret := C.hs_reset_and_expand_stream_cgo(stream, (*C.char)(unsafe.Pointer(&buf[0])), C.uint(len(buf)),
-		scratch, C.uintptr_t(uintptr(ctxt)))
+	ret := C.hs_reset_and_expand_stream(stream,
+		(*C.char)(unsafe.Pointer(&buf[0])),
+		C.size_t(len(buf)),
+		scratch,
+		C.match_event_handler(C.hsMatchEventCallback),
+		unsafe.Pointer(h))
 
 	runtime.KeepAlive(buf)
-	runtime.KeepAlive(ctxt)
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
