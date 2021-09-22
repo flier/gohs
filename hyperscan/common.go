@@ -56,7 +56,7 @@ const infoMatches = 4
 var regexInfo = regexp.MustCompile(`^Version: (\d+\.\d+\.\d+) Features: ([\w\s]+)? Mode: (\w+)$`)
 
 // DbInfo identify the version and platform information for the supplied database.
-type DbInfo string
+type DbInfo string // nolint: stylecheck
 
 func (i DbInfo) String() string { return string(i) }
 
@@ -151,7 +151,7 @@ func SerializedDatabaseInfo(data []byte) (DbInfo, error) {
 	return DbInfo(i), err
 }
 
-func (d *baseDatabase) Db() hsDatabase { return d.db }
+func (d *baseDatabase) Db() hsDatabase { return d.db } // nolint: stylecheck
 
 func (d *baseDatabase) Size() (int, error) { return hsDatabaseSize(d.db) }
 

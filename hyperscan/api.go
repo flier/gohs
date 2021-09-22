@@ -11,7 +11,7 @@ type matchEvent struct {
 	flags    ScanFlag
 }
 
-func (e *matchEvent) Id() uint { return e.id }
+func (e *matchEvent) Id() uint { return e.id } // nolint: golint,revive,stylecheck
 
 func (e *matchEvent) From() uint64 { return e.from }
 

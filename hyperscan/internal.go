@@ -153,7 +153,7 @@ func (flags CompileFlag) String() string {
 }
 
 // CpuFeature is the CPU feature support flags
-type CpuFeature int
+type CpuFeature int // nolint: golint,stylecheck
 
 const (
 	// AVX2 is a CPU features flag indicates that the target platform supports AVX2 instructions.
@@ -313,7 +313,7 @@ type hsPlatformInfo struct {
 func (i *hsPlatformInfo) Tune() TuneFlag { return TuneFlag(i.platform.tune) }
 
 // CpuFeatures returns the CPU features of the platform.
-func (i *hsPlatformInfo) CpuFeatures() CpuFeature { return CpuFeature(i.platform.cpu_features) }
+func (i *hsPlatformInfo) CpuFeatures() CpuFeature { return CpuFeature(i.platform.cpu_features) } // nolint: golint,stylecheck
 
 func newPlatformInfo(tune TuneFlag, cpu CpuFeature) *hsPlatformInfo {
 	var platform C.struct_hs_platform_info
@@ -515,7 +515,7 @@ func ParseExprExt(s string) (ext *ExprExt, err error) {
 		}
 	}
 
-	return
+	return // nolint: nakedret
 }
 
 type (
@@ -1068,7 +1068,8 @@ func hsScanVector(db hsDatabase, data [][]byte, flags ScanFlag, scratch hsScratc
 			return HsError(C.HS_INVALID)
 		}
 
-		hdr := (*reflect.SliceHeader)(unsafe.Pointer(&d)) // FIXME: Zero-copy access to go data
+		// FIXME: Zero-copy access to go data
+		hdr := (*reflect.SliceHeader)(unsafe.Pointer(&d)) // nolint: scopelint
 		cdata[i] = uintptr(unsafe.Pointer(hdr.Data))
 		clength[i] = C.uint(hdr.Len)
 	}

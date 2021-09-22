@@ -22,6 +22,7 @@ func (e Expression) String() string { return string(e) }
 // Patterns is a set of matching patterns.
 type Patterns []*Pattern
 
+// nolint: golint,revive,stylecheck
 // Pattern is a matching pattern.
 type Pattern struct {
 	Expression             // The expression to parse.
