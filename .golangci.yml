@@ -58,3 +58,14 @@ linters-settings:
     # locale: US
     ignore-words:
       - rela # This is for elf.SHT_RELA
+
+linters:
+  enable-all: true
+  disable:
+    - exhaustive
+    - exhaustivestruct
+    - gci
+    - gochecknoglobals
+    - gochecknoinits
+    - nlreturn
+    - paralleltest

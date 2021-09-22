@@ -572,7 +572,8 @@ func TestVectorScan(t *testing.T) {
 		Convey("Scan multi block with multi pattern but terminated", func() {
 			h.err = ErrScanTerminated
 
-			So(hsScanVector(db, [][]byte{[]byte("abctestdef"), []byte("123test456")}, 0, s, h.Handle, nil), ShouldEqual, ErrScanTerminated)
+			So(hsScanVector(db, [][]byte{[]byte("abctestdef"), []byte("123test456")}, 0, s, h.Handle, nil),
+				ShouldEqual, ErrScanTerminated)
 			So(h.matched, ShouldResemble, []matchEvent{{0, 0, 7, 0}})
 		})
 

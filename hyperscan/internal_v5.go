@@ -1,3 +1,4 @@
+//go:build !hyperscan_v4
 // +build !hyperscan_v4
 
 package hyperscan

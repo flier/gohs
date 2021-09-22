@@ -14,15 +14,15 @@ var (
 	ErrUnexpected = errors.New("unexpected")
 )
 
-// Expression of pattern
+// Expression of pattern.
 type Expression string
 
 func (e Expression) String() string { return string(e) }
 
-// Patterns is a set of matching patterns
+// Patterns is a set of matching patterns.
 type Patterns []*Pattern
 
-// Pattern is a matching pattern
+// Pattern is a matching pattern.
 type Pattern struct {
 	Expression             // The expression to parse.
 	Flags      CompileFlag // Flags which modify the behaviour of the expression.
@@ -62,7 +62,9 @@ func (p *Pattern) WithExt(exts ...Ext) *Pattern {
 	if p.ext == nil {
 		p.ext = new(ExprExt)
 	}
+
 	p.ext.With(exts...)
+
 	return p
 }
 
@@ -118,6 +120,7 @@ func ParsePattern(s string) (*Pattern, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid pattern id `%s`, %w", s[:i], ErrInvalid)
 		}
+
 		p.Id = id
 		s = s[i+1:]
 	}
@@ -150,6 +153,7 @@ func ParsePattern(s string) (*Pattern, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid pattern `%s`, %w", p.Expression, err)
 	}
+
 	p.info = info
 
 	return &p, nil
@@ -202,7 +206,7 @@ func PopulatePlatform() Platform {
 	return platform
 }
 
-// DatabaseBuilder is a type to help to build up a database
+// DatabaseBuilder is a type to help to build up a database.
 type DatabaseBuilder struct {
 	// Array of patterns to compile.
 	Patterns []*Pattern

@@ -29,6 +29,7 @@ func ExampleBlockScanner() {
 		fmt.Println("create scratch failed,", err)
 		return
 	}
+
 	defer func() {
 		_ = s.Free()
 	}()
@@ -38,7 +39,9 @@ func ExampleBlockScanner() {
 		from uint64
 		to   uint64
 	}
+
 	var matches []Match
+
 	handler := hyperscan.MatchHandler(func(id uint, from, to uint64, flags uint, context interface{}) error {
 		matches = append(matches, Match{from, to})
 		return nil
@@ -84,6 +87,7 @@ func ExampleVectoredScanner() {
 		fmt.Println("create scratch failed,", err)
 		return
 	}
+
 	defer func() {
 		_ = s.Free()
 	}()
@@ -93,7 +97,9 @@ func ExampleVectoredScanner() {
 		from uint64
 		to   uint64
 	}
+
 	var matches []Match
+
 	handler := hyperscan.MatchHandler(func(id uint, from, to uint64, flags uint, context interface{}) error {
 		matches = append(matches, Match{from, to})
 		return nil
@@ -139,6 +145,7 @@ func ExampleStreamScanner() {
 		fmt.Println("create scratch failed,", err)
 		return
 	}
+
 	defer func() {
 		_ = s.Free()
 	}()
@@ -148,7 +155,9 @@ func ExampleStreamScanner() {
 		from uint64
 		to   uint64
 	}
+
 	var matches []Match
+
 	handler := hyperscan.MatchHandler(func(id uint, from, to uint64, flags uint, context interface{}) error {
 		matches = append(matches, Match{from, to})
 		return nil
@@ -167,9 +176,11 @@ func ExampleStreamScanner() {
 	for i := 0; i < len(data); i += 4 {
 		start := i
 		end := i + 4
+
 		if end > len(data) {
 			end = len(data)
 		}
+
 		if err = st.Scan(data[start:end]); err != nil {
 			fmt.Println("streaming scan failed,", err)
 			return

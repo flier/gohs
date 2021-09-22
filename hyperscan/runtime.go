@@ -45,10 +45,10 @@ func (s *Scratch) Clone() (*Scratch, error) {
 	return &Scratch{cloned}, nil
 }
 
-// Free a scratch block previously allocated
+// Free a scratch block previously allocated.
 func (s *Scratch) Free() error { return hsFreeScratch(s.s) }
 
-// MatchContext represents a match context
+// MatchContext represents a match context.
 type MatchContext interface {
 	Database() Database
 
@@ -57,7 +57,7 @@ type MatchContext interface {
 	UserData() interface{}
 }
 
-// MatchEvent indicates a match event
+// MatchEvent indicates a match event.
 type MatchEvent interface {
 	Id() uint
 
@@ -68,7 +68,7 @@ type MatchEvent interface {
 	Flags() ScanFlag
 }
 
-// MatchHandler handles match events
+// MatchHandler handles match events.
 type MatchHandler hsMatchEventHandler
 
 // BlockScanner is the block (non-streaming) regular expression scanner.
@@ -83,7 +83,8 @@ type BlockMatcher interface {
 	// A return value of nil indicates no match.
 	Find(data []byte) []byte
 
-	// FindIndex returns a two-element slice of integers defining the location of the leftmost match in b of the regular expression.
+	// FindIndex returns a two-element slice of integers defining
+	// the location of the leftmost match in b of the regular expression.
 	// The match itself is at b[loc[0]:loc[1]]. A return value of nil indicates no match.
 	FindIndex(data []byte) []int
 
@@ -97,10 +98,12 @@ type BlockMatcher interface {
 
 	// FindString returns a string holding the text of the leftmost match in s of the regular expression.
 	// If there is no match, the return value is an empty string, but it will also be empty
-	// if the regular expression successfully matches an empty string. Use FindStringIndex if it is necessary to distinguish these cases.
+	// if the regular expression successfully matches an empty string.
+	// Use FindStringIndex if it is necessary to distinguish these cases.
 	FindString(s string) string
 
-	// FindStringIndex returns a two-element slice of integers defining the location of the leftmost match in s of the regular expression.
+	// FindStringIndex returns a two-element slice of integers defining
+	// the location of the leftmost match in s of the regular expression.
 	// The match itself is at s[loc[0]:loc[1]]. A return value of nil indicates no match.
 	FindStringIndex(s string) []int
 
@@ -108,7 +111,8 @@ type BlockMatcher interface {
 	// as defined by the 'All' description in the package comment. A return value of nil indicates no match.
 	FindAllString(s string, n int) []string
 
-	// FindAllStringIndex is the 'All' version of FindStringIndex; it returns a slice of all successive matches of the expression,
+	// FindAllStringIndex is the 'All' version of FindStringIndex;
+	// it returns a slice of all successive matches of the expression,
 	// as defined by the 'All' description in the package comment. A return value of nil indicates no match.
 	FindAllStringIndex(s string, n int) [][]int
 
@@ -119,7 +123,8 @@ type BlockMatcher interface {
 	MatchString(s string) bool
 }
 
-// Stream exist in the Hyperscan library so that pattern matching state can be maintained across multiple blocks of target data
+// Stream exist in the Hyperscan library so that pattern matching state can be maintained
+// across multiple blocks of target data.
 type Stream interface {
 	Scan(data []byte) error
 
@@ -143,7 +148,8 @@ type StreamMatcher interface {
 	// A return value of nil indicates no match.
 	Find(reader io.ReadSeeker) []byte
 
-	// FindIndex returns a two-element slice of integers defining the location of the leftmost match in b of the regular expression.
+	// FindIndex returns a two-element slice of integers defining
+	// the location of the leftmost match in b of the regular expression.
 	// The match itself is at b[loc[0]:loc[1]]. A return value of nil indicates no match.
 	FindIndex(reader io.Reader) []int
 
@@ -168,7 +174,8 @@ type StreamCompressor interface {
 	Expand(buf []byte, flags ScanFlag, scratch *Scratch, handler MatchHandler, context interface{}) (Stream, error)
 
 	// Decompresses a compressed representation created by `CompressStream` on top of the 'to' stream.
-	ResetAndExpand(stream Stream, buf []byte, flags ScanFlag, scratch *Scratch, handler MatchHandler, context interface{}) (Stream, error)
+	ResetAndExpand(stream Stream, buf []byte, flags ScanFlag, scratch *Scratch,
+		handler MatchHandler, context interface{}) (Stream, error)
 }
 
 // VectoredScanner is the vectored regular expression scanner.
@@ -595,7 +602,8 @@ func (db *streamDatabase) Compress(s Stream) ([]byte, error) {
 	return buf, nil
 }
 
-func (db *streamDatabase) Expand(buf []byte, flags ScanFlag, sc *Scratch, handler MatchHandler, context interface{}) (Stream, error) {
+func (db *streamDatabase) Expand(buf []byte, flags ScanFlag, sc *Scratch,
+	handler MatchHandler, context interface{}) (Stream, error) {
 	var s hsStream
 
 	err := hsExpandStream(db.db, &s, buf)
@@ -617,7 +625,8 @@ func (db *streamDatabase) Expand(buf []byte, flags ScanFlag, sc *Scratch, handle
 	return &stream{s, flags, sc.s, hsMatchEventHandler(handler), context, ownedScratch}, nil
 }
 
-func (db *streamDatabase) ResetAndExpand(s Stream, buf []byte, flags ScanFlag, sc *Scratch, handler MatchHandler, context interface{}) (Stream, error) {
+func (db *streamDatabase) ResetAndExpand(s Stream, buf []byte, flags ScanFlag, sc *Scratch,
+	handler MatchHandler, context interface{}) (Stream, error) {
 	ss, ok := s.(*stream)
 	if !ok {
 		return nil, fmt.Errorf("stream %v, %w", s, ErrUnexpected)

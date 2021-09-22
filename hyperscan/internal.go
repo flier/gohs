@@ -1,3 +1,4 @@
+// nolint: gocritic,godox,wsl
 package hyperscan
 
 import (
@@ -706,23 +707,26 @@ func hsFreeDatabase(db hsDatabase) (err error) {
 	return
 }
 
-func hsSerializeDatabase(db hsDatabase) ([]byte, error) {
+func hsSerializeDatabase(db hsDatabase) (b []byte, err error) {
 	var data *C.char
 	var length C.size_t
 
-	if ret := C.hs_serialize_database(db, &data, &length); ret != C.HS_SUCCESS { // nolint: gocritic
-		return nil, HsError(ret)
+	ret := C.hs_serialize_database(db, &data, &length)
+	if ret != C.HS_SUCCESS {
+		err = HsError(ret)
+	} else {
+		defer C.free(unsafe.Pointer(data))
+
+		b = C.GoBytes(unsafe.Pointer(data), C.int(length))
 	}
 
-	defer C.free(unsafe.Pointer(data))
-
-	return C.GoBytes(unsafe.Pointer(data), C.int(length)), nil
+	return
 }
 
 func hsDeserializeDatabase(data []byte) (hsDatabase, error) {
 	var db *C.hs_database_t
 
-	ret := C.hs_deserialize_database((*C.char)(unsafe.Pointer(&data[0])), C.size_t(len(data)), &db) // nolint: gocritic
+	ret := C.hs_deserialize_database((*C.char)(unsafe.Pointer(&data[0])), C.size_t(len(data)), &db)
 
 	runtime.KeepAlive(data)
 
@@ -782,7 +786,7 @@ func hsSerializedDatabaseSize(data []byte) (int, error) {
 func hsDatabaseInfo(db hsDatabase) (string, error) {
 	var info *C.char
 
-	if ret := C.hs_database_info(db, &info); ret != C.HS_SUCCESS { // nolint: gocritic
+	if ret := C.hs_database_info(db, &info); ret != C.HS_SUCCESS {
 		return "", HsError(ret)
 	}
 
@@ -817,6 +821,7 @@ func hsCompile(expression string, flags CompileFlag, mode ModeFlag, info *hsPlat
 	}
 
 	expr := C.CString(expression)
+
 	defer C.free(unsafe.Pointer(expr))
 
 	ret := C.hs_compile(expr, C.uint(flags), C.uint(mode), platform, &db, &err)
@@ -897,6 +902,7 @@ func hsExpressionInfo(expression string, flags CompileFlag) (*ExprInfo, error) {
 	var err *C.hs_compile_error_t
 
 	expr := C.CString(expression)
+
 	defer C.free(unsafe.Pointer(expr))
 
 	ret := C.hs_expression_info(expr, C.uint(flags), &info, &err)
@@ -924,6 +930,7 @@ func hsExpressionExt(expression string, flags CompileFlag) (ext *ExprExt, info *
 
 	ext = new(ExprExt)
 	expr := C.CString(expression)
+
 	defer C.free(unsafe.Pointer(expr))
 
 	ret := C.hs_expression_ext_info(expr, C.uint(flags), (*C.hs_expr_ext_t)(unsafe.Pointer(ext)), &exprInfo, &compileErr)
@@ -1013,6 +1020,7 @@ func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, data un
 		if errors.As(err, &hsErr) {
 			return C.int(hsErr)
 		}
+
 		return C.HS_SCAN_TERMINATED
 	}
 
