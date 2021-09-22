@@ -183,7 +183,7 @@ func newStreamDatabase(db hsDatabase) (*streamDatabase, error) {
 	return &streamDatabase{newStreamMatcher(newStreamScanner(newBaseDatabase(db)))}, nil
 }
 
-func (d *streamDatabase) StreamSize() (int, error) { return hsStreamSize(d.db) }
+func (db *streamDatabase) StreamSize() (int, error) { return hsStreamSize(db.db) }
 
 type vectoredDatabase struct {
 	*vectoredMatcher
