@@ -6,9 +6,7 @@ import (
 	"io"
 )
 
-var (
-	errTooManyMatches = errors.New("too many matches")
-)
+var errTooManyMatches = errors.New("too many matches")
 
 // Scratch is a Hyperscan scratch space.
 type Scratch struct {
@@ -20,7 +18,6 @@ type Scratch struct {
 // or concurrent caller, is required.
 func NewScratch(db Database) (*Scratch, error) {
 	s, err := hsAllocScratch(db.(database).Db())
-
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +36,6 @@ func (s *Scratch) Realloc(db Database) error {
 // Clone allocate a scratch space that is a clone of an existing scratch space.
 func (s *Scratch) Clone() (*Scratch, error) {
 	cloned, err := hsCloneScratch(s.s)
-
 	if err != nil {
 		return nil, err
 	}
@@ -179,8 +175,7 @@ type VectoredScanner interface {
 }
 
 // VectoredMatcher implements regular expression search.
-type VectoredMatcher interface {
-}
+type VectoredMatcher interface{}
 
 type stream struct {
 	stream       hsStream
@@ -211,7 +206,6 @@ func (s *stream) Reset() error {
 
 func (s *stream) Clone() (Stream, error) {
 	ss, err := hsCopyStream(s.stream)
-
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +233,6 @@ func newStreamScanner(db *baseDatabase) *streamScanner {
 
 func (ss *streamScanner) Open(flags ScanFlag, sc *Scratch, handler MatchHandler, context interface{}) (Stream, error) {
 	s, err := hsOpenStream(ss.db, flags)
-
 	if err != nil {
 		return nil, err
 	}
@@ -345,7 +338,6 @@ func newBlockMatcher(scanner *blockScanner) *blockMatcher {
 
 func (m *blockMatcher) Handle(id uint, from, to uint64, flags uint, context interface{}) error {
 	err := m.matchRecorder.Handle(id, from, to, flags, context)
-
 	if err != nil {
 		return err
 	}
@@ -455,7 +447,6 @@ func newStreamMatcher(scanner *streamScanner) *streamMatcher {
 
 func (m *streamMatcher) Handle(id uint, from, to uint64, flags uint, context interface{}) error {
 	err := m.matchRecorder.Handle(id, from, to, flags, context)
-
 	if err != nil {
 		return err
 	}
@@ -510,7 +501,6 @@ func (m *streamMatcher) read(reader io.ReadSeeker, loc []int) ([]byte, error) {
 	size := loc[1] - loc[0]
 
 	_, err := reader.Seek(offset, io.SeekStart)
-
 	if err != nil {
 		return nil, err
 	}
@@ -529,7 +519,6 @@ func (m *streamMatcher) read(reader io.ReadSeeker, loc []int) ([]byte, error) {
 func (m *streamMatcher) Find(reader io.ReadSeeker) []byte {
 	loc := m.FindIndex(reader)
 	buf, err := m.read(reader, loc)
-
 	if err != nil {
 		return nil
 	}
@@ -587,7 +576,6 @@ var _ StreamCompressor = (*streamDatabase)(nil)
 
 func (db *streamDatabase) Compress(s Stream) ([]byte, error) {
 	size, err := db.StreamSize()
-
 	if err != nil {
 		return nil, err
 	}
@@ -607,7 +595,6 @@ func (db *streamDatabase) Expand(buf []byte, flags ScanFlag, sc *Scratch, handle
 	var s hsStream
 
 	err := hsExpandStream(db.db, &s, buf)
-
 	if err != nil {
 		return nil, err
 	}
@@ -645,7 +632,6 @@ func (db *streamDatabase) ResetAndExpand(s Stream, buf []byte, flags ScanFlag, s
 	}
 
 	err := hsResetAndExpandStream(ss.stream, buf, ss.scratch, ss.handler, ss.context)
-
 	if err != nil {
 		return nil, err
 	}

@@ -115,6 +115,7 @@ func ExampleVectoredScanner() {
 	// match [ 6 : 12 ] foobar
 	// match [ 6 : 15 ] foobarbar
 }
+
 func ExampleStreamScanner() {
 	// Pattern with `L` flag enable leftmost start of match reporting.
 	p, err := hyperscan.ParsePattern(`/foo(bar)+/L`)

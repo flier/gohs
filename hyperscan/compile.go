@@ -42,7 +42,6 @@ func (p *Pattern) IsValid() bool {
 func (p *Pattern) Info() (*ExprInfo, error) {
 	if p.info == nil {
 		info, err := hsExpressionInfo(string(p.Expression), p.Flags)
-
 		if err != nil {
 			return nil, err
 		}
@@ -66,7 +65,6 @@ func (p *Pattern) WithExt(exts ...Ext) *Pattern {
 func (p *Pattern) Ext() (*ExprExt, error) {
 	if p.ext == nil {
 		ext, info, err := hsExpressionExt(string(p.Expression), p.Flags)
-
 		if err != nil {
 			return nil, err
 		}
@@ -250,7 +248,6 @@ func (b *DatabaseBuilder) Build() (Database, error) {
 	platform, _ := b.Platform.(*hsPlatformInfo)
 
 	db, err := hsCompileMulti(b.Patterns, mode, platform)
-
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +269,6 @@ func NewBlockDatabase(patterns ...*Pattern) (BlockDatabase, error) {
 	builder := &DatabaseBuilder{Patterns: patterns, Mode: BlockMode}
 
 	db, err := builder.Build()
-
 	if err != nil {
 		return nil, err
 	}
@@ -285,7 +281,6 @@ func NewStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 	builder := &DatabaseBuilder{Patterns: patterns, Mode: StreamMode}
 
 	db, err := builder.Build()
-
 	if err != nil {
 		return nil, err
 	}
@@ -298,7 +293,6 @@ func NewMediumStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 	builder := &DatabaseBuilder{Patterns: patterns, Mode: StreamMode | SomHorizonMediumMode}
 
 	db, err := builder.Build()
-
 	if err != nil {
 		return nil, err
 	}
@@ -311,7 +305,6 @@ func NewLargeStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 	builder := &DatabaseBuilder{Patterns: patterns, Mode: StreamMode | SomHorizonLargeMode}
 
 	db, err := builder.Build()
-
 	if err != nil {
 		return nil, err
 	}
@@ -324,7 +317,6 @@ func NewVectoredDatabase(patterns ...*Pattern) (VectoredDatabase, error) {
 	builder := &DatabaseBuilder{Patterns: patterns, Mode: VectoredMode}
 
 	db, err := builder.Build()
-
 	if err != nil {
 		return nil, err
 	}
@@ -336,7 +328,6 @@ func NewVectoredDatabase(patterns ...*Pattern) (VectoredDatabase, error) {
 // a pattern database in the block mode that can be used to match against text.
 func Compile(expr string) (Database, error) {
 	db, err := hsCompile(expr, SomLeftMost, BlockMode, nil)
-
 	if err != nil {
 		return nil, err
 	}
@@ -348,13 +339,11 @@ func Compile(expr string) (Database, error) {
 // It simplifies safe initialization of global variables holding compiled regular expressions.
 func MustCompile(expr string) Database {
 	db, err := hsCompile(expr, SomLeftMost, BlockMode, nil)
-
 	if err != nil {
 		panic(`Compile(` + Quote(expr) + `): ` + err.Error())
 	}
 
 	bdb, err := newBlockDatabase(db)
-
 	if err != nil {
 		panic(`Compile(` + Quote(expr) + `): ` + err.Error())
 	}

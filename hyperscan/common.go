@@ -49,9 +49,7 @@ type VectoredDatabase interface {
 	VectoredMatcher
 }
 
-var (
-	regexInfo = regexp.MustCompile(`^Version: (\d+\.\d+\.\d+) Features: ([\w\s]+)? Mode: (\w+)$`)
-)
+var regexInfo = regexp.MustCompile(`^Version: (\d+\.\d+\.\d+) Features: ([\w\s]+)? Mode: (\w+)$`)
 
 // DbInfo identify the version and platform information for the supplied database.
 type DbInfo string
@@ -101,7 +99,6 @@ func newBaseDatabase(db hsDatabase) *baseDatabase {
 // UnmarshalDatabase reconstruct a pattern database from a stream of bytes.
 func UnmarshalDatabase(data []byte) (Database, error) {
 	db, err := hsDeserializeDatabase(data)
-
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +109,6 @@ func UnmarshalDatabase(data []byte) (Database, error) {
 // UnmarshalBlockDatabase reconstruct a block database from a stream of bytes.
 func UnmarshalBlockDatabase(data []byte) (BlockDatabase, error) {
 	db, err := hsDeserializeDatabase(data)
-
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +119,6 @@ func UnmarshalBlockDatabase(data []byte) (BlockDatabase, error) {
 // UnmarshalStreamDatabase reconstruct a stream database from a stream of bytes.
 func UnmarshalStreamDatabase(data []byte) (StreamDatabase, error) {
 	db, err := hsDeserializeDatabase(data)
-
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +129,6 @@ func UnmarshalStreamDatabase(data []byte) (StreamDatabase, error) {
 // UnmarshalVectoredDatabase reconstruct a vectored database from a stream of bytes.
 func UnmarshalVectoredDatabase(data []byte) (VectoredDatabase, error) {
 	db, err := hsDeserializeDatabase(data)
-
 	if err != nil {
 		return nil, err
 	}

@@ -269,22 +269,20 @@ const (
 	ErrArchError HsError = C.HS_ARCH_ERROR
 )
 
-var (
-	hsErrorMessages = map[HsError]string{
-		C.HS_SUCCESS:           "The engine completed normally.",
-		C.HS_INVALID:           "A parameter passed to this function was invalid.",
-		C.HS_NOMEM:             "A memory allocation failed.",
-		C.HS_SCAN_TERMINATED:   "The engine was terminated by callback.",
-		C.HS_COMPILER_ERROR:    "The pattern compiler failed.",
-		C.HS_DB_VERSION_ERROR:  "The given database was built for a different version of Hyperscan.",
-		C.HS_DB_PLATFORM_ERROR: "The given database was built for a different platform (i.e., CPU type).",
-		C.HS_DB_MODE_ERROR:     "The given database was built for a different mode of operation.",
-		C.HS_BAD_ALIGN:         "A parameter passed to this function was not correctly aligned.",
-		C.HS_BAD_ALLOC:         "The memory allocator did not correctly return aligned memory.",
-		C.HS_SCRATCH_IN_USE:    "The scratch region was already in use.",
-		C.HS_ARCH_ERROR:        "Unsupported CPU architecture.",
-	}
-)
+var hsErrorMessages = map[HsError]string{
+	C.HS_SUCCESS:           "The engine completed normally.",
+	C.HS_INVALID:           "A parameter passed to this function was invalid.",
+	C.HS_NOMEM:             "A memory allocation failed.",
+	C.HS_SCAN_TERMINATED:   "The engine was terminated by callback.",
+	C.HS_COMPILER_ERROR:    "The pattern compiler failed.",
+	C.HS_DB_VERSION_ERROR:  "The given database was built for a different version of Hyperscan.",
+	C.HS_DB_PLATFORM_ERROR: "The given database was built for a different platform (i.e., CPU type).",
+	C.HS_DB_MODE_ERROR:     "The given database was built for a different mode of operation.",
+	C.HS_BAD_ALIGN:         "A parameter passed to this function was not correctly aligned.",
+	C.HS_BAD_ALLOC:         "The memory allocator did not correctly return aligned memory.",
+	C.HS_SCRATCH_IN_USE:    "The scratch region was already in use.",
+	C.HS_ARCH_ERROR:        "Unsupported CPU architecture.",
+}
 
 func (e HsError) Error() string {
 	if msg, exists := hsErrorMessages[e]; exists {
@@ -335,9 +333,11 @@ func hsPopulatePlatform() (*hsPlatformInfo, error) {
 	return &hsPlatformInfo{platform}, nil
 }
 
-type hsDatabase *C.hs_database_t
-type hsScratch *C.hs_scratch_t
-type hsStream *C.hs_stream_t
+type (
+	hsDatabase *C.hs_database_t
+	hsScratch  *C.hs_scratch_t
+	hsStream   *C.hs_stream_t
+)
 
 // ExprInfo containing information related to an expression
 type ExprInfo struct {
@@ -510,8 +510,10 @@ func ParseExprExt(s string) (ext *ExprExt, err error) {
 	return
 }
 
-type hsAllocFunc func(uint) unsafe.Pointer
-type hsFreeFunc func(unsafe.Pointer)
+type (
+	hsAllocFunc func(uint) unsafe.Pointer
+	hsFreeFunc  func(unsafe.Pointer)
+)
 
 type hsAllocator struct {
 	Alloc hsAllocFunc
@@ -997,7 +999,6 @@ type hsMatchEventContext struct {
 func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, data unsafe.Pointer) C.int {
 	ctx := Handle(data).Value().(hsMatchEventContext)
 	err := ctx.handler(uint(id), uint64(from), uint64(to), uint(flags), ctx.context)
-
 	if err != nil {
 		return -1
 	}
