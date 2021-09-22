@@ -1,6 +1,7 @@
 package hyperscan
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"runtime"
@@ -1001,13 +1002,21 @@ type hsMatchEventContext struct {
 
 //export hsMatchEventCallback
 func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, data unsafe.Pointer) C.int {
-	ctx := Handle(data).Value().(hsMatchEventContext)
-	err := ctx.handler(uint(id), uint64(from), uint64(to), uint(flags), ctx.context)
-	if err != nil {
-		return -1
+	ctx, ok := Handle(data).Value().(hsMatchEventContext)
+	if !ok {
+		return C.HS_INVALID
 	}
 
-	return 0
+	err := ctx.handler(uint(id), uint64(from), uint64(to), uint(flags), ctx.context)
+	if err != nil {
+		var hsErr HsError
+		if errors.As(err, &hsErr) {
+			return C.int(hsErr)
+		}
+		return C.HS_SCAN_TERMINATED
+	}
+
+	return C.HS_SUCCESS
 }
 
 func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {

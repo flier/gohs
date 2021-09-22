@@ -618,7 +618,10 @@ func (db *streamDatabase) Expand(buf []byte, flags ScanFlag, sc *Scratch, handle
 }
 
 func (db *streamDatabase) ResetAndExpand(s Stream, buf []byte, flags ScanFlag, sc *Scratch, handler MatchHandler, context interface{}) (Stream, error) {
-	ss := s.(*stream)
+	ss, ok := s.(*stream)
+	if !ok {
+		return nil, fmt.Errorf("stream %v, %w", s, ErrUnexpected)
+	}
 
 	ownedScratch := false
 
