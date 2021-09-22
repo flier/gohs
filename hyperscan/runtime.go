@@ -34,7 +34,6 @@ func NewScratch(db Database) (*Scratch, error) {
 // once the object is no longer in use.
 func NewManagedScratch(db Database) (*Scratch, error) {
 	s, err := NewScratch(db)
-
 	if err != nil {
 		return nil, err
 	}

@@ -299,7 +299,6 @@ func NewBlockDatabase(patterns ...*Pattern) (BlockDatabase, error) {
 // freed once the object is no longer in use.
 func NewManagedBlockDatabase(patterns ...*Pattern) (BlockDatabase, error) {
 	db, err := NewBlockDatabase(patterns...)
-
 	if err != nil {
 		return nil, err
 	}
@@ -328,7 +327,6 @@ func NewStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 // freed once the object is no longer in use.
 func NewManagedStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 	db, err := NewStreamDatabase(patterns...)
-
 	if err != nil {
 		return nil, err
 	}

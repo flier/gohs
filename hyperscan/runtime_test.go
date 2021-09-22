@@ -10,16 +10,25 @@ import (
 	"github.com/flier/gohs/hyperscan"
 )
 
-type BlockDatabaseConstructor func(patterns ...*Pattern) (BlockDatabase, error)
-type StreamDatabaseConstructor func(patterns ...*Pattern) (StreamDatabase, error)
+type (
+	BlockDatabaseConstructor  func(patterns ...*hyperscan.Pattern) (hyperscan.BlockDatabase, error)
+	StreamDatabaseConstructor func(patterns ...*hyperscan.Pattern) (hyperscan.StreamDatabase, error)
+)
 
-var blockDatabaseConstructors map[string]BlockDatabaseConstructor = map[string]BlockDatabaseConstructor{"normal": NewBlockDatabase, "managed": NewManagedBlockDatabase}
-var streamDatabaseConstructors map[string]StreamDatabaseConstructor = map[string]StreamDatabaseConstructor{"normal": NewStreamDatabase, "managed": NewManagedStreamDatabase}
+var blockDatabaseConstructors = map[string]BlockDatabaseConstructor{
+	"normal":  hyperscan.NewBlockDatabase,
+	"managed": hyperscan.NewManagedBlockDatabase,
+}
+
+var streamDatabaseConstructors = map[string]StreamDatabaseConstructor{
+	"normal":  hyperscan.NewStreamDatabase,
+	"managed": hyperscan.NewManagedStreamDatabase,
+}
 
 func TestBlockScanner(t *testing.T) {
 	for dbType, dbConstructor := range blockDatabaseConstructors {
 		Convey("Given a "+dbType+" block database", t, func() {
-			bdb, err := dbConstructor(NewPattern(`\d+`, SomLeftMost))
+			bdb, err := dbConstructor(hyperscan.NewPattern(`\d+`, hyperscan.SomLeftMost)) // nolint: scopelint
 
 			So(err, ShouldBeNil)
 			So(bdb, ShouldNotBeNil)
@@ -45,7 +54,7 @@ func TestBlockScanner(t *testing.T) {
 func TestBlockMatcher(t *testing.T) {
 	for dbType, dbConstructor := range blockDatabaseConstructors {
 		Convey("Given a "+dbType+" block database", t, func() {
-			bdb, err := dbConstructor(NewPattern(`\d+`, SomLeftMost))
+			bdb, err := dbConstructor(hyperscan.NewPattern(`\d+`, hyperscan.SomLeftMost)) // nolint: scopelint
 
 			So(err, ShouldBeNil)
 			So(bdb, ShouldNotBeNil)
@@ -85,14 +94,13 @@ func TestBlockMatcher(t *testing.T) {
 					[]string{"123"})
 			})
 		})
-
 	}
 }
 
 func TestStreamScanner(t *testing.T) {
 	for dbType, dbConstructor := range streamDatabaseConstructors {
 		Convey("Given a "+dbType+" streaming database", t, func() {
-			sdb, err := dbConstructor(NewPattern(`abc`, SomLeftMost))
+			sdb, err := dbConstructor(hyperscan.NewPattern(`abc`, hyperscan.SomLeftMost)) // nolint: scopelint
 
 			So(err, ShouldBeNil)
 			So(sdb, ShouldNotBeNil)
@@ -127,7 +135,7 @@ func TestStreamScanner(t *testing.T) {
 func TestStreamMatcher(t *testing.T) {
 	for dbType, dbConstructor := range streamDatabaseConstructors {
 		Convey("Given a "+dbType+" streaming database", t, func() {
-			sdb, err := dbConstructor(NewPattern(`\d+`, SomLeftMost))
+			sdb, err := dbConstructor(hyperscan.NewPattern(`\d+`, hyperscan.SomLeftMost)) // nolint: scopelint
 
 			So(err, ShouldBeNil)
 			So(sdb, ShouldNotBeNil)
@@ -186,7 +194,7 @@ func TestStreamMatcher(t *testing.T) {
 func TestStreamCompressor(t *testing.T) {
 	for dbType, dbConstructor := range streamDatabaseConstructors {
 		Convey("Given a "+dbType+" streaming database", t, func() {
-			sdb, err := dbConstructor(NewPattern(`abc`, SomLeftMost))
+			sdb, err := dbConstructor(hyperscan.NewPattern(`abc`, hyperscan.SomLeftMost)) // nolint: scopelint
 
 			So(err, ShouldBeNil)
 			So(sdb, ShouldNotBeNil)
@@ -194,8 +202,8 @@ func TestStreamCompressor(t *testing.T) {
 			Convey("When open a new stream", func() {
 				var matches [][]uint64
 
-			  matched := func(id uint, from, to uint64, flags uint, context interface{}) error { // nolint: unparam
-  				matches = append(matches, []uint64{from, to})
+				matched := func(id uint, from, to uint64, flags uint, context interface{}) error { // nolint: unparam
+					matches = append(matches, []uint64{from, to})
 					return nil
 				}
 
