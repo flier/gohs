@@ -32,7 +32,8 @@ type BlockDatabase interface {
 }
 
 // StreamDatabase scan the target data to be scanned is a continuous stream,
-// not all of which is available at once; blocks of data are scanned in sequence and matches may span multiple blocks in a stream.
+// not all of which is available at once;
+// blocks of data are scanned in sequence and matches may span multiple blocks in a stream.
 type StreamDatabase interface {
 	Database
 	StreamScanner
@@ -42,12 +43,15 @@ type StreamDatabase interface {
 	StreamSize() (int, error)
 }
 
-// VectoredDatabase scan the target data that consists of a list of non-contiguous blocks that are available all at once.
+// VectoredDatabase scan the target data that consists of a list of non-contiguous blocks
+// that are available all at once.
 type VectoredDatabase interface {
 	Database
 	VectoredScanner
 	VectoredMatcher
 }
+
+const infoMatches = 4
 
 var regexInfo = regexp.MustCompile(`^Version: (\d+\.\d+\.\d+) Features: ([\w\s]+)? Mode: (\w+)$`)
 
@@ -60,7 +64,7 @@ func (i DbInfo) String() string { return string(i) }
 func (i DbInfo) Version() (string, error) {
 	matched := regexInfo.FindStringSubmatch(string(i))
 
-	if len(matched) != 4 {
+	if len(matched) != infoMatches {
 		return "", fmt.Errorf("database info, %w", ErrInvalid)
 	}
 
@@ -71,9 +75,10 @@ func (i DbInfo) Version() (string, error) {
 func (i DbInfo) Mode() (ModeFlag, error) {
 	matched := regexInfo.FindStringSubmatch(string(i))
 
-	if len(matched) != 4 {
+	if len(matched) != infoMatches {
 		return 0, fmt.Errorf("database info, %w", ErrInvalid)
 	}
+
 	return ParseModeFlag(matched[3])
 }
 

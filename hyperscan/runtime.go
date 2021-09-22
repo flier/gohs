@@ -362,8 +362,10 @@ func (m *blockMatcher) scan(data []byte) error {
 	return m.blockScanner.Scan(data, nil, m.Handle, nil)
 }
 
+const findIndexMatches = 2
+
 func (m *blockMatcher) Find(data []byte) []byte {
-	if loc := m.FindIndex(data); len(loc) == 2 {
+	if loc := m.FindIndex(data); len(loc) == findIndexMatches {
 		return data[loc[0]:loc[1]]
 	}
 
@@ -494,7 +496,7 @@ func (m *streamMatcher) scan(reader io.Reader) error {
 }
 
 func (m *streamMatcher) read(reader io.ReadSeeker, loc []int) ([]byte, error) {
-	if len(loc) != 2 {
+	if len(loc) != findIndexMatches {
 		return nil, fmt.Errorf("location, %w", ErrInvalid)
 	}
 
@@ -519,6 +521,7 @@ func (m *streamMatcher) read(reader io.ReadSeeker, loc []int) ([]byte, error) {
 
 func (m *streamMatcher) Find(reader io.ReadSeeker) []byte {
 	loc := m.FindIndex(reader)
+
 	buf, err := m.read(reader, loc)
 	if err != nil {
 		return nil

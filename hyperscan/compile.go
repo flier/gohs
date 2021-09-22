@@ -112,12 +112,13 @@ func ParsePattern(s string) (*Pattern, error) {
 
 	i := strings.Index(s, ":/")
 	j := strings.LastIndex(s, "/")
+
 	if i > 0 && j > i+1 {
-		id, err := strconv.ParseInt(s[:i], 10, 32)
+		id, err := strconv.Atoi(s[:i])
 		if err != nil {
 			return nil, fmt.Errorf("invalid pattern id `%s`, %w", s[:i], ErrInvalid)
 		}
-		p.Id = int(id)
+		p.Id = id
 		s = s[i+1:]
 	}
 
@@ -130,6 +131,7 @@ func ParsePattern(s string) (*Pattern, error) {
 			if err != nil {
 				return nil, fmt.Errorf("invalid expression extensions `%s`, %w", s[n:], err)
 			}
+
 			p.ext = ext
 			s = s[:n]
 		}
@@ -138,6 +140,7 @@ func ParsePattern(s string) (*Pattern, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid pattern flags `%s`, %w", s, err)
 		}
+
 		p.Flags = flags
 	} else {
 		p.Expression = Expression(s)

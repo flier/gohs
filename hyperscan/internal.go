@@ -443,21 +443,27 @@ func (ext *ExprExt) String() string {
 	if (ext.Flags & ExtMinOffset) == ExtMinOffset {
 		values = append(values, fmt.Sprintf("min_offset=%d", ext.MinOffset))
 	}
+
 	if (ext.Flags & ExtMaxOffset) == ExtMaxOffset {
 		values = append(values, fmt.Sprintf("max_offset=%d", ext.MaxOffset))
 	}
+
 	if (ext.Flags & ExtMinLength) == ExtMinLength {
 		values = append(values, fmt.Sprintf("min_length=%d", ext.MinLength))
 	}
+
 	if (ext.Flags & ExtEditDistance) == ExtEditDistance {
 		values = append(values, fmt.Sprintf("edit_distance=%d", ext.EditDistance))
 	}
+
 	if (ext.Flags & ExtHammingDistance) == ExtHammingDistance {
 		values = append(values, fmt.Sprintf("hamming_distance=%d", ext.HammingDistance))
 	}
 
 	return "{" + strings.Join(values, ",") + "}"
 }
+
+const keyValuePair = 2
 
 // ParseExprExt parse containing additional parameters from string
 func ParseExprExt(s string) (ext *ExprExt, err error) {
@@ -468,33 +474,33 @@ func ParseExprExt(s string) (ext *ExprExt, err error) {
 	}
 
 	for _, s := range strings.Split(s, ",") {
-		parts := strings.SplitN(s, "=", 2)
+		parts := strings.SplitN(s, "=", keyValuePair)
 
-		if len(parts) != 2 {
+		if len(parts) != keyValuePair {
 			continue
 		}
 
 		key := strings.ToLower(parts[0])
 		value := parts[1]
 
-		var n uint64
-		n, err = strconv.ParseUint(value, 10, 64)
-		if err != nil {
+		var n int
+
+		if n, err = strconv.Atoi(value); err != nil {
 			return
 		}
 
 		switch key {
 		case "min_offset":
 			ext.Flags |= ExtMinOffset
-			ext.MinOffset = n
+			ext.MinOffset = uint64(n)
 
 		case "max_offset":
 			ext.Flags |= ExtMaxOffset
-			ext.MaxOffset = n
+			ext.MaxOffset = uint64(n)
 
 		case "min_length":
 			ext.Flags |= ExtMinLength
-			ext.MinLength = n
+			ext.MinLength = uint64(n)
 
 		case "edit_distance":
 			ext.Flags |= ExtEditDistance
