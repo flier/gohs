@@ -1,9 +1,9 @@
+//go:build !hyperscan_v4
 // +build !hyperscan_v4
 
 package hyperscan
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -15,6 +15,7 @@ type Literals []*Literal
 // A character sequence is regarded as a pure literal if and
 // only if each character is read and interpreted independently.
 // No syntax association happens between any adjacent characters.
+// nolint: golint,revive,stylecheck
 type Literal struct {
 	Expression             // The expression to parse.
 	Flags      CompileFlag // Flags which modify the behaviour of the expression.
@@ -42,7 +43,6 @@ func (lit *Literal) IsValid() bool {
 func (lit *Literal) Info() (*ExprInfo, error) {
 	if lit.info == nil {
 		info, err := hsExpressionInfo(string(lit.Expression), lit.Flags)
-
 		if err != nil {
 			return nil, err
 		}
@@ -81,11 +81,11 @@ func ParseLiteral(s string) (*Literal, error) {
 	i := strings.Index(s, ":/")
 	j := strings.LastIndex(s, "/")
 	if i > 0 && j > i+1 {
-		id, err := strconv.ParseInt(s[:i], 10, 32)
+		id, err := strconv.Atoi(s[:i])
 		if err != nil {
-			return nil, errors.New("invalid pattern id: " + s[:i])
+			return nil, fmt.Errorf("invalid pattern id `%s`, %w", s[:i], ErrInvalid)
 		}
-		lit.Id = int(id)
+		lit.Id = id
 		s = s[i+1:]
 	}
 
@@ -95,7 +95,7 @@ func ParseLiteral(s string) (*Literal, error) {
 
 		flags, err := ParseCompileFlag(s)
 		if err != nil {
-			return nil, fmt.Errorf("invalid pattern flags: %s, %w", s, err)
+			return nil, fmt.Errorf("invalid pattern flags `%s`, %w", s, err)
 		}
 		lit.Flags = flags
 	} else {
@@ -104,7 +104,7 @@ func ParseLiteral(s string) (*Literal, error) {
 
 	info, err := hsExpressionInfo(string(lit.Expression), lit.Flags)
 	if err != nil {
-		return nil, fmt.Errorf("invalid pattern: %s, %w", lit.Expression, err)
+		return nil, fmt.Errorf("invalid pattern `%s`, %w", lit.Expression, err)
 	}
 	lit.info = info
 
@@ -129,21 +129,20 @@ func (lit *Literal) ForPlatform(mode ModeFlag, platform Platform) (Database, err
 	p, _ := platform.(*hsPlatformInfo)
 
 	db, err := hsCompileLit(string(lit.Expression), lit.Flags, mode, p)
-
 	if err != nil {
 		return nil, err
 	}
 
 	switch mode & ModeMask {
 	case StreamMode:
-		return newStreamDatabase(db)
+		return newStreamDatabase(db), nil
 	case VectoredMode:
-		return newVectoredDatabase(db)
+		return newVectoredDatabase(db), nil
 	case BlockMode:
-		return newBlockDatabase(db)
+		return newBlockDatabase(db), nil
 	}
 
-	return nil, errors.New("unknown mode")
+	return nil, fmt.Errorf("mode %d, %w", mode, ErrUnexpected)
 }
 
 func (literals Literals) Build(mode ModeFlag) (Database, error) {
@@ -170,19 +169,18 @@ func (literals Literals) ForPlatform(mode ModeFlag, platform Platform) (Database
 	p, _ := platform.(*hsPlatformInfo)
 
 	db, err := hsCompileLitMulti(literals, mode, p)
-
 	if err != nil {
 		return nil, err
 	}
 
 	switch mode & ModeMask {
 	case StreamMode:
-		return newStreamDatabase(db)
+		return newStreamDatabase(db), nil
 	case VectoredMode:
-		return newVectoredDatabase(db)
+		return newVectoredDatabase(db), nil
 	case BlockMode:
-		return newBlockDatabase(db)
+		return newBlockDatabase(db), nil
 	}
 
-	return nil, errors.New("unknown mode")
+	return nil, fmt.Errorf("mode %d, %w", mode, ErrUnexpected)
 }

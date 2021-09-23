@@ -7,9 +7,9 @@ package hyperscan
 #include <hs.h>
 */
 import "C"
+
 import (
 	"fmt"
-	"reflect"
 	"unsafe"
 )
 
@@ -36,23 +36,23 @@ func hsCompileLit(expression string, flags CompileFlag, mode ModeFlag, info *hsP
 
 	expr := C.CString(expression)
 
+	defer C.free(unsafe.Pointer(expr))
+
 	ret := C.hs_compile_lit(expr, C.uint(flags), C.ulong(len(expression)), C.uint(mode), platform, &db, &err)
-
-	C.free(unsafe.Pointer(expr))
-
-	if ret == C.HS_SUCCESS {
-		return db, nil
-	}
 
 	if err != nil {
 		defer C.hs_free_compile_error(err)
+	}
+
+	if ret == C.HS_SUCCESS {
+		return db, nil
 	}
 
 	if ret == C.HS_COMPILER_ERROR && err != nil {
 		return nil, &compileError{C.GoString(err.message), int(err.expression)}
 	}
 
-	return nil, fmt.Errorf("compile error, %d", int(ret))
+	return nil, fmt.Errorf("compile error %d, %w", int(ret), ErrCompileError)
 }
 
 func hsCompileLitMulti(literals []*Literal, mode ModeFlag, info *hsPlatformInfo) (hsDatabase, error) {
@@ -66,37 +66,21 @@ func hsCompileLitMulti(literals []*Literal, mode ModeFlag, info *hsPlatformInfo)
 
 	count := len(literals)
 
-	cexprs := (**C.char)(C.calloc(C.size_t(count), C.size_t(unsafe.Sizeof(uintptr(0)))))
-	exprs := *(*[]*C.char)(unsafe.Pointer(&reflect.SliceHeader{
-		Data: uintptr(unsafe.Pointer(cexprs)),
-		Len:  count,
-		Cap:  count,
-	}))
+	cexprs := (**C.char)(C.calloc(C.size_t(len(literals)), C.size_t(unsafe.Sizeof(uintptr(0)))))
+	exprs := (*[1 << 30]*C.char)(unsafe.Pointer(cexprs))[:len(literals):len(literals)]
 
-	clens := (*C.size_t)(C.calloc(C.size_t(count), C.size_t(unsafe.Sizeof(C.size_t(0)))))
-	lens := *(*[]C.size_t)(unsafe.Pointer(&reflect.SliceHeader{
-		Data: uintptr(unsafe.Pointer(clens)),
-		Len:  count,
-		Cap:  count,
-	}))
+	clens := (*C.size_t)(C.calloc(C.size_t(len(literals)), C.size_t(unsafe.Sizeof(uintptr(0)))))
+	lens := (*[1 << 30]C.size_t)(unsafe.Pointer(clens))[:len(literals):len(literals)]
 
-	cflags := (*C.uint)(C.calloc(C.size_t(count), C.size_t(unsafe.Sizeof(C.uint(0)))))
-	flags := *(*[]C.uint)(unsafe.Pointer(&reflect.SliceHeader{
-		Data: uintptr(unsafe.Pointer(cflags)),
-		Len:  count,
-		Cap:  count,
-	}))
+	cflags := (*C.uint)(C.calloc(C.size_t(len(literals)), C.size_t(unsafe.Sizeof(C.uint(0)))))
+	flags := (*[1 << 30]C.uint)(unsafe.Pointer(cflags))[:len(literals):len(literals)]
 
-	cids := (*C.uint)(C.calloc(C.size_t(count), C.size_t(unsafe.Sizeof(C.uint(0)))))
-	ids := *(*[]C.uint)(unsafe.Pointer(&reflect.SliceHeader{
-		Data: uintptr(unsafe.Pointer(cids)),
-		Len:  count,
-		Cap:  count,
-	}))
+	cids := (*C.uint)(C.calloc(C.size_t(len(literals)), C.size_t(unsafe.Sizeof(C.uint(0)))))
+	ids := (*[1 << 30]C.uint)(unsafe.Pointer(cids))[:len(literals):len(literals)]
 
 	for i, lit := range literals {
 		exprs[i] = C.CString(string(lit.Expression))
-		lens[i] = C.ulong(len(lit.Expression))
+		lens[i] = C.size_t(len(lit.Expression))
 		flags[i] = C.uint(lit.Flags)
 		ids[i] = C.uint(lit.Id)
 	}
@@ -124,5 +108,5 @@ func hsCompileLitMulti(literals []*Literal, mode ModeFlag, info *hsPlatformInfo)
 		return nil, &compileError{C.GoString(err.message), int(err.expression)}
 	}
 
-	return nil, fmt.Errorf("compile error, %d", int(ret))
+	return nil, fmt.Errorf("compile error %d, %w", int(ret), ErrCompileError)
 }
