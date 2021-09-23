@@ -36,8 +36,12 @@ type Pattern struct {
 }
 
 // NewPattern returns a new pattern base on expression and compile flags.
-func NewPattern(expr string, flags CompileFlag) *Pattern {
-	return &Pattern{Expression: Expression(expr), Flags: flags}
+func NewPattern(expr string, flags ...CompileFlag) *Pattern {
+	var v CompileFlag
+	for _, f := range flags {
+		v |= f
+	}
+	return &Pattern{Expression: Expression(expr), Flags: v}
 }
 
 // IsValid validate the pattern contains a regular expression.
@@ -210,7 +214,31 @@ func PopulatePlatform() Platform {
 	return platform
 }
 
-// DatabaseBuilder is a type to help to build up a database.
+type Builder interface {
+	Build(mode ModeFlag) (Database, error)
+
+	ForPlatform(mode ModeFlag, platform Platform) (Database, error)
+}
+
+func (p *Pattern) Build(mode ModeFlag) (Database, error) {
+	return p.ForPlatform(mode, nil)
+}
+
+func (p *Pattern) ForPlatform(mode ModeFlag, platform Platform) (Database, error) {
+	b := DatabaseBuilder{Patterns: []*Pattern{p}, Mode: mode, Platform: platform}
+	return b.Build()
+}
+
+func (p Patterns) Build(mode ModeFlag) (Database, error) {
+	return p.ForPlatform(mode, nil)
+}
+
+func (p Patterns) ForPlatform(mode ModeFlag, platform Platform) (Database, error) {
+	b := DatabaseBuilder{Patterns: p, Mode: mode, Platform: platform}
+	return b.Build()
+}
+
+// DatabaseBuilder to help to build up a database.
 type DatabaseBuilder struct {
 	// Array of patterns to compile.
 	Patterns []*Pattern
@@ -284,9 +312,7 @@ func (b *DatabaseBuilder) Build() (Database, error) {
 
 // NewBlockDatabase create a block database base on the patterns.
 func NewBlockDatabase(patterns ...*Pattern) (BlockDatabase, error) {
-	builder := &DatabaseBuilder{Patterns: patterns, Mode: BlockMode}
-
-	db, err := builder.Build()
+	db, err := Patterns(patterns).Build(BlockMode)
 	if err != nil {
 		return nil, err
 	}
@@ -312,9 +338,7 @@ func NewManagedBlockDatabase(patterns ...*Pattern) (BlockDatabase, error) {
 
 // NewStreamDatabase create a stream database base on the patterns.
 func NewStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
-	builder := &DatabaseBuilder{Patterns: patterns, Mode: StreamMode}
-
-	db, err := builder.Build()
+	db, err := Patterns(patterns).Build(StreamMode)
 	if err != nil {
 		return nil, err
 	}
@@ -340,9 +364,7 @@ func NewManagedStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 
 // NewMediumStreamDatabase create a medium-sized stream database base on the patterns.
 func NewMediumStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
-	builder := &DatabaseBuilder{Patterns: patterns, Mode: StreamMode | SomHorizonMediumMode}
-
-	db, err := builder.Build()
+	db, err := Patterns(patterns).Build(StreamMode | SomHorizonMediumMode)
 	if err != nil {
 		return nil, err
 	}
@@ -352,9 +374,7 @@ func NewMediumStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 
 // NewLargeStreamDatabase create a large-sized stream database base on the patterns.
 func NewLargeStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
-	builder := &DatabaseBuilder{Patterns: patterns, Mode: StreamMode | SomHorizonLargeMode}
-
-	db, err := builder.Build()
+	db, err := Patterns(patterns).Build(StreamMode | SomHorizonLargeMode)
 	if err != nil {
 		return nil, err
 	}
@@ -364,9 +384,7 @@ func NewLargeStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 
 // NewVectoredDatabase create a vectored database base on the patterns.
 func NewVectoredDatabase(patterns ...*Pattern) (VectoredDatabase, error) {
-	builder := &DatabaseBuilder{Patterns: patterns, Mode: VectoredMode}
-
-	db, err := builder.Build()
+	db, err := Patterns(patterns).Build(VectoredMode)
 	if err != nil {
 		return nil, err
 	}
