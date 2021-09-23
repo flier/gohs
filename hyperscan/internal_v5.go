@@ -14,6 +14,11 @@ import (
 )
 
 const (
+	// ErrUnknown is an unexpected internal error.
+	ErrUnknown HsError = C.HS_UNKNOWN_ERROR
+)
+
+const (
 	// Combination represents logical combination.
 	Combination CompileFlag = C.HS_FLAG_COMBINATION
 	// Quiet represents don't do any match reporting.
@@ -21,6 +26,8 @@ const (
 )
 
 func init() {
+	hsErrorMessages[C.HS_UNKNOWN_ERROR] = "Unexpected internal error."
+
 	compileFlags['C'] = Combination
 	compileFlags['Q'] = Quiet
 }

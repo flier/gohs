@@ -269,21 +269,24 @@ const (
 	ErrScratchInUse HsError = C.HS_SCRATCH_IN_USE
 	// ErrArchError is the error returned if unsupported CPU architecture.
 	ErrArchError HsError = C.HS_ARCH_ERROR
+	// ErrInsufficientSpace is the error returned if provided buffer was too small.
+	ErrInsufficientSpace HsError = C.HS_INSUFFICIENT_SPACE
 )
 
 var hsErrorMessages = map[HsError]string{
-	C.HS_SUCCESS:           "The engine completed normally.",
-	C.HS_INVALID:           "A parameter passed to this function was invalid.",
-	C.HS_NOMEM:             "A memory allocation failed.",
-	C.HS_SCAN_TERMINATED:   "The engine was terminated by callback.",
-	C.HS_COMPILER_ERROR:    "The pattern compiler failed.",
-	C.HS_DB_VERSION_ERROR:  "The given database was built for a different version of Hyperscan.",
-	C.HS_DB_PLATFORM_ERROR: "The given database was built for a different platform (i.e., CPU type).",
-	C.HS_DB_MODE_ERROR:     "The given database was built for a different mode of operation.",
-	C.HS_BAD_ALIGN:         "A parameter passed to this function was not correctly aligned.",
-	C.HS_BAD_ALLOC:         "The memory allocator did not correctly return aligned memory.",
-	C.HS_SCRATCH_IN_USE:    "The scratch region was already in use.",
-	C.HS_ARCH_ERROR:        "Unsupported CPU architecture.",
+	C.HS_SUCCESS:            "The engine completed normally.",
+	C.HS_INVALID:            "A parameter passed to this function was invalid.",
+	C.HS_NOMEM:              "A memory allocation failed.",
+	C.HS_SCAN_TERMINATED:    "The engine was terminated by callback.",
+	C.HS_COMPILER_ERROR:     "The pattern compiler failed.",
+	C.HS_DB_VERSION_ERROR:   "The given database was built for a different version of Hyperscan.",
+	C.HS_DB_PLATFORM_ERROR:  "The given database was built for a different platform (i.e., CPU type).",
+	C.HS_DB_MODE_ERROR:      "The given database was built for a different mode of operation.",
+	C.HS_BAD_ALIGN:          "A parameter passed to this function was not correctly aligned.",
+	C.HS_BAD_ALLOC:          "The memory allocator did not correctly return aligned memory.",
+	C.HS_SCRATCH_IN_USE:     "The scratch region was already in use.",
+	C.HS_ARCH_ERROR:         "Unsupported CPU architecture.",
+	C.HS_INSUFFICIENT_SPACE: "Provided buffer was too small.",
 }
 
 func (e HsError) Error() string {
