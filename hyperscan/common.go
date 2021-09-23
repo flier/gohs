@@ -1,10 +1,11 @@
 package hyperscan
 
 import (
-	"errors"
+	"fmt"
 	"regexp"
 )
 
+// Database is an immutable database that can be used by the Hyperscan scanning API.
 type Database interface {
 	// Provides information about a database.
 	Info() (DbInfo, error)
@@ -31,7 +32,8 @@ type BlockDatabase interface {
 }
 
 // StreamDatabase scan the target data to be scanned is a continuous stream,
-// not all of which is available at once; blocks of data are scanned in sequence and matches may span multiple blocks in a stream.
+// not all of which is available at once;
+// blocks of data are scanned in sequence and matches may span multiple blocks in a stream.
 type StreamDatabase interface {
 	Database
 	StreamScanner
@@ -41,38 +43,42 @@ type StreamDatabase interface {
 	StreamSize() (int, error)
 }
 
-// VectoredDatabase scan the target data that consists of a list of non-contiguous blocks that are available all at once.
+// VectoredDatabase scan the target data that consists of a list of non-contiguous blocks
+// that are available all at once.
 type VectoredDatabase interface {
 	Database
 	VectoredScanner
 	VectoredMatcher
 }
 
-var (
-	regexInfo = regexp.MustCompile(`^Version: (\d+\.\d+\.\d+) Features: ([\w\s]+)? Mode: (\w+)$`)
-)
+const infoMatches = 4
 
-// The version and platform information for the supplied database
-type DbInfo string
+var regexInfo = regexp.MustCompile(`^Version: (\d+\.\d+\.\d+) Features: ([\w\s]+)? Mode: (\w+)$`)
+
+// DbInfo identify the version and platform information for the supplied database.
+type DbInfo string // nolint: stylecheck
 
 func (i DbInfo) String() string { return string(i) }
 
+// Version is the version for the supplied database.
 func (i DbInfo) Version() (string, error) {
 	matched := regexInfo.FindStringSubmatch(string(i))
 
-	if len(matched) != 4 {
-		return "", errors.New("invalid database info")
+	if len(matched) != infoMatches {
+		return "", fmt.Errorf("database info, %w", ErrInvalid)
 	}
 
 	return matched[1], nil
 }
 
+// Mode is the scanning mode for the supplied database.
 func (i DbInfo) Mode() (ModeFlag, error) {
 	matched := regexInfo.FindStringSubmatch(string(i))
 
-	if len(matched) != 4 {
-		return 0, errors.New("invalid database info")
+	if len(matched) != infoMatches {
+		return 0, fmt.Errorf("database info, %w", ErrInvalid)
 	}
+
 	return ParseModeFlag(matched[3])
 }
 
@@ -98,7 +104,6 @@ func newBaseDatabase(db hsDatabase) *baseDatabase {
 // UnmarshalDatabase reconstruct a pattern database from a stream of bytes.
 func UnmarshalDatabase(data []byte) (Database, error) {
 	db, err := hsDeserializeDatabase(data)
-
 	if err != nil {
 		return nil, err
 	}
@@ -109,34 +114,31 @@ func UnmarshalDatabase(data []byte) (Database, error) {
 // UnmarshalBlockDatabase reconstruct a block database from a stream of bytes.
 func UnmarshalBlockDatabase(data []byte) (BlockDatabase, error) {
 	db, err := hsDeserializeDatabase(data)
-
 	if err != nil {
 		return nil, err
 	}
 
-	return newBlockDatabase(db)
+	return newBlockDatabase(db), nil
 }
 
 // UnmarshalStreamDatabase reconstruct a stream database from a stream of bytes.
 func UnmarshalStreamDatabase(data []byte) (StreamDatabase, error) {
 	db, err := hsDeserializeDatabase(data)
-
 	if err != nil {
 		return nil, err
 	}
 
-	return newStreamDatabase(db)
+	return newStreamDatabase(db), nil
 }
 
 // UnmarshalVectoredDatabase reconstruct a vectored database from a stream of bytes.
 func UnmarshalVectoredDatabase(data []byte) (VectoredDatabase, error) {
 	db, err := hsDeserializeDatabase(data)
-
 	if err != nil {
 		return nil, err
 	}
 
-	return newVectoredDatabase(db)
+	return newVectoredDatabase(db), nil
 }
 
 // SerializedDatabaseSize reports the size that would be required by a database if it were deserialized.
@@ -149,7 +151,7 @@ func SerializedDatabaseInfo(data []byte) (DbInfo, error) {
 	return DbInfo(i), err
 }
 
-func (d *baseDatabase) Db() hsDatabase { return d.db }
+func (d *baseDatabase) Db() hsDatabase { return d.db } // nolint: stylecheck
 
 func (d *baseDatabase) Size() (int, error) { return hsDatabaseSize(d.db) }
 
@@ -169,24 +171,24 @@ type blockDatabase struct {
 	*blockMatcher
 }
 
-func newBlockDatabase(db hsDatabase) (*blockDatabase, error) {
-	return &blockDatabase{newBlockMatcher(newBlockScanner(newBaseDatabase(db)))}, nil
+func newBlockDatabase(db hsDatabase) *blockDatabase {
+	return &blockDatabase{newBlockMatcher(newBlockScanner(newBaseDatabase(db)))}
 }
 
 type streamDatabase struct {
 	*streamMatcher
 }
 
-func newStreamDatabase(db hsDatabase) (*streamDatabase, error) {
-	return &streamDatabase{newStreamMatcher(newStreamScanner(newBaseDatabase(db)))}, nil
+func newStreamDatabase(db hsDatabase) *streamDatabase {
+	return &streamDatabase{newStreamMatcher(newStreamScanner(newBaseDatabase(db)))}
 }
 
-func (d *streamDatabase) StreamSize() (int, error) { return hsStreamSize(d.db) }
+func (db *streamDatabase) StreamSize() (int, error) { return hsStreamSize(db.db) }
 
 type vectoredDatabase struct {
 	*vectoredMatcher
 }
 
-func newVectoredDatabase(db hsDatabase) (*vectoredDatabase, error) {
-	return &vectoredDatabase{newVectoredMatcher(newVectoredScanner(newBaseDatabase(db)))}, nil
+func newVectoredDatabase(db hsDatabase) *vectoredDatabase {
+	return &vectoredDatabase{newVectoredMatcher(newVectoredScanner(newBaseDatabase(db)))}
 }

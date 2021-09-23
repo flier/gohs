@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"unsafe"
+
+	"github.com/flier/gohs/hyperscan/handle"
 )
 
 /*
@@ -24,22 +26,22 @@ import (
 
 static inline void* aligned64_malloc(size_t size) {
 	void* result;
-	#ifdef _WIN32
+#ifdef _WIN32
 	result = _aligned_malloc(size, 64);
-	#else
+#else
 	if (posix_memalign(&result, 64, size)) {
 		result = 0;
 	}
-	#endif
+#endif
 	return result;
 }
 
 static inline void aligned64_free(void *ptr) {
-	#ifdef _WIN32
-		_aligned_free(ptr);
-	#else
-		free(ptr);
-	#endif
+#ifdef _WIN32
+	_aligned_free(ptr);
+#else
+	free(ptr);
+#endif
 }
 
 #define DEFINE_ALLOCTOR(ID, TYPE) \
@@ -58,65 +60,31 @@ DEFINE_ALLOCTOR(Scratch, scratch);
 DEFINE_ALLOCTOR(Stream, stream);
 
 extern int hsMatchEventCallback(unsigned int id, unsigned long long from, unsigned long long to, unsigned int flags, void *context);
-
-static
-int hs_event_callback(unsigned int id, unsigned long long from, unsigned long long to, unsigned int flags, void *context) {
-	return hsMatchEventCallback(id, from, to, flags, context);
-}
-
-static inline
-hs_error_t hs_scan_cgo(const hs_database_t *db, const char * data, unsigned int length,
-					   unsigned int flags, hs_scratch_t * scratch, uintptr_t context) {
-	return hs_scan(db, data, length, flags, scratch, hs_event_callback, (void *) context);
-}
-
-static inline
-hs_error_t hs_scan_vector_cgo(const hs_database_t *db, const char *const *data, const unsigned int *length,
-							  unsigned int count, unsigned int flags, hs_scratch_t *scratch, uintptr_t context) {
-	return hs_scan_vector(db, data, length, count, flags, scratch, hs_event_callback, (void *) context);
-}
-
-static inline
-hs_error_t hs_scan_stream_cgo(hs_stream_t *id, const char * data, unsigned int length,
-							  unsigned int flags, hs_scratch_t *scratch, uintptr_t context) {
-	return hs_scan_stream(id, data, length, flags, scratch, hs_event_callback, (void *) context);
-}
-
-static inline
-hs_error_t hs_close_stream_cgo(hs_stream_t *id, hs_scratch_t *scratch, uintptr_t context) {
-	return hs_close_stream(id, scratch, hs_event_callback, (void *) context);
-}
-
-static inline
-hs_error_t hs_reset_stream_cgo(hs_stream_t *id, unsigned int flags, hs_scratch_t *scratch, uintptr_t context) {
-	return hs_reset_stream(id, flags, scratch, hs_event_callback, (void *) context);
-}
-
-static inline
-hs_error_t hs_reset_and_copy_stream_cgo(hs_stream_t *to_id, const hs_stream_t *from_id, hs_scratch_t *scratch, uintptr_t context) {
-	return hs_reset_and_copy_stream(to_id, from_id, scratch, hs_event_callback, (void *) context);
-}
-
-static inline
-hs_error_t hs_reset_and_expand_stream_cgo(hs_stream_t *stream, const char *data, unsigned int length, hs_scratch_t *scratch, uintptr_t context) {
-	return hs_reset_and_expand_stream(stream, data, length, scratch, hs_event_callback, (void *) context);
-}
 */
 import "C"
 
-// Pattern flags
+// CompileFlag represents a pattern flag
 type CompileFlag uint
 
 const (
-	Caseless        CompileFlag = C.HS_FLAG_CASELESS     // Set case-insensitive matching.
-	DotAll          CompileFlag = C.HS_FLAG_DOTALL       // Matching a `.` will not exclude newlines.
-	MultiLine       CompileFlag = C.HS_FLAG_MULTILINE    // Set multi-line anchoring.
-	SingleMatch     CompileFlag = C.HS_FLAG_SINGLEMATCH  // Set single-match only mode.
-	AllowEmpty      CompileFlag = C.HS_FLAG_ALLOWEMPTY   // Allow expressions that can match against empty buffers.
-	Utf8Mode        CompileFlag = C.HS_FLAG_UTF8         // Enable UTF-8 mode for this expression.
-	UnicodeProperty CompileFlag = C.HS_FLAG_UCP          // Enable Unicode property support for this expression.
-	PrefilterMode   CompileFlag = C.HS_FLAG_PREFILTER    // Enable prefiltering mode for this expression.
-	SomLeftMost     CompileFlag = C.HS_FLAG_SOM_LEFTMOST // Enable leftmost start of match reporting.
+	// Caseless represents set case-insensitive matching.
+	Caseless CompileFlag = C.HS_FLAG_CASELESS
+	// DotAll represents matching a `.` will not exclude newlines.
+	DotAll CompileFlag = C.HS_FLAG_DOTALL
+	// MultiLine set multi-line anchoring.
+	MultiLine CompileFlag = C.HS_FLAG_MULTILINE
+	// SingleMatch set single-match only mode.
+	SingleMatch CompileFlag = C.HS_FLAG_SINGLEMATCH
+	// AllowEmpty allow expressions that can match against empty buffers.
+	AllowEmpty CompileFlag = C.HS_FLAG_ALLOWEMPTY
+	// Utf8Mode enable UTF-8 mode for this expression.
+	Utf8Mode CompileFlag = C.HS_FLAG_UTF8
+	// UnicodeProperty enable Unicode property support for this expression.
+	UnicodeProperty CompileFlag = C.HS_FLAG_UCP
+	// PrefilterMode enable prefiltering mode for this expression.
+	PrefilterMode CompileFlag = C.HS_FLAG_PREFILTER
+	// SomLeftMost enable leftmost start of match reporting.
+	SomLeftMost CompileFlag = C.HS_FLAG_SOM_LEFTMOST
 )
 
 var compileFlags = map[rune]CompileFlag{
@@ -141,7 +109,7 @@ var deprecatedCompileFlags = map[rune]CompileFlag{
 }
 
 /*
-Parse the compile pattern flags from string
+ParseCompileFlag parse the compile pattern flags from string
 
 	i	Caseless 		Case-insensitive matching
 	s	DotAll			Dot (.) will match newlines
@@ -164,7 +132,7 @@ func ParseCompileFlag(s string) (CompileFlag, error) {
 		} else if flag, exists := deprecatedCompileFlags[c]; exists {
 			flags |= flag
 		} else {
-			return 0, fmt.Errorf("unknown flag `%c`", c)
+			return 0, fmt.Errorf("flag `%c`, %w", c, ErrUnexpected)
 		}
 	}
 
@@ -186,29 +154,40 @@ func (flags CompileFlag) String() string {
 }
 
 // CpuFeature is the CPU feature support flags
-type CpuFeature int
+type CpuFeature int // nolint: golint,stylecheck
 
 const (
-	AVX2   CpuFeature = C.HS_CPU_FEATURES_AVX2   // AVX2 is a CPU features flag indicates that the target platform supports AVX2 instructions.
-	AVX512 CpuFeature = C.HS_CPU_FEATURES_AVX512 // AVX512 is a CPU features flag indicates that the target platform supports AVX512 instructions, specifically AVX-512BW. Using AVX512 implies the use of AVX2.
+	// AVX2 is a CPU features flag indicates that the target platform supports AVX2 instructions.
+	AVX2 CpuFeature = C.HS_CPU_FEATURES_AVX2
+	// AVX512 is a CPU features flag indicates that the target platform supports AVX512 instructions, specifically AVX-512BW. Using AVX512 implies the use of AVX2.
+	AVX512 CpuFeature = C.HS_CPU_FEATURES_AVX512
 )
 
 // TuneFlag is the tuning flags
 type TuneFlag int
 
 const (
-	Generic       TuneFlag = C.HS_TUNE_FAMILY_GENERIC // Genericindicates that the compiled database should not be tuned for any particular target platform.
-	SandyBridge   TuneFlag = C.HS_TUNE_FAMILY_SNB     // SandyBridge indicates that the compiled database should be tuned for the Sandy Bridge microarchitecture.
-	IvyBridge     TuneFlag = C.HS_TUNE_FAMILY_IVB     // IvyBridge indicates that the compiled database should be tuned for the Ivy Bridge microarchitecture.
-	Haswell       TuneFlag = C.HS_TUNE_FAMILY_HSW     // Haswell indicates that the compiled database should be tuned for the Haswell microarchitecture.
-	Silvermont    TuneFlag = C.HS_TUNE_FAMILY_SLM     // Silvermont indicates that the compiled database should be tuned for the Silvermont microarchitecture.
-	Broadwell     TuneFlag = C.HS_TUNE_FAMILY_BDW     // Broadwell indicates that the compiled database should be tuned for the Broadwell microarchitecture.
-	Skylake       TuneFlag = C.HS_TUNE_FAMILY_SKL     // Skylake indicates that the compiled database should be tuned for the Skylake microarchitecture.
-	SkylakeServer TuneFlag = C.HS_TUNE_FAMILY_SKX     // SkylakeServer indicates that the compiled database should be tuned for the Skylake Server microarchitecture.
-	Goldmont      TuneFlag = C.HS_TUNE_FAMILY_GLM     // Goldmont indicates that the compiled database should be tuned for the Goldmont microarchitecture.
+	// Generic indicates that the compiled database should not be tuned for any particular target platform.
+	Generic TuneFlag = C.HS_TUNE_FAMILY_GENERIC
+	// SandyBridge indicates that the compiled database should be tuned for the Sandy Bridge microarchitecture.
+	SandyBridge TuneFlag = C.HS_TUNE_FAMILY_SNB
+	// IvyBridge indicates that the compiled database should be tuned for the Ivy Bridge microarchitecture.
+	IvyBridge TuneFlag = C.HS_TUNE_FAMILY_IVB
+	// Haswell indicates that the compiled database should be tuned for the Haswell microarchitecture.
+	Haswell TuneFlag = C.HS_TUNE_FAMILY_HSW
+	// Silvermont indicates that the compiled database should be tuned for the Silvermont microarchitecture.
+	Silvermont TuneFlag = C.HS_TUNE_FAMILY_SLM
+	// Broadwell indicates that the compiled database should be tuned for the Broadwell microarchitecture.
+	Broadwell TuneFlag = C.HS_TUNE_FAMILY_BDW
+	// Skylake indicates that the compiled database should be tuned for the Skylake microarchitecture.
+	Skylake TuneFlag = C.HS_TUNE_FAMILY_SKL
+	// SkylakeServer indicates that the compiled database should be tuned for the Skylake Server microarchitecture.
+	SkylakeServer TuneFlag = C.HS_TUNE_FAMILY_SKX
+	// Goldmont indicates that the compiled database should be tuned for the Goldmont microarchitecture.
+	Goldmont TuneFlag = C.HS_TUNE_FAMILY_GLM
 )
 
-// Compile mode flags
+// ModeFlag represents the compile mode flags
 type ModeFlag uint
 
 const (
@@ -226,9 +205,9 @@ const (
 	SomHorizonMediumMode ModeFlag = C.HS_MODE_SOM_HORIZON_MEDIUM
 	// SomHorizonSmallMode use limited precision to track start of match offsets in stream state. (within 2^16 bytes)
 	SomHorizonSmallMode ModeFlag = C.HS_MODE_SOM_HORIZON_SMALL
+	// ModeMask represents the mask of database mode
+	ModeMask ModeFlag = 0xFF
 )
-
-const ModeMask ModeFlag = 0xFF
 
 var modeFlags = map[string]ModeFlag{
 	"STREAM":   StreamMode,
@@ -237,12 +216,13 @@ var modeFlags = map[string]ModeFlag{
 	"BLOCK":    BlockMode,
 }
 
+// ParseModeFlag parse a database mode from string
 func ParseModeFlag(s string) (ModeFlag, error) {
 	if mode, exists := modeFlags[strings.ToUpper(s)]; exists {
 		return mode, nil
 	}
 
-	return BlockMode, errors.New("Unknown Mode: " + s)
+	return BlockMode, fmt.Errorf("database mode %s, %w", s, ErrUnexpected)
 }
 
 func (m ModeFlag) String() string {
@@ -258,52 +238,53 @@ func (m ModeFlag) String() string {
 	}
 }
 
-// ExtFlag are used in ExprExt.Flags to indicate which fields are used.
-type ExtFlag uint
-
-const (
-	MinOffset       ExtFlag = C.HS_EXT_FLAG_MIN_OFFSET       // MinOffset is a flag indicating that the ExprExt.MinOffset field is used.
-	MaxOffset       ExtFlag = C.HS_EXT_FLAG_MAX_OFFSET       // MaxOffset is a flag indicating that the ExprExt.MaxOffset field is used.
-	MinLength       ExtFlag = C.HS_EXT_FLAG_MIN_LENGTH       // MinLength is a flag indicating that the ExprExt.MinLength field is used.
-	EditDistance    ExtFlag = C.HS_EXT_FLAG_EDIT_DISTANCE    // EditDistance is a flag indicating that the ExprExt.EditDistance field is used.
-	HammingDistance ExtFlag = C.HS_EXT_FLAG_HAMMING_DISTANCE // HammingDistance is a flag indicating that the ExprExt.HammingDistance field is used.
-)
-
+// ScanFlag represents a scan flag
 type ScanFlag uint
 
+// HsError represents an error
 type HsError int
 
 const (
-	ErrSuccess               HsError = C.HS_SUCCESS           // ErrSuccess is the error returned if the engine completed normally.
-	ErrInvalid               HsError = C.HS_INVALID           // ErrInvalid is the error returned if a parameter passed to this function was invalid.
-	ErrNoMemory              HsError = C.HS_NOMEM             // ErrNoMemory is the error returned if a memory allocation failed.
-	ErrScanTerminated        HsError = C.HS_SCAN_TERMINATED   // ErrScanTerminated is the error returned if the engine was terminated by callback.
-	ErrCompileError          HsError = C.HS_COMPILER_ERROR    // ErrCompileError is the error returned if the pattern compiler failed.
-	ErrDatabaseVersionError  HsError = C.HS_DB_VERSION_ERROR  // ErrDatabaseVersionError is the error returned if the given database was built for a different version of Hyperscan.
-	ErrDatabasePlatformError HsError = C.HS_DB_PLATFORM_ERROR // ErrDatabasePlatformError is the error returned if the given database was built for a different platform (i.e., CPU type).
-	ErrDatabaseModeError     HsError = C.HS_DB_MODE_ERROR     // ErrDatabaseModeError is the error returned if the given database was built for a different mode of operation.
-	ErrBadAlign              HsError = C.HS_BAD_ALIGN         // ErrBadAlign is the error returned if a parameter passed to this function was not correctly aligned.
-	ErrBadAlloc              HsError = C.HS_BAD_ALLOC         // ErrBadAlloc is the error returned if the memory allocator did not correctly return memory suitably aligned.
-	ErrScratchInUse          HsError = C.HS_SCRATCH_IN_USE    // ErrScratchInUse is the error returned if the scratch region was already in use.
-	ErrArchError             HsError = C.HS_ARCH_ERROR        // ErrArchError is the error returned if unsupported CPU architecture.
+	// ErrSuccess is the error returned if the engine completed normally.
+	ErrSuccess HsError = C.HS_SUCCESS
+	// ErrInvalid is the error returned if a parameter passed to this function was invalid.
+	ErrInvalid HsError = C.HS_INVALID
+	// ErrNoMemory is the error returned if a memory allocation failed.
+	ErrNoMemory HsError = C.HS_NOMEM
+	// ErrScanTerminated is the error returned if the engine was terminated by callback.
+	ErrScanTerminated HsError = C.HS_SCAN_TERMINATED
+	// ErrCompileError is the error returned if the pattern compiler failed.
+	ErrCompileError HsError = C.HS_COMPILER_ERROR
+	// ErrDatabaseVersionError is the error returned if the given database was built for a different version of Hyperscan.
+	ErrDatabaseVersionError HsError = C.HS_DB_VERSION_ERROR
+	// ErrDatabasePlatformError is the error returned if the given database was built for a different platform (i.e., CPU type).
+	ErrDatabasePlatformError HsError = C.HS_DB_PLATFORM_ERROR
+	// ErrDatabaseModeError is the error returned if the given database was built for a different mode of operation.
+	ErrDatabaseModeError HsError = C.HS_DB_MODE_ERROR
+	// ErrBadAlign is the error returned if a parameter passed to this function was not correctly aligned.
+	ErrBadAlign HsError = C.HS_BAD_ALIGN
+	// ErrBadAlloc is the error returned if the memory allocator did not correctly return memory suitably aligned.
+	ErrBadAlloc HsError = C.HS_BAD_ALLOC
+	// ErrScratchInUse is the error returned if the scratch region was already in use.
+	ErrScratchInUse HsError = C.HS_SCRATCH_IN_USE
+	// ErrArchError is the error returned if unsupported CPU architecture.
+	ErrArchError HsError = C.HS_ARCH_ERROR
 )
 
-var (
-	hsErrorMessages = map[HsError]string{
-		C.HS_SUCCESS:           "The engine completed normally.",
-		C.HS_INVALID:           "A parameter passed to this function was invalid.",
-		C.HS_NOMEM:             "A memory allocation failed.",
-		C.HS_SCAN_TERMINATED:   "The engine was terminated by callback.",
-		C.HS_COMPILER_ERROR:    "The pattern compiler failed.",
-		C.HS_DB_VERSION_ERROR:  "The given database was built for a different version of Hyperscan.",
-		C.HS_DB_PLATFORM_ERROR: "The given database was built for a different platform (i.e., CPU type).",
-		C.HS_DB_MODE_ERROR:     "The given database was built for a different mode of operation.",
-		C.HS_BAD_ALIGN:         "A parameter passed to this function was not correctly aligned.",
-		C.HS_BAD_ALLOC:         "The memory allocator did not correctly return aligned memory.",
-		C.HS_SCRATCH_IN_USE:    "The scratch region was already in use.",
-		C.HS_ARCH_ERROR:        "Unsupported CPU architecture.",
-	}
-)
+var hsErrorMessages = map[HsError]string{
+	C.HS_SUCCESS:           "The engine completed normally.",
+	C.HS_INVALID:           "A parameter passed to this function was invalid.",
+	C.HS_NOMEM:             "A memory allocation failed.",
+	C.HS_SCAN_TERMINATED:   "The engine was terminated by callback.",
+	C.HS_COMPILER_ERROR:    "The pattern compiler failed.",
+	C.HS_DB_VERSION_ERROR:  "The given database was built for a different version of Hyperscan.",
+	C.HS_DB_PLATFORM_ERROR: "The given database was built for a different platform (i.e., CPU type).",
+	C.HS_DB_MODE_ERROR:     "The given database was built for a different mode of operation.",
+	C.HS_BAD_ALIGN:         "A parameter passed to this function was not correctly aligned.",
+	C.HS_BAD_ALLOC:         "The memory allocator did not correctly return aligned memory.",
+	C.HS_SCRATCH_IN_USE:    "The scratch region was already in use.",
+	C.HS_ARCH_ERROR:        "Unsupported CPU architecture.",
+}
 
 func (e HsError) Error() string {
 	if msg, exists := hsErrorMessages[e]; exists {
@@ -329,9 +310,11 @@ type hsPlatformInfo struct {
 	platform C.struct_hs_platform_info
 }
 
+// Tune returns the tuning flags of the platform.
 func (i *hsPlatformInfo) Tune() TuneFlag { return TuneFlag(i.platform.tune) }
 
-func (i *hsPlatformInfo) CpuFeatures() CpuFeature { return CpuFeature(i.platform.cpu_features) }
+// CpuFeatures returns the CPU features of the platform.
+func (i *hsPlatformInfo) CpuFeatures() CpuFeature { return CpuFeature(i.platform.cpu_features) } // nolint: golint,stylecheck
 
 func newPlatformInfo(tune TuneFlag, cpu CpuFeature) *hsPlatformInfo {
 	var platform C.struct_hs_platform_info
@@ -352,11 +335,13 @@ func hsPopulatePlatform() (*hsPlatformInfo, error) {
 	return &hsPlatformInfo{platform}, nil
 }
 
-type hsDatabase *C.hs_database_t
-type hsScratch *C.hs_scratch_t
-type hsStream *C.hs_stream_t
+type (
+	hsDatabase *C.hs_database_t
+	hsScratch  *C.hs_scratch_t
+	hsStream   *C.hs_stream_t
+)
 
-// A type containing information related to an expression
+// ExprInfo containing information related to an expression
 type ExprInfo struct {
 	MinWidth        uint // The minimum length in bytes of a match for the pattern.
 	MaxWidth        uint // The maximum length in bytes of a match for the pattern.
@@ -365,7 +350,7 @@ type ExprInfo struct {
 	OnlyAtEndOfData bool // Whether this expression can *only* produce matches at end of data (EOD).
 }
 
-// If the pattern expression has an unbounded maximum width
+// UnboundedMaxWidth represents the pattern expression has an unbounded maximum width
 const UnboundedMaxWidth = C.UINT_MAX
 
 func newExprInfo(info *C.hs_expr_info_t) *ExprInfo {
@@ -378,78 +363,113 @@ func newExprInfo(info *C.hs_expr_info_t) *ExprInfo {
 	}
 }
 
+// ExtFlag are used in ExprExt.Flags to indicate which fields are used.
+type ExtFlag uint64
+
+const (
+	// ExtMinOffset is a flag indicating that the ExprExt.MinOffset field is used.
+	ExtMinOffset ExtFlag = C.HS_EXT_FLAG_MIN_OFFSET
+	// ExtMaxOffset is a flag indicating that the ExprExt.MaxOffset field is used.
+	ExtMaxOffset ExtFlag = C.HS_EXT_FLAG_MAX_OFFSET
+	// ExtMinLength is a flag indicating that the ExprExt.MinLength field is used.
+	ExtMinLength ExtFlag = C.HS_EXT_FLAG_MIN_LENGTH
+	// ExtEditDistance is a flag indicating that the ExprExt.EditDistance field is used.
+	ExtEditDistance ExtFlag = C.HS_EXT_FLAG_EDIT_DISTANCE
+	// ExtHammingDistance is a flag indicating that the ExprExt.HammingDistance field is used.
+	ExtHammingDistance ExtFlag = C.HS_EXT_FLAG_HAMMING_DISTANCE
+)
+
+// Ext is a option containing additional parameters related to an expression.
+type Ext func(ext *ExprExt)
+
+// MinOffset given the minimum end offset in the data stream at which this expression should match successfully.
+func MinOffset(n uint64) Ext {
+	return func(ext *ExprExt) {
+		ext.Flags |= ExtMinOffset
+		ext.MinOffset = n
+	}
+}
+
+// MaxOffset given the maximum end offset in the data stream at which this expression should match successfully.
+func MaxOffset(n uint64) Ext {
+	return func(ext *ExprExt) {
+		ext.Flags |= ExtMaxOffset
+		ext.MaxOffset = n
+	}
+}
+
+// MinLength given the minimum match length (from start to end) required to successfully match this expression.
+func MinLength(n uint64) Ext {
+	return func(ext *ExprExt) {
+		ext.Flags |= ExtMinLength
+		ext.MinLength = n
+	}
+}
+
+// EditDistance allow patterns to approximately match within this edit distance.
+func EditDistance(n uint32) Ext {
+	return func(ext *ExprExt) {
+		ext.Flags |= ExtEditDistance
+		ext.EditDistance = n
+	}
+}
+
+// HammingDistance allow patterns to approximately match within this Hamming distance.
+func HammingDistance(n uint32) Ext {
+	return func(ext *ExprExt) {
+		ext.Flags |= ExtHammingDistance
+		ext.HammingDistance = n
+	}
+}
+
 // ExprExt is a structure containing additional parameters related to an expression.
 type ExprExt struct {
 	Flags           ExtFlag // Flags governing which parts of this structure are to be used by the compiler.
-	MinOffset       uint    // The minimum end offset in the data stream at which this expression should match successfully.
-	MaxOffset       uint    // The maximum end offset in the data stream at which this expression should match successfully.
-	MinLength       uint    // The minimum match length (from start to end) required to successfully match this expression.
-	EditDistance    uint    // Allow patterns to approximately match within this edit distance.
-	HammingDistance uint    // Allow patterns to approximately match within this Hamming distance.
+	MinOffset       uint64  // The minimum end offset in the data stream at which this expression should match successfully.
+	MaxOffset       uint64  // The maximum end offset in the data stream at which this expression should match successfully.
+	MinLength       uint64  // The minimum match length (from start to end) required to successfully match this expression.
+	EditDistance    uint32  // Allow patterns to approximately match within this edit distance.
+	HammingDistance uint32  // Allow patterns to approximately match within this Hamming distance.
+}
+
+// With specifies the additional parameters related to an expression.
+func (ext *ExprExt) With(exts ...Ext) *ExprExt {
+	for _, f := range exts {
+		f(ext)
+	}
+
+	return ext
 }
 
 func (ext *ExprExt) String() string {
 	var values []string
 
-	if (ext.Flags & MinOffset) == MinOffset {
+	if (ext.Flags & ExtMinOffset) == ExtMinOffset {
 		values = append(values, fmt.Sprintf("min_offset=%d", ext.MinOffset))
 	}
-	if (ext.Flags & MaxOffset) == MaxOffset {
+
+	if (ext.Flags & ExtMaxOffset) == ExtMaxOffset {
 		values = append(values, fmt.Sprintf("max_offset=%d", ext.MaxOffset))
 	}
-	if (ext.Flags & MinLength) == MinLength {
+
+	if (ext.Flags & ExtMinLength) == ExtMinLength {
 		values = append(values, fmt.Sprintf("min_length=%d", ext.MinLength))
 	}
-	if (ext.Flags & EditDistance) == EditDistance {
+
+	if (ext.Flags & ExtEditDistance) == ExtEditDistance {
 		values = append(values, fmt.Sprintf("edit_distance=%d", ext.EditDistance))
 	}
-	if (ext.Flags & HammingDistance) == HammingDistance {
+
+	if (ext.Flags & ExtHammingDistance) == ExtHammingDistance {
 		values = append(values, fmt.Sprintf("hamming_distance=%d", ext.HammingDistance))
 	}
 
 	return "{" + strings.Join(values, ",") + "}"
 }
 
-func (ext *ExprExt) new_expr_ext() *C.hs_expr_ext_t {
-	e := (*C.hs_expr_ext_t)(C.calloc(1, C.size_t(unsafe.Sizeof(C.hs_expr_ext_t{}))))
+const keyValuePair = 2
 
-	e.flags = C.ulonglong(ext.Flags)
-	e.min_offset = C.ulonglong(ext.MinOffset)
-	e.max_offset = C.ulonglong(ext.MaxOffset)
-	e.min_length = C.ulonglong(ext.MinLength)
-	e.edit_distance = C.uint(ext.EditDistance)
-	e.hamming_distance = C.uint(ext.HammingDistance)
-
-	return e
-}
-
-func newExprExt(ext *C.hs_expr_ext_t) *ExprExt {
-	e := new(ExprExt)
-
-	if (ext.flags & C.HS_EXT_FLAG_MIN_OFFSET) == C.HS_EXT_FLAG_MIN_OFFSET {
-		e.Flags |= MinOffset
-		e.MinOffset = uint(ext.min_offset)
-	}
-	if (ext.flags & C.HS_EXT_FLAG_MAX_OFFSET) == C.HS_EXT_FLAG_MAX_OFFSET {
-		e.Flags |= MaxOffset
-		e.MaxOffset = uint(ext.max_offset)
-	}
-	if (ext.flags & C.HS_EXT_FLAG_MIN_LENGTH) == C.HS_EXT_FLAG_MIN_LENGTH {
-		e.Flags |= MinLength
-		e.MinLength = uint(ext.min_length)
-	}
-	if (ext.flags & C.HS_EXT_FLAG_EDIT_DISTANCE) == C.HS_EXT_FLAG_EDIT_DISTANCE {
-		e.Flags |= EditDistance
-		e.EditDistance = uint(ext.edit_distance)
-	}
-	if (ext.flags & C.HS_EXT_FLAG_HAMMING_DISTANCE) == C.HS_EXT_FLAG_HAMMING_DISTANCE {
-		e.Flags |= HammingDistance
-		e.HammingDistance = uint(ext.hamming_distance)
-	}
-
-	return e
-}
-
+// ParseExprExt parse containing additional parameters from string
 func ParseExprExt(s string) (ext *ExprExt, err error) {
 	ext = new(ExprExt)
 
@@ -458,44 +478,51 @@ func ParseExprExt(s string) (ext *ExprExt, err error) {
 	}
 
 	for _, s := range strings.Split(s, ",") {
-		parts := strings.SplitN(s, "=", 2)
+		parts := strings.SplitN(s, "=", keyValuePair)
 
-		if len(parts) != 2 {
+		if len(parts) != keyValuePair {
 			continue
 		}
 
-		key := parts[0]
+		key := strings.ToLower(parts[0])
 		value := parts[1]
 
-		var n uint64
-		n, err = strconv.ParseUint(value, 10, 64)
-		if err != nil {
+		var n int
+
+		if n, err = strconv.Atoi(value); err != nil {
 			return
 		}
 
-		if key == "min_offset" {
-			ext.Flags |= MinOffset
-			ext.MinOffset = uint(n)
-		} else if key == "max_offset" {
-			ext.Flags |= MaxOffset
-			ext.MaxOffset = uint(n)
-		} else if key == "min_length" {
-			ext.Flags |= MinLength
-			ext.MinLength = uint(n)
-		} else if key == "edit_distance" {
-			ext.Flags |= EditDistance
-			ext.EditDistance = uint(n)
-		} else if key == "hamming_distance" {
-			ext.Flags |= HammingDistance
-			ext.HammingDistance = uint(n)
+		switch key {
+		case "min_offset":
+			ext.Flags |= ExtMinOffset
+			ext.MinOffset = uint64(n)
+
+		case "max_offset":
+			ext.Flags |= ExtMaxOffset
+			ext.MaxOffset = uint64(n)
+
+		case "min_length":
+			ext.Flags |= ExtMinLength
+			ext.MinLength = uint64(n)
+
+		case "edit_distance":
+			ext.Flags |= ExtEditDistance
+			ext.EditDistance = uint32(n)
+
+		case "hamming_distance":
+			ext.Flags |= ExtHammingDistance
+			ext.HammingDistance = uint32(n)
 		}
 	}
 
-	return
+	return // nolint: nakedret
 }
 
-type hsAllocFunc func(uint) unsafe.Pointer
-type hsFreeFunc func(unsafe.Pointer)
+type (
+	hsAllocFunc func(uint) unsafe.Pointer
+	hsFreeFunc  func(unsafe.Pointer)
+)
 
 type hsAllocator struct {
 	Alloc hsAllocFunc
@@ -503,7 +530,6 @@ type hsAllocator struct {
 }
 
 var (
-	defaultAllocator hsAllocator
 	dbAllocator      hsAllocator
 	miscAllocator    hsAllocator
 	scratchAllocator hsAllocator
@@ -674,23 +700,28 @@ func hsValidPlatform() error {
 	return nil
 }
 
-func hsFreeDatabase(db hsDatabase) error {
+func hsFreeDatabase(db hsDatabase) (err error) {
 	if ret := C.hs_free_database(db); ret != C.HS_SUCCESS {
-		return HsError(ret)
+		err = HsError(ret)
 	}
 
-	return nil
+	return
 }
 
-func hsSerializeDatabase(db hsDatabase) ([]byte, error) {
+func hsSerializeDatabase(db hsDatabase) (b []byte, err error) {
 	var data *C.char
 	var length C.size_t
 
-	if ret := C.hs_serialize_database(db, &data, &length); ret != C.HS_SUCCESS {
-		return nil, HsError(ret)
+	ret := C.hs_serialize_database(db, &data, &length)
+	if ret != C.HS_SUCCESS {
+		err = HsError(ret)
+	} else {
+		defer C.free(unsafe.Pointer(data))
+
+		b = C.GoBytes(unsafe.Pointer(data), C.int(length))
 	}
 
-	return C.GoBytes(unsafe.Pointer(data), C.int(length)), nil
+	return
 }
 
 func hsDeserializeDatabase(data []byte) (hsDatabase, error) {
@@ -760,6 +791,8 @@ func hsDatabaseInfo(db hsDatabase) (string, error) {
 		return "", HsError(ret)
 	}
 
+	defer C.free(unsafe.Pointer(info))
+
 	return C.GoString(info), nil
 }
 
@@ -773,6 +806,8 @@ func hsSerializedDatabaseInfo(data []byte) (string, error) {
 	if ret != C.HS_SUCCESS {
 		return "", HsError(ret)
 	}
+
+	defer C.free(unsafe.Pointer(info))
 
 	return C.GoString(info), nil
 }
@@ -788,23 +823,23 @@ func hsCompile(expression string, flags CompileFlag, mode ModeFlag, info *hsPlat
 
 	expr := C.CString(expression)
 
+	defer C.free(unsafe.Pointer(expr))
+
 	ret := C.hs_compile(expr, C.uint(flags), C.uint(mode), platform, &db, &err)
-
-	C.free(unsafe.Pointer(expr))
-
-	if ret == C.HS_SUCCESS {
-		return db, nil
-	}
 
 	if err != nil {
 		defer C.hs_free_compile_error(err)
+	}
+
+	if ret == C.HS_SUCCESS {
+		return db, nil
 	}
 
 	if ret == C.HS_COMPILER_ERROR && err != nil {
 		return nil, &compileError{C.GoString(err.message), int(err.expression)}
 	}
 
-	return nil, fmt.Errorf("compile error, %d", int(ret))
+	return nil, fmt.Errorf("compile error %d, %w", int(ret), ErrCompileError)
 }
 
 func hsCompileMulti(patterns []*Pattern, mode ModeFlag, info *hsPlatformInfo) (hsDatabase, error) {
@@ -816,46 +851,26 @@ func hsCompileMulti(patterns []*Pattern, mode ModeFlag, info *hsPlatformInfo) (h
 		platform = &info.platform
 	}
 
-	count := len(patterns)
+	cexprs := (**C.char)(C.calloc(C.size_t(len(patterns)), C.size_t(unsafe.Sizeof(uintptr(0)))))
+	exprs := (*[1 << 30]*C.char)(unsafe.Pointer(cexprs))[:len(patterns):len(patterns)]
 
-	cexprs := (**C.char)(C.calloc(C.size_t(count), C.size_t(unsafe.Sizeof(uintptr(0)))))
-	exprs := *(*[]*C.char)(unsafe.Pointer(&reflect.SliceHeader{
-		Data: uintptr(unsafe.Pointer(cexprs)),
-		Len:  count,
-		Cap:  count,
-	}))
+	cflags := (*C.uint)(C.calloc(C.size_t(len(patterns)), C.size_t(unsafe.Sizeof(C.uint(0)))))
+	flags := (*[1 << 30]C.uint)(unsafe.Pointer(cflags))[:len(patterns):len(patterns)]
 
-	cflags := (*C.uint)(C.calloc(C.size_t(count), C.size_t(unsafe.Sizeof(C.uint(0)))))
-	flags := *(*[]C.uint)(unsafe.Pointer(&reflect.SliceHeader{
-		Data: uintptr(unsafe.Pointer(cflags)),
-		Len:  count,
-		Cap:  count,
-	}))
+	cids := (*C.uint)(C.calloc(C.size_t(len(patterns)), C.size_t(unsafe.Sizeof(C.uint(0)))))
+	ids := (*[1 << 30]C.uint)(unsafe.Pointer(cids))[:len(patterns):len(patterns)]
 
-	cids := (*C.uint)(C.calloc(C.size_t(count), C.size_t(unsafe.Sizeof(C.uint(0)))))
-	ids := *(*[]C.uint)(unsafe.Pointer(&reflect.SliceHeader{
-		Data: uintptr(unsafe.Pointer(cids)),
-		Len:  count,
-		Cap:  count,
-	}))
-
-	cexts := (**C.hs_expr_ext_t)(C.calloc(C.size_t(count), C.size_t(unsafe.Sizeof(uintptr(0)))))
-	exts := *(*[]*C.hs_expr_ext_t)(unsafe.Pointer(&reflect.SliceHeader{
-		Data: uintptr(unsafe.Pointer(cexts)),
-		Len:  count,
-		Cap:  count,
-	}))
+	cexts := (**C.hs_expr_ext_t)(C.calloc(C.size_t(len(patterns)), C.size_t(unsafe.Sizeof(uintptr(0)))))
+	exts := (*[1 << 30]*C.hs_expr_ext_t)(unsafe.Pointer(cexts))[:len(patterns):len(patterns)]
 
 	for i, pattern := range patterns {
 		exprs[i] = C.CString(string(pattern.Expression))
 		flags[i] = C.uint(pattern.Flags)
 		ids[i] = C.uint(pattern.Id)
-		if pattern.ext != nil {
-			exts[i] = pattern.ext.new_expr_ext()
-		}
+		exts[i] = (*C.hs_expr_ext_t)(unsafe.Pointer(pattern.ext))
 	}
 
-	ret := C.hs_compile_ext_multi(cexprs, cflags, cids, cexts, C.uint(count), C.uint(mode), platform, &db, &err)
+	ret := C.hs_compile_ext_multi(cexprs, cflags, cids, cexts, C.uint(len(patterns)), C.uint(mode), platform, &db, &err)
 
 	for _, expr := range exprs {
 		C.free(unsafe.Pointer(expr))
@@ -863,13 +878,10 @@ func hsCompileMulti(patterns []*Pattern, mode ModeFlag, info *hsPlatformInfo) (h
 
 	C.free(unsafe.Pointer(cexprs))
 	C.free(unsafe.Pointer(cflags))
+	C.free(unsafe.Pointer(cexts))
 	C.free(unsafe.Pointer(cids))
 
-	for _, ext := range exts {
-		if ext != nil {
-			C.free(unsafe.Pointer(ext))
-		}
-	}
+	runtime.KeepAlive(patterns)
 
 	if err != nil {
 		defer C.hs_free_compile_error(err)
@@ -883,86 +895,7 @@ func hsCompileMulti(patterns []*Pattern, mode ModeFlag, info *hsPlatformInfo) (h
 		return nil, &compileError{C.GoString(err.message), int(err.expression)}
 	}
 
-	return nil, fmt.Errorf("compile error, %d", int(ret))
-}
-
-func hsCompileExtMulti(expressions []string, flags []CompileFlag, ids []uint, exts []ExprExt, mode ModeFlag, info *hsPlatformInfo) (hsDatabase, error) {
-	var db *C.hs_database_t
-	var err *C.hs_compile_error_t
-	var platform *C.hs_platform_info_t
-
-	if info != nil {
-		platform = &info.platform
-	}
-
-	cexprs := make([]*C.char, len(expressions))
-
-	for i, expr := range expressions {
-		cexprs[i] = C.CString(expr)
-	}
-
-	var cflags, cids *C.uint
-	var cexts **C.hs_expr_ext_t
-
-	if flags != nil {
-		values := make([]C.uint, len(flags))
-
-		for i, flag := range flags {
-			values[i] = C.uint(flag)
-		}
-
-		cflags = &values[0]
-	}
-
-	if ids != nil {
-		values := make([]C.uint, len(ids))
-
-		for i, id := range ids {
-			values[i] = C.uint(id)
-		}
-
-		cids = &values[0]
-	}
-
-	if exts != nil {
-		values := make([]C.hs_expr_ext_t, len(exts))
-		ptrs := make([]uintptr, len(exts))
-
-		for i, ext := range exts {
-			values[i].flags = C.ulonglong(ext.Flags)
-			values[i].min_offset = C.ulonglong(ext.MinOffset)
-			values[i].max_offset = C.ulonglong(ext.MaxOffset)
-			values[i].min_length = C.ulonglong(ext.MinLength)
-			values[i].edit_distance = C.uint(ext.EditDistance)
-			ptrs[i] = uintptr(unsafe.Pointer(&values[i]))
-		}
-
-		cexts = (**C.hs_expr_ext_t)(unsafe.Pointer(&ptrs[0]))
-	}
-
-	ret := C.hs_compile_ext_multi(&cexprs[0], cflags, cids, cexts, C.uint(len(cexprs)), C.uint(mode), platform, &db, &err)
-
-	runtime.KeepAlive(cflags)
-	runtime.KeepAlive(cids)
-	runtime.KeepAlive(cexts)
-
-	for _, expr := range cexprs {
-		C.free(unsafe.Pointer(expr))
-	}
-
-	if ret == C.HS_SUCCESS {
-		return db, nil
-	}
-
-	if err != nil {
-		defer C.hs_free_compile_error(err)
-	}
-
-	if ret == C.HS_COMPILER_ERROR && err != nil {
-		return nil, &compileError{C.GoString(err.message), int(err.expression)}
-	}
-
-	return nil, fmt.Errorf("compile error, %d", int(ret))
+	return nil, fmt.Errorf("compile error %d, %w", int(ret), ErrCompileError)
 }
 
 func hsExpressionInfo(expression string, flags CompileFlag) (*ExprInfo, error) {
@@ -970,6 +903,7 @@ func hsExpressionInfo(expression string, flags CompileFlag) (*ExprInfo, error) {
 	var err *C.hs_compile_error_t
 
 	expr := C.CString(expression)
+
 	defer C.free(unsafe.Pointer(expr))
 
 	ret := C.hs_expression_info(expr, C.uint(flags), &info, &err)
@@ -988,35 +922,34 @@ func hsExpressionInfo(expression string, flags CompileFlag) (*ExprInfo, error) {
 		return nil, &compileError{C.GoString(err.message), int(err.expression)}
 	}
 
-	return nil, fmt.Errorf("compile error, %d", int(ret))
+	return nil, fmt.Errorf("compile error %d, %w", int(ret), ErrCompileError)
 }
 
 func hsExpressionExt(expression string, flags CompileFlag) (ext *ExprExt, info *ExprInfo, err error) {
-	expr_ext := new(C.hs_expr_ext_t)
-	var expr_info *C.hs_expr_info_t
-	var compile_err *C.hs_compile_error_t
+	var exprInfo *C.hs_expr_info_t
+	var compileErr *C.hs_compile_error_t
 
+	ext = new(ExprExt)
 	expr := C.CString(expression)
 
-	ret := C.hs_expression_ext_info(expr, C.uint(flags), expr_ext, &expr_info, &compile_err)
+	defer C.free(unsafe.Pointer(expr))
 
-	C.free(unsafe.Pointer(expr))
+	ret := C.hs_expression_ext_info(expr, C.uint(flags), (*C.hs_expr_ext_t)(unsafe.Pointer(ext)), &exprInfo, &compileErr)
 
-	if ret == C.HS_SUCCESS && expr_info != nil {
-		defer hsMiscFree(unsafe.Pointer(expr_info))
+	if exprInfo != nil {
+		defer hsMiscFree(unsafe.Pointer(exprInfo))
 
-		ext = newExprExt(expr_ext)
-		info = newExprInfo(expr_info)
+		info = newExprInfo(exprInfo)
 	}
 
-	if compile_err != nil {
-		defer C.hs_free_compile_error(compile_err)
+	if compileErr != nil {
+		defer C.hs_free_compile_error(compileErr)
 	}
 
-	if ret == C.HS_COMPILER_ERROR && compile_err != nil {
-		err = &compileError{C.GoString(compile_err.message), int(compile_err.expression)}
+	if ret == C.HS_COMPILER_ERROR && compileErr != nil {
+		err = &compileError{C.GoString(compileErr.message), int(compileErr.expression)}
 	} else {
-		err = fmt.Errorf("compile error, %d", int(ret))
+		err = fmt.Errorf("compile error %d, %w", int(ret), ErrCompileError)
 	}
 
 	return
@@ -1077,13 +1010,22 @@ type hsMatchEventContext struct {
 
 //export hsMatchEventCallback
 func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, data unsafe.Pointer) C.int {
-	ctxt := (*hsMatchEventContext)(data)
-
-	if err := ctxt.handler(uint(id), uint64(from), uint64(to), uint(flags), ctxt.context); err != nil {
-		return -1
+	ctx, ok := handle.Handle(data).Value().(hsMatchEventContext)
+	if !ok {
+		return C.HS_INVALID
 	}
 
-	return 0
+	err := ctx.handler(uint(id), uint64(from), uint64(to), uint(flags), ctx.context)
+	if err != nil {
+		var hsErr HsError
+		if errors.As(err, &hsErr) {
+			return C.int(hsErr)
+		}
+
+		return C.HS_SCAN_TERMINATED
+	}
+
+	return C.HS_SUCCESS
 }
 
 func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
@@ -1091,14 +1033,21 @@ func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEve
 		return HsError(C.HS_INVALID)
 	}
 
-	ctxt := &hsMatchEventContext{onEvent, context}
-	data_hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data))
+	h := handle.New(hsMatchEventContext{onEvent, context})
+	defer h.Delete()
 
-	ret := C.hs_scan_cgo(db, (*C.char)(unsafe.Pointer(data_hdr.Data)), C.uint(data_hdr.Len),
-		C.uint(flags), scratch, C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
+	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data)) // FIXME: Zero-copy access to go data
 
+	ret := C.hs_scan(db,
+		(*C.char)(unsafe.Pointer(hdr.Data)),
+		C.uint(hdr.Len),
+		C.uint(flags),
+		scratch,
+		C.match_event_handler(C.hsMatchEventCallback),
+		unsafe.Pointer(h))
+
+	// Ensure go data is alive before the C function returns
 	runtime.KeepAlive(data)
-	runtime.KeepAlive(ctxt)
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
@@ -1120,22 +1069,31 @@ func hsScanVector(db hsDatabase, data [][]byte, flags ScanFlag, scratch hsScratc
 			return HsError(C.HS_INVALID)
 		}
 
-		hdr := (*reflect.SliceHeader)(unsafe.Pointer(&d))
+		// FIXME: Zero-copy access to go data
+		hdr := (*reflect.SliceHeader)(unsafe.Pointer(&d)) // nolint: scopelint
 		cdata[i] = uintptr(unsafe.Pointer(hdr.Data))
 		clength[i] = C.uint(hdr.Len)
 	}
 
-	ctxt := &hsMatchEventContext{onEvent, context}
-	cdata_hdr := (*reflect.SliceHeader)(unsafe.Pointer(&cdata))
-	clength_hdr := (*reflect.SliceHeader)(unsafe.Pointer(&clength))
+	h := handle.New(hsMatchEventContext{onEvent, context})
+	defer h.Delete()
 
-	ret := C.hs_scan_vector_cgo(db, (**C.char)(unsafe.Pointer(cdata_hdr.Data)), (*C.uint)(unsafe.Pointer(clength_hdr.Data)),
-		C.uint(cdata_hdr.Len), C.uint(flags), scratch, C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
+	cdataHdr := (*reflect.SliceHeader)(unsafe.Pointer(&cdata))     // FIXME: Zero-copy access to go data
+	clengthHdr := (*reflect.SliceHeader)(unsafe.Pointer(&clength)) // FIXME: Zero-copy access to go data
 
+	ret := C.hs_scan_vector(db,
+		(**C.char)(unsafe.Pointer(cdataHdr.Data)),
+		(*C.uint)(unsafe.Pointer(clengthHdr.Data)),
+		C.uint(cdataHdr.Len),
+		C.uint(flags),
+		scratch,
+		C.match_event_handler(C.hsMatchEventCallback),
+		unsafe.Pointer(h))
+
+	// Ensure go data is alive before the C function returns
 	runtime.KeepAlive(data)
 	runtime.KeepAlive(cdata)
 	runtime.KeepAlive(clength)
-	runtime.KeepAlive(ctxt)
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
@@ -1159,14 +1117,21 @@ func hsScanStream(stream hsStream, data []byte, flags ScanFlag, scratch hsScratc
 		return HsError(C.HS_INVALID)
 	}
 
-	ctxt := &hsMatchEventContext{onEvent, context}
-	data_hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data))
+	h := handle.New(hsMatchEventContext{onEvent, context})
+	defer h.Delete()
 
-	ret := C.hs_scan_stream_cgo(stream, (*C.char)(unsafe.Pointer(data_hdr.Data)), C.uint(data_hdr.Len),
-		C.uint(flags), scratch, C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
+	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data)) // FIXME: Zero-copy access to go data
 
+	ret := C.hs_scan_stream(stream,
+		(*C.char)(unsafe.Pointer(hdr.Data)),
+		C.uint(hdr.Len),
+		C.uint(flags),
+		scratch,
+		C.match_event_handler(C.hsMatchEventCallback),
+		unsafe.Pointer(h))
+
+	// Ensure go data is alive before the C function returns
 	runtime.KeepAlive(data)
-	runtime.KeepAlive(ctxt)
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
@@ -1176,11 +1141,13 @@ func hsScanStream(stream hsStream, data []byte, flags ScanFlag, scratch hsScratc
 }
 
 func hsCloseStream(stream hsStream, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	ctxt := &hsMatchEventContext{onEvent, context}
+	h := handle.New(hsMatchEventContext{onEvent, context})
+	defer h.Delete()
 
-	ret := C.hs_close_stream_cgo(stream, scratch, C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
-
-	runtime.KeepAlive(ctxt)
+	ret := C.hs_close_stream(stream,
+		scratch,
+		C.match_event_handler(C.hsMatchEventCallback),
+		unsafe.Pointer(h))
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
@@ -1190,11 +1157,14 @@ func hsCloseStream(stream hsStream, scratch hsScratch, onEvent hsMatchEventHandl
 }
 
 func hsResetStream(stream hsStream, flags ScanFlag, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	ctxt := &hsMatchEventContext{onEvent, context}
+	h := handle.New(hsMatchEventContext{onEvent, context})
+	defer h.Delete()
 
-	ret := C.hs_reset_stream_cgo(stream, C.uint(flags), scratch, C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
-
-	runtime.KeepAlive(ctxt)
+	ret := C.hs_reset_stream(stream,
+		C.uint(flags),
+		scratch,
+		C.match_event_handler(C.hsMatchEventCallback),
+		unsafe.Pointer(h))
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
@@ -1214,11 +1184,14 @@ func hsCopyStream(stream hsStream) (hsStream, error) {
 }
 
 func hsResetAndCopyStream(to, from hsStream, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	ctxt := &hsMatchEventContext{onEvent, context}
+	h := handle.New(hsMatchEventContext{onEvent, context})
+	defer h.Delete()
 
-	ret := C.hs_reset_and_copy_stream_cgo(to, from, scratch, C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
-
-	runtime.KeepAlive(ctxt)
+	ret := C.hs_reset_and_copy_stream(to,
+		from,
+		scratch,
+		C.match_event_handler(C.hsMatchEventCallback),
+		unsafe.Pointer(h))
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
@@ -1258,13 +1231,17 @@ func hsExpandStream(db hsDatabase, stream *hsStream, buf []byte) error {
 }
 
 func hsResetAndExpandStream(stream hsStream, buf []byte, scratch hsScratch, onEvent hsMatchEventHandler, context interface{}) error {
-	ctxt := &hsMatchEventContext{onEvent, context}
+	h := handle.New(hsMatchEventContext{onEvent, context})
+	defer h.Delete()
 
-	ret := C.hs_reset_and_expand_stream_cgo(stream, (*C.char)(unsafe.Pointer(&buf[0])), C.uint(len(buf)),
-		scratch, C.uintptr_t(uintptr(unsafe.Pointer(ctxt))))
+	ret := C.hs_reset_and_expand_stream(stream,
+		(*C.char)(unsafe.Pointer(&buf[0])),
+		C.size_t(len(buf)),
+		scratch,
+		C.match_event_handler(C.hsMatchEventCallback),
+		unsafe.Pointer(h))
 
 	runtime.KeepAlive(buf)
-	runtime.KeepAlive(ctxt)
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)

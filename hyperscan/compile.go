@@ -5,17 +5,28 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"runtime"
 	"strconv"
 	"strings"
 )
 
-// The expression of pattern
+var (
+	// ErrNoFound means patterns not found.
+	ErrNoFound = errors.New("no found")
+	// ErrUnexpected means item is unexpected.
+	ErrUnexpected = errors.New("unexpected")
+)
+
+// Expression of pattern.
 type Expression string
 
 func (e Expression) String() string { return string(e) }
 
+// Patterns is a set of matching patterns.
 type Patterns []*Pattern
 
+// Pattern is a matching pattern.
+// nolint: golint,revive,stylecheck
 type Pattern struct {
 	Expression             // The expression to parse.
 	Flags      CompileFlag // Flags which modify the behaviour of the expression.
@@ -40,11 +51,10 @@ func (p *Pattern) IsValid() bool {
 	return err == nil
 }
 
-// Provides information about a regular expression.
+// Info provides information about a regular expression.
 func (p *Pattern) Info() (*ExprInfo, error) {
 	if p.info == nil {
 		info, err := hsExpressionInfo(string(p.Expression), p.Flags)
-
 		if err != nil {
 			return nil, err
 		}
@@ -55,11 +65,21 @@ func (p *Pattern) Info() (*ExprInfo, error) {
 	return p.info, nil
 }
 
-// Provides additional parameters related to an expression.
+// WithExt is used to set the additional parameters related to an expression.
+func (p *Pattern) WithExt(exts ...Ext) *Pattern {
+	if p.ext == nil {
+		p.ext = new(ExprExt)
+	}
+
+	p.ext.With(exts...)
+
+	return p
+}
+
+// Ext provides additional parameters related to an expression.
 func (p *Pattern) Ext() (*ExprExt, error) {
 	if p.ext == nil {
 		ext, info, err := hsExpressionExt(string(p.Expression), p.Flags)
-
 		if err != nil {
 			return nil, err
 		}
@@ -88,8 +108,7 @@ func (p *Pattern) String() string {
 }
 
 /*
-
-Parse pattern from a formated string
+ParsePattern parse pattern from a formated string.
 
 	<integer id>:/<expression>/<flags>
 
@@ -103,12 +122,14 @@ func ParsePattern(s string) (*Pattern, error) {
 
 	i := strings.Index(s, ":/")
 	j := strings.LastIndex(s, "/")
+
 	if i > 0 && j > i+1 {
-		id, err := strconv.ParseInt(s[:i], 10, 32)
+		id, err := strconv.Atoi(s[:i])
 		if err != nil {
-			return nil, errors.New("invalid pattern id: " + s[:i])
+			return nil, fmt.Errorf("invalid pattern id `%s`, %w", s[:i], ErrInvalid)
 		}
-		p.Id = int(id)
+
+		p.Id = id
 		s = s[i+1:]
 	}
 
@@ -119,16 +140,18 @@ func ParsePattern(s string) (*Pattern, error) {
 		if n = strings.Index(s, "{"); n > 0 && strings.HasSuffix(s, "}") {
 			ext, err := ParseExprExt(s[n:])
 			if err != nil {
-				return nil, fmt.Errorf("invalid expression extensions: %s, %w", s[n:], err)
+				return nil, fmt.Errorf("invalid expression extensions `%s`, %w", s[n:], err)
 			}
+
 			p.ext = ext
 			s = s[:n]
 		}
 
 		flags, err := ParseCompileFlag(s)
 		if err != nil {
-			return nil, fmt.Errorf("invalid pattern flags: %s, %w", s, err)
+			return nil, fmt.Errorf("invalid pattern flags `%s`, %w", s, err)
 		}
+
 		p.Flags = flags
 	} else {
 		p.Expression = Expression(s)
@@ -136,8 +159,9 @@ func ParsePattern(s string) (*Pattern, error) {
 
 	info, err := hsExpressionInfo(string(p.Expression), p.Flags)
 	if err != nil {
-		return nil, fmt.Errorf("invalid pattern: %s, %w", p.Expression, err)
+		return nil, fmt.Errorf("invalid pattern `%s`, %w", p.Expression, err)
 	}
+
 	p.info = info
 
 	return &p, nil
@@ -154,6 +178,7 @@ func ParsePatterns(r io.Reader) (patterns Patterns, err error) {
 			// skip empty line
 			continue
 		}
+
 		if strings.HasPrefix(line, "#") {
 			// skip comment
 			continue
@@ -163,13 +188,14 @@ func ParsePatterns(r io.Reader) (patterns Patterns, err error) {
 		if err != nil {
 			return nil, err
 		}
+
 		patterns = append(patterns, p)
 	}
 
 	return
 }
 
-// A type containing information on the target platform.
+// Platform is a type containing information on the target platform.
 type Platform interface {
 	// Information about the target platform which may be used to guide the optimisation process of the compile.
 	Tune() TuneFlag
@@ -178,9 +204,10 @@ type Platform interface {
 	CpuFeatures() CpuFeature
 }
 
+// NewPlatform create a new platform information on the target platform.
 func NewPlatform(tune TuneFlag, cpu CpuFeature) Platform { return newPlatformInfo(tune, cpu) }
 
-// Populates the platform information based on the current host.
+// PopulatePlatform populates the platform information based on the current host.
 func PopulatePlatform() Platform {
 	platform, _ := hsPopulatePlatform()
 
@@ -211,7 +238,7 @@ func (p Patterns) ForPlatform(mode ModeFlag, platform Platform) (Database, error
 	return b.Build()
 }
 
-// A type to help to build up a database
+// DatabaseBuilder to help to build up a database.
 type DatabaseBuilder struct {
 	// Array of patterns to compile.
 	Patterns []*Pattern
@@ -224,6 +251,7 @@ type DatabaseBuilder struct {
 	Platform Platform
 }
 
+// AddExpressions add more expressions to the database.
 func (b *DatabaseBuilder) AddExpressions(exprs ...Expression) *DatabaseBuilder {
 	for _, expr := range exprs {
 		b.Patterns = append(b.Patterns, &Pattern{Expression: expr, Id: len(b.Patterns) + 1})
@@ -232,15 +260,17 @@ func (b *DatabaseBuilder) AddExpressions(exprs ...Expression) *DatabaseBuilder {
 	return b
 }
 
+// AddExpressionWithFlags add more expressions with flags to the database.
 func (b *DatabaseBuilder) AddExpressionWithFlags(expr Expression, flags CompileFlag) *DatabaseBuilder {
 	b.Patterns = append(b.Patterns, &Pattern{Expression: expr, Flags: flags, Id: len(b.Patterns) + 1})
 
 	return b
 }
 
+// Build a database base on the expressions and platform.
 func (b *DatabaseBuilder) Build() (Database, error) {
 	if b.Patterns == nil {
-		return nil, errors.New("no patterns")
+		return nil, ErrNoFound
 	}
 
 	mode := b.Mode
@@ -264,26 +294,25 @@ func (b *DatabaseBuilder) Build() (Database, error) {
 	platform, _ := b.Platform.(*hsPlatformInfo)
 
 	db, err := hsCompileMulti(b.Patterns, mode, platform)
-
 	if err != nil {
 		return nil, err
 	}
 
 	switch mode & ModeMask {
 	case StreamMode:
-		return newStreamDatabase(db)
+		return newStreamDatabase(db), nil
 	case VectoredMode:
-		return newVectoredDatabase(db)
+		return newVectoredDatabase(db), nil
 	case BlockMode:
-		return newBlockDatabase(db)
+		return newBlockDatabase(db), nil
+	default:
+		return nil, fmt.Errorf("mode %d, %w", mode, ErrUnexpected)
 	}
-
-	return nil, errors.New("unknown mode")
 }
 
+// NewBlockDatabase create a block database base on the patterns.
 func NewBlockDatabase(patterns ...*Pattern) (BlockDatabase, error) {
 	db, err := Patterns(patterns).Build(BlockMode)
-
 	if err != nil {
 		return nil, err
 	}
@@ -291,9 +320,25 @@ func NewBlockDatabase(patterns ...*Pattern) (BlockDatabase, error) {
 	return db.(*blockDatabase), err
 }
 
+// NewManagedBlockDatabase is a wrapper for NewBlockDatabase that
+// sets a finalizer on the Scratch instance so that memory is
+// freed once the object is no longer in use.
+func NewManagedBlockDatabase(patterns ...*Pattern) (BlockDatabase, error) {
+	db, err := NewBlockDatabase(patterns...)
+	if err != nil {
+		return nil, err
+	}
+
+	runtime.SetFinalizer(db, func(obj BlockDatabase) {
+		_ = obj.Close()
+	})
+
+	return db, nil
+}
+
+// NewStreamDatabase create a stream database base on the patterns.
 func NewStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 	db, err := Patterns(patterns).Build(StreamMode)
-
 	if err != nil {
 		return nil, err
 	}
@@ -301,9 +346,25 @@ func NewStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 	return db.(*streamDatabase), err
 }
 
+// NewManagedStreamDatabase is a wrapper for NewStreamDatabase that
+// sets a finalizer on the Scratch instance so that memory is
+// freed once the object is no longer in use.
+func NewManagedStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
+	db, err := NewStreamDatabase(patterns...)
+	if err != nil {
+		return nil, err
+	}
+
+	runtime.SetFinalizer(db, func(obj StreamDatabase) {
+		_ = obj.Close()
+	})
+
+	return db, nil
+}
+
+// NewMediumStreamDatabase create a medium-sized stream database base on the patterns.
 func NewMediumStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 	db, err := Patterns(patterns).Build(StreamMode | SomHorizonMediumMode)
-
 	if err != nil {
 		return nil, err
 	}
@@ -311,9 +372,9 @@ func NewMediumStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 	return db.(*streamDatabase), err
 }
 
+// NewLargeStreamDatabase create a large-sized stream database base on the patterns.
 func NewLargeStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 	db, err := Patterns(patterns).Build(StreamMode | SomHorizonLargeMode)
-
 	if err != nil {
 		return nil, err
 	}
@@ -321,9 +382,9 @@ func NewLargeStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 	return db.(*streamDatabase), err
 }
 
+// NewVectoredDatabase create a vectored database base on the patterns.
 func NewVectoredDatabase(patterns ...*Pattern) (VectoredDatabase, error) {
 	db, err := Patterns(patterns).Build(VectoredMode)
-
 	if err != nil {
 		return nil, err
 	}
@@ -335,35 +396,29 @@ func NewVectoredDatabase(patterns ...*Pattern) (VectoredDatabase, error) {
 // a pattern database in the block mode that can be used to match against text.
 func Compile(expr string) (Database, error) {
 	db, err := hsCompile(expr, SomLeftMost, BlockMode, nil)
-
 	if err != nil {
 		return nil, err
 	}
 
-	return newBlockDatabase(db)
+	return newBlockDatabase(db), nil
 }
 
 // MustCompile is like Compile but panics if the expression cannot be parsed.
 // It simplifies safe initialization of global variables holding compiled regular expressions.
 func MustCompile(expr string) Database {
 	db, err := hsCompile(expr, SomLeftMost, BlockMode, nil)
-
 	if err != nil {
 		panic(`Compile(` + Quote(expr) + `): ` + err.Error())
 	}
 
-	bdb, err := newBlockDatabase(db)
-
-	if err != nil {
-		panic(`Compile(` + Quote(expr) + `): ` + err.Error())
-	}
-
-	return bdb
+	return newBlockDatabase(db)
 }
 
+// Quote returns a quoted string literal representing s.
 func Quote(s string) string {
 	if strconv.CanBackquote(s) {
 		return "`" + s + "`"
 	}
+
 	return strconv.Quote(s)
 }

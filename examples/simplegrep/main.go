@@ -61,7 +61,7 @@ func eventHandler(id uint, from, to uint64, flags uint, context interface{}) err
 	if start == -1 {
 		start = 0
 	} else {
-		start += 1
+		start++
 	}
 
 	if end == -1 {
@@ -103,7 +103,6 @@ func main() {
 	 * explaining why the pattern didn't compile.
 	 */
 	database, err := hyperscan.NewBlockDatabase(pattern)
-
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: Unable to compile pattern \"%s\": %s\n", pattern.String(), err.Error())
 		os.Exit(-1)
@@ -113,7 +112,6 @@ func main() {
 
 	/* Next, we read the input data file into a buffer. */
 	inputData, err := ioutil.ReadFile(inputFN)
-
 	if err != nil {
 		os.Exit(-1)
 	}
@@ -135,7 +133,6 @@ func main() {
 	 * match event.
 	 */
 	scratch, err := hyperscan.NewScratch(database)
-
 	if err != nil {
 		fmt.Fprint(os.Stderr, "ERROR: Unable to allocate scratch space. Exiting.\n")
 		os.Exit(-1)
