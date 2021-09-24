@@ -44,13 +44,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Test v4 API
+      - name: Test Hyperscan v4 API
         if: matrix.os == 'ubuntu-18.04'
-        run: go test -v -tags hyperscan_v4 ./...
+        run: go test -v -tags hyperscan_v4 ./internal/hs/... ./hyperscan/...
 
-      - name: Test v5 API
+      - name: Test Hyperscan v5 API
         if: matrix.os == 'ubuntu-20.04' || matrix.os == 'macos-latest'
-        run: go test -v ./...
+        run: go test -v ./internal/hs/... ./hyperscan/...
+
+      - name: Test Chimera API
+        run: go test -v ./internal/ch/... ./chimera/...
+        continue-on-error: true
 
   golangci:
     name: lint
