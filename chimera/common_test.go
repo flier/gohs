@@ -3,8 +3,9 @@ package chimera_test
 import (
 	"testing"
 
-	"github.com/flier/gohs/chimera"
 	. "github.com/smartystreets/goconvey/convey"
+
+	"github.com/flier/gohs/chimera"
 )
 
 func TestChimera(t *testing.T) {

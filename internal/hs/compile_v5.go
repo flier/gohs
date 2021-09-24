@@ -1,7 +1,7 @@
 //go:build !hyperscan_v4
 // +build !hyperscan_v4
 
-package hyperscan
+package hs
 
 /*
 #include <hs.h>
@@ -14,11 +14,6 @@ import (
 )
 
 const (
-	// ErrUnknown is an unexpected internal error.
-	ErrUnknown HsError = C.HS_UNKNOWN_ERROR
-)
-
-const (
 	// Combination represents logical combination.
 	Combination CompileFlag = C.HS_FLAG_COMBINATION
 	// Quiet represents don't do any match reporting.
@@ -26,19 +21,28 @@ const (
 )
 
 func init() {
-	hsErrorMessages[C.HS_UNKNOWN_ERROR] = "Unexpected internal error."
-
-	compileFlags['C'] = Combination
-	compileFlags['Q'] = Quiet
+	CompileFlags['C'] = Combination
+	CompileFlags['Q'] = Quiet
 }
 
-func hsCompileLit(expression string, flags CompileFlag, mode ModeFlag, info *hsPlatformInfo) (hsDatabase, error) {
+// Pure literal is a special case of regular expression.
+// A character sequence is regarded as a pure literal if and
+// only if each character is read and interpreted independently.
+// No syntax association happens between any adjacent characters.
+type Literal struct {
+	Expr  string      // The expression to parse.
+	Flags CompileFlag // Flags which modify the behaviour of the expression.
+	ID    int         // The ID number to be associated with the corresponding pattern
+	*ExprInfo
+}
+
+func CompileLit(expression string, flags CompileFlag, mode ModeFlag, info *PlatformInfo) (Database, error) {
 	var db *C.hs_database_t
 	var err *C.hs_compile_error_t
 	var platform *C.hs_platform_info_t
 
 	if info != nil {
-		platform = &info.platform
+		platform = (*C.struct_hs_platform_info)(unsafe.Pointer(&info.Platform))
 	}
 
 	expr := C.CString(expression)
@@ -56,21 +60,26 @@ func hsCompileLit(expression string, flags CompileFlag, mode ModeFlag, info *hsP
 	}
 
 	if ret == C.HS_COMPILER_ERROR && err != nil {
-		return nil, &compileError{C.GoString(err.message), int(err.expression)}
+		return nil, &CompileError{C.GoString(err.message), int(err.expression)}
 	}
 
 	return nil, fmt.Errorf("compile error %d, %w", int(ret), ErrCompileError)
 }
 
-func hsCompileLitMulti(literals []*Literal, mode ModeFlag, info *hsPlatformInfo) (hsDatabase, error) {
+type Literals interface {
+	Literals() []*Literal
+}
+
+func CompileLitMulti(input Literals, mode ModeFlag, info *PlatformInfo) (Database, error) {
 	var db *C.hs_database_t
 	var err *C.hs_compile_error_t
 	var platform *C.hs_platform_info_t
 
 	if info != nil {
-		platform = &info.platform
+		platform = (*C.struct_hs_platform_info)(unsafe.Pointer(&info.Platform))
 	}
 
+	literals := input.Literals()
 	count := len(literals)
 
 	cexprs := (**C.char)(C.calloc(C.size_t(len(literals)), C.size_t(unsafe.Sizeof(uintptr(0)))))
@@ -86,10 +95,10 @@ func hsCompileLitMulti(literals []*Literal, mode ModeFlag, info *hsPlatformInfo)
 	ids := (*[1 << 30]C.uint)(unsafe.Pointer(cids))[:len(literals):len(literals)]
 
 	for i, lit := range literals {
-		exprs[i] = C.CString(string(lit.Expression))
-		lens[i] = C.size_t(len(lit.Expression))
+		exprs[i] = C.CString(lit.Expr)
+		lens[i] = C.size_t(len(lit.Expr))
 		flags[i] = C.uint(lit.Flags)
-		ids[i] = C.uint(lit.Id)
+		ids[i] = C.uint(lit.ID)
 	}
 
 	ret := C.hs_compile_lit_multi(cexprs, cflags, cids, clens, C.uint(count), C.uint(mode), platform, &db, &err)
@@ -112,7 +121,7 @@ func hsCompileLitMulti(literals []*Literal, mode ModeFlag, info *hsPlatformInfo)
 	}
 
 	if ret == C.HS_COMPILER_ERROR && err != nil {
-		return nil, &compileError{C.GoString(err.message), int(err.expression)}
+		return nil, &CompileError{C.GoString(err.message), int(err.expression)}
 	}
 
 	return nil, fmt.Errorf("compile error %d, %w", int(ret), ErrCompileError)

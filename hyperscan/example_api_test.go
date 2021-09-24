@@ -17,7 +17,7 @@ func ExampleMatch() {
 	// Output:
 	// true <nil>
 	// false <nil>
-	// false parse pattern, invalid pattern `a(b`, Missing close parenthesis for group started at index 1.
+	// false parse pattern, pattern `a(b`, Missing close parenthesis for group started at index 1.
 }
 
 func ExampleMatchReader() {
@@ -31,5 +31,5 @@ func ExampleMatchReader() {
 	// Output:
 	// true <nil>
 	// false <nil>
-	// false parse pattern, invalid pattern `a(b`, Missing close parenthesis for group started at index 1.
+	// false parse pattern, pattern `a(b`, Missing close parenthesis for group started at index 1.
 }

@@ -93,7 +93,7 @@ func main() {
 		}
 	}
 
-	pattern := hyperscan.NewPattern(flag.Arg(0), hyperscan.DotAll|hyperscan.SomLeftMost)
+	pattern := hyperscan.NewPattern(hyperscan.Expression(flag.Arg(0)), hyperscan.DotAll|hyperscan.SomLeftMost)
 	inputFN := flag.Arg(1)
 
 	/* First, we attempt to compile the pattern provided on the command line.

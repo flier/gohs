@@ -3,6 +3,39 @@ package hyperscan
 import (
 	"fmt"
 	"regexp"
+
+	"github.com/flier/gohs/internal/hs"
+)
+
+type HsError = hs.Error
+
+const (
+	// ErrSuccess is the error returned if the engine completed normally.
+	ErrSuccess HsError = hs.ErrSuccess
+	// ErrInvalid is the error returned if a parameter passed to this function was invalid.
+	ErrInvalid HsError = hs.ErrInvalid
+	// ErrNoMemory is the error returned if a memory allocation failed.
+	ErrNoMemory HsError = hs.ErrNoMemory
+	// ErrScanTerminated is the error returned if the engine was terminated by callback.
+	ErrScanTerminated HsError = hs.ErrScanTerminated
+	// ErrCompileError is the error returned if the pattern compiler failed.
+	ErrCompileError HsError = hs.ErrCompileError
+	// ErrDatabaseVersionError is the error returned if the given database was built for a different version of Hyperscan.
+	ErrDatabaseVersionError HsError = hs.ErrDatabaseVersionError
+	// ErrDatabasePlatformError is the error returned if the given database was built for a different platform.
+	ErrDatabasePlatformError HsError = hs.ErrDatabasePlatformError
+	// ErrDatabaseModeError is the error returned if the given database was built for a different mode of operation.
+	ErrDatabaseModeError HsError = hs.ErrDatabaseModeError
+	// ErrBadAlign is the error returned if a parameter passed to this function was not correctly aligned.
+	ErrBadAlign HsError = hs.ErrBadAlign
+	// ErrBadAlloc is the error returned if the memory allocator did not correctly return memory suitably aligned.
+	ErrBadAlloc HsError = hs.ErrBadAlloc
+	// ErrScratchInUse is the error returned if the scratch region was already in use.
+	ErrScratchInUse HsError = hs.ErrScratchInUse
+	// ErrArchError is the error returned if unsupported CPU architecture.
+	ErrArchError HsError = hs.ErrArchError
+	// ErrInsufficientSpace is the error returned if provided buffer was too small.
+	ErrInsufficientSpace HsError = hs.ErrInsufficientSpace
 )
 
 // Database is an immutable database that can be used by the Hyperscan scanning API.
@@ -84,28 +117,28 @@ func (i DbInfo) Mode() (ModeFlag, error) {
 
 // Version identify this release version. The return version is a string
 // containing the version number of this release build and the date of the build.
-func Version() string { return hsVersion() }
+func Version() string { return hs.Version() }
 
 // ValidPlatform test the current system architecture.
-func ValidPlatform() error { return hsValidPlatform() }
+func ValidPlatform() error { return hs.ValidPlatform() } // nolint: wrapcheck
 
 type database interface {
-	Db() hsDatabase
+	Db() hs.Database
 }
 
 type baseDatabase struct {
-	db hsDatabase
+	db hs.Database
 }
 
-func newBaseDatabase(db hsDatabase) *baseDatabase {
+func newBaseDatabase(db hs.Database) *baseDatabase {
 	return &baseDatabase{db}
 }
 
 // UnmarshalDatabase reconstruct a pattern database from a stream of bytes.
 func UnmarshalDatabase(data []byte) (Database, error) {
-	db, err := hsDeserializeDatabase(data)
+	db, err := hs.DeserializeDatabase(data)
 	if err != nil {
-		return nil, err
+		return nil, err // nolint: wrapcheck
 	}
 
 	return &baseDatabase{db}, nil
@@ -113,9 +146,9 @@ func UnmarshalDatabase(data []byte) (Database, error) {
 
 // UnmarshalBlockDatabase reconstruct a block database from a stream of bytes.
 func UnmarshalBlockDatabase(data []byte) (BlockDatabase, error) {
-	db, err := hsDeserializeDatabase(data)
+	db, err := hs.DeserializeDatabase(data)
 	if err != nil {
-		return nil, err
+		return nil, err // nolint: wrapcheck
 	}
 
 	return newBlockDatabase(db), nil
@@ -123,9 +156,9 @@ func UnmarshalBlockDatabase(data []byte) (BlockDatabase, error) {
 
 // UnmarshalStreamDatabase reconstruct a stream database from a stream of bytes.
 func UnmarshalStreamDatabase(data []byte) (StreamDatabase, error) {
-	db, err := hsDeserializeDatabase(data)
+	db, err := hs.DeserializeDatabase(data)
 	if err != nil {
-		return nil, err
+		return nil, err // nolint: wrapcheck
 	}
 
 	return newStreamDatabase(db), nil
@@ -133,45 +166,48 @@ func UnmarshalStreamDatabase(data []byte) (StreamDatabase, error) {
 
 // UnmarshalVectoredDatabase reconstruct a vectored database from a stream of bytes.
 func UnmarshalVectoredDatabase(data []byte) (VectoredDatabase, error) {
-	db, err := hsDeserializeDatabase(data)
+	db, err := hs.DeserializeDatabase(data)
 	if err != nil {
-		return nil, err
+		return nil, err // nolint: wrapcheck
 	}
 
 	return newVectoredDatabase(db), nil
 }
 
 // SerializedDatabaseSize reports the size that would be required by a database if it were deserialized.
-func SerializedDatabaseSize(data []byte) (int, error) { return hsSerializedDatabaseSize(data) }
+func SerializedDatabaseSize(data []byte) (int, error) { return hs.SerializedDatabaseSize(data) } // nolint: wrapcheck
 
 // SerializedDatabaseInfo provides information about a serialized database.
 func SerializedDatabaseInfo(data []byte) (DbInfo, error) {
-	i, err := hsSerializedDatabaseInfo(data)
+	i, err := hs.SerializedDatabaseInfo(data)
 
 	return DbInfo(i), err
 }
 
-func (d *baseDatabase) Db() hsDatabase { return d.db } // nolint: stylecheck
+func (d *baseDatabase) Db() hs.Database { return d.db } // nolint: stylecheck
 
-func (d *baseDatabase) Size() (int, error) { return hsDatabaseSize(d.db) }
+func (d *baseDatabase) Size() (int, error) { return hs.DatabaseSize(d.db) } // nolint: wrapcheck
 
 func (d *baseDatabase) Info() (DbInfo, error) {
-	i, err := hsDatabaseInfo(d.db)
+	i, err := hs.DatabaseInfo(d.db)
+	if err != nil {
+		return "", err //nolint: wrapcheck
+	}
 
-	return DbInfo(i), err
+	return DbInfo(i), nil
 }
 
-func (d *baseDatabase) Close() error { return hsFreeDatabase(d.db) }
+func (d *baseDatabase) Close() error { return hs.FreeDatabase(d.db) } // nolint: wrapcheck
 
-func (d *baseDatabase) Marshal() ([]byte, error) { return hsSerializeDatabase(d.db) }
+func (d *baseDatabase) Marshal() ([]byte, error) { return hs.SerializeDatabase(d.db) } // nolint: wrapcheck
 
-func (d *baseDatabase) Unmarshal(data []byte) error { return hsDeserializeDatabaseAt(data, d.db) }
+func (d *baseDatabase) Unmarshal(data []byte) error { return hs.DeserializeDatabaseAt(data, d.db) } // nolint: wrapcheck
 
 type blockDatabase struct {
 	*blockMatcher
 }
 
-func newBlockDatabase(db hsDatabase) *blockDatabase {
+func newBlockDatabase(db hs.Database) *blockDatabase {
 	return &blockDatabase{newBlockMatcher(newBlockScanner(newBaseDatabase(db)))}
 }
 
@@ -179,16 +215,16 @@ type streamDatabase struct {
 	*streamMatcher
 }
 
-func newStreamDatabase(db hsDatabase) *streamDatabase {
+func newStreamDatabase(db hs.Database) *streamDatabase {
 	return &streamDatabase{newStreamMatcher(newStreamScanner(newBaseDatabase(db)))}
 }
 
-func (db *streamDatabase) StreamSize() (int, error) { return hsStreamSize(db.db) }
+func (db *streamDatabase) StreamSize() (int, error) { return hs.StreamSize(db.db) } // nolint: wrapcheck
 
 type vectoredDatabase struct {
 	*vectoredMatcher
 }
 
-func newVectoredDatabase(db hsDatabase) *vectoredDatabase {
+func newVectoredDatabase(db hs.Database) *vectoredDatabase {
 	return &vectoredDatabase{newVectoredMatcher(newVectoredScanner(newBaseDatabase(db)))}
 }
