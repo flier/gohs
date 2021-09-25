@@ -10,6 +10,22 @@ Golang binding for Intel's HyperScan regex matching library: [hyperscan.io](http
 go get -u -tags hyperscan_v4 github.com/flier/gohs/hyperscan
 ```
 
+## Chimera [![Go Reference](https://pkg.go.dev/badge/github.com/flier/gohs/chimera.svg)](https://pkg.go.dev/github.com/flier/gohs/chimera)
+
+Chimera is a software regular expression matching engine that is a hybrid of Hyperscan and PCRE. The design goals of Chimera are to fully support PCRE syntax as well as to take advantage of the high performance nature of Hyperscan.
+
+It is recommended to compile and link Chimera using static libraries.
+
+```bash
+$ mkdir build && cd build
+$ cmake .. -G Ninja -DBUILD_STATIC_LIBS=on
+$ ninja && ninja install
+```
+
+### Note
+
+You need to download the PCRE library source code to build Chimera, see [Chimera Requirements](https://intel.github.io/hyperscan/dev-reference/chimera.html#requirements) for more details
+
 ## License
 
 This project is licensed under either of Apache License ([LICENSE-APACHE](LICENSE-APACHE)) or MIT license ([LICENSE-MIT](LICENSE-MIT)) at your option.
