@@ -3,10 +3,7 @@
 
 package hyperscan
 
-/*
-#include <hs.h>
-*/
-import "C"
+import "github.com/flier/gohs/internal/hs"
 
 const (
 	// AVX512VBMI is a CPU features flag indicates that the target platform
