@@ -31,8 +31,6 @@ const (
 	ErrBadAlloc Error = C.CH_BAD_ALLOC
 	// ErrScratchInUse is the error returned if the scratch region was already in use.
 	ErrScratchInUse Error = C.CH_SCRATCH_IN_USE
-	// ErrUnknown is the unexpected internal error from Hyperscan.
-	ErrUnknownHSError Error = C.CH_UNKNOWN_HS_ERROR
 )
 
 var ErrorMessages = map[Error]string{
@@ -47,7 +45,6 @@ var ErrorMessages = map[Error]string{
 	C.CH_BAD_ALIGN:         "A parameter passed to this function was not correctly aligned.",
 	C.CH_BAD_ALLOC:         "The memory allocator did not correctly return aligned memory.",
 	C.CH_SCRATCH_IN_USE:    "The scratch region was already in use.",
-	C.CH_UNKNOWN_HS_ERROR:  "Unexpected internal error from Hyperscan.",
 }
 
 func (e Error) Error() string {

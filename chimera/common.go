@@ -31,8 +31,6 @@ const (
 	ErrBadAlloc Error = ch.ErrBadAlloc
 	// ErrScratchInUse is the error returned if the scratch region was already in use.
 	ErrScratchInUse Error = ch.ErrScratchInUse
-	// ErrUnknown is the unexpected internal error from Hyperscan.
-	ErrUnknownHSError Error = ch.ErrUnknownHSError
 )
 
 // DbInfo identify the version and platform information for the supplied database.
