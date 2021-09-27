@@ -1,6 +1,7 @@
 package ch
 
 import (
+	"fmt"
 	"reflect"
 	"runtime"
 	"unsafe"
@@ -28,40 +29,6 @@ extern ch_callback_t errorEventCallback(ch_error_event_t error_type,
 */
 import "C"
 
-// A Chimera scratch space.
-type Scratch *C.ch_scratch_t
-
-// Allocate a scratch space that is a clone of an existing scratch space.
-func CloneScratch(scratch Scratch) (Scratch, error) {
-	var clone *C.ch_scratch_t
-
-	if ret := C.ch_clone_scratch(scratch, &clone); ret != C.HS_SUCCESS {
-		return nil, Error(ret)
-	}
-
-	return clone, nil
-}
-
-// Provides the size of the given scratch space.
-func ScratchSize(scratch Scratch) (int, error) {
-	var size C.size_t
-
-	if ret := C.ch_scratch_size(scratch, &size); ret != C.HS_SUCCESS {
-		return 0, Error(ret)
-	}
-
-	return int(size), nil
-}
-
-// Free a scratch block previously allocated by @ref ch_alloc_scratch() or @ref ch_clone_scratch().
-func FreeScratch(scratch Scratch) error {
-	if ret := C.ch_free_scratch(scratch); ret != C.HS_SUCCESS {
-		return Error(ret)
-	}
-
-	return nil
-}
-
 // Callback return value used to tell the Chimera matcher what to do after processing this match.
 type Callback C.ch_callback_t
 
@@ -80,14 +47,26 @@ type Capture struct {
 // Definition of the match event callback function type.
 type MatchEventHandler func(id uint, from, to uint64, flags uint, captured []*Capture, context interface{}) Callback
 
+// Type used to differentiate the errors raised with the `ErrorEventHandler` callback.
 type ErrorEvent C.ch_error_event_t
 
 const (
 	// PCRE hits its match limit and reports PCRE_ERROR_MATCHLIMIT.
-	MatchLimit ErrorEvent = C.CH_ERROR_MATCHLIMIT
+	ErrMatchLimit ErrorEvent = C.CH_ERROR_MATCHLIMIT
 	// PCRE hits its recursion limit and reports PCRE_ERROR_RECURSIONLIMIT.
-	RecursionLimit ErrorEvent = C.CH_ERROR_RECURSIONLIMIT
+	ErrRecursionLimit ErrorEvent = C.CH_ERROR_RECURSIONLIMIT
 )
+
+func (e ErrorEvent) Error() string {
+	switch e {
+	case ErrMatchLimit:
+		return "PCRE hits its match limit."
+	case ErrRecursionLimit:
+		return "PCRE hits its recursion limit."
+	}
+
+	return fmt.Sprintf("ErrorEvent(%d)", int(C.ch_error_event_t(e)))
+}
 
 // Definition of the Chimera error event callback function type.
 type ErrorEventHandler func(event ErrorEvent, id uint, info, context interface{}) Callback
@@ -126,10 +105,10 @@ func errorEventCallback(evt C.ch_error_event_t, id C.uint, info, data unsafe.Poi
 }
 
 // ScanFlag represents a scan flag.
-type ScanFlag C.uint
+type ScanFlag uint
 
 // The block regular expression scanner.
-func hsScan(db Database, data []byte, flags ScanFlag, scratch Scratch,
+func Scan(db Database, data []byte, flags ScanFlag, scratch Scratch,
 	onEvent MatchEventHandler, onError ErrorEventHandler, context interface{}) error {
 	if data == nil {
 		return ErrInvalid
@@ -157,4 +136,30 @@ func hsScan(db Database, data []byte, flags ScanFlag, scratch Scratch,
 	}
 
 	return nil
+}
+
+type MatchEvent struct {
+	ID       uint
+	From, To uint64
+	Flag     ScanFlag
+	Captured []*Capture
+}
+
+type MatchRecorder struct {
+	Events []MatchEvent
+	Err    error
+}
+
+func (h *MatchRecorder) Matched() bool { return len(h.Events) > 0 }
+
+func (h *MatchRecorder) OnMatch(id uint, from, to uint64, flags uint, captured []*Capture, ctx interface{}) Callback {
+	h.Events = append(h.Events, MatchEvent{id, from, to, ScanFlag(flags), captured})
+
+	return Continue
+}
+
+func (h *MatchRecorder) OnError(evt ErrorEvent, id uint, info, ctx interface{}) Callback {
+	h.Err = evt
+
+	return Terminate
 }

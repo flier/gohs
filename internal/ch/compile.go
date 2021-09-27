@@ -18,27 +18,12 @@ type Expression string
 
 func (e Expression) String() string { return string(e) }
 
-// Patterns is a set of matching patterns.
-type Patterns []*Pattern
-
 // Pattern is a matching pattern.
 // nolint: golint,revive,stylecheck
 type Pattern struct {
 	Expression             // The expression to parse.
 	Flags      CompileFlag // Flags which modify the behaviour of the expression.
 	Id         int         // The ID number to be associated with the corresponding pattern
-}
-
-func (p *Pattern) String() string {
-	var b strings.Builder
-
-	if p.Id > 0 {
-		fmt.Fprintf(&b, "%d:", p.Id)
-	}
-
-	fmt.Fprintf(&b, "/%s/%s", p.Expression, p.Flags)
-
-	return b.String()
 }
 
 // A type containing error details that is returned by the compile calls on failure.
@@ -133,8 +118,18 @@ func Compile(expression string, flags CompileFlag, mode CompileMode, info *hs.Pl
 	return nil, fmt.Errorf("compile error %d, %w", int(ret), ErrCompileError)
 }
 
+type Patterns interface {
+	Patterns() []*Pattern
+}
+
 // The multiple regular expression compiler.
-func CompileMulti(patterns []*Pattern, mode CompileMode, info *hs.PlatformInfo) (Database, error) {
+func CompileMulti(p Patterns, mode CompileMode, info *hs.PlatformInfo) (Database, error) {
+	return CompileExtMulti(p, mode, info, 0, 0)
+}
+
+// The multiple regular expression compiler.
+func CompileExtMulti(p Patterns, mode CompileMode, info *hs.PlatformInfo,
+	matchLimit, matchLimitRecursion uint) (Database, error) {
 	var db *C.ch_database_t
 	var err *C.ch_compile_error_t
 	var platform *C.hs_platform_info_t
@@ -142,6 +137,8 @@ func CompileMulti(patterns []*Pattern, mode CompileMode, info *hs.PlatformInfo) 
 	if info != nil {
 		platform = (*C.struct_hs_platform_info)(unsafe.Pointer(&info.Platform))
 	}
+
+	patterns := p.Patterns()
 
 	cexprs := (**C.char)(C.calloc(C.size_t(len(patterns)), C.size_t(unsafe.Sizeof(uintptr(0)))))
 	exprs := (*[1 << 30]*C.char)(unsafe.Pointer(cexprs))[:len(patterns):len(patterns)]
@@ -158,7 +155,8 @@ func CompileMulti(patterns []*Pattern, mode CompileMode, info *hs.PlatformInfo) 
 		ids[i] = C.uint(pattern.Id)
 	}
 
-	ret := C.ch_compile_multi(cexprs, cflags, cids, C.uint(len(patterns)), C.uint(mode), platform, &db, &err)
+	ret := C.ch_compile_ext_multi(cexprs, cflags, cids, C.uint(len(patterns)), C.uint(mode),
+		C.ulong(matchLimit), C.ulong(matchLimitRecursion), platform, &db, &err)
 
 	for _, expr := range exprs {
 		C.free(unsafe.Pointer(expr))

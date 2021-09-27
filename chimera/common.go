@@ -1,6 +1,10 @@
 package chimera
 
 import (
+	"fmt"
+	"regexp"
+
+	"github.com/flier/gohs/hyperscan"
 	"github.com/flier/gohs/internal/ch"
 )
 
@@ -33,10 +37,53 @@ const (
 	ErrScratchInUse Error = ch.ErrScratchInUse
 )
 
+// ModeFlag represents the compile mode flags.
+type ModeFlag = hyperscan.ModeFlag
+
+// BlockMode for the block scan (non-streaming) database.
+const BlockMode = hyperscan.BlockMode
+
 // DbInfo identify the version and platform information for the supplied database.
 type DbInfo string // nolint: stylecheck
 
+// parse `Chimera Version: 5.4.0 Features: AVX2 Mode: BLOCK`.
+var regexDBInfo = regexp.MustCompile(`^Chimera Version: (\d+\.\d+\.\d+) Features: ([\w\s]+)? Mode: (\w+)$`)
+
+const dbInfoMatches = 4
+
 func (i DbInfo) String() string { return string(i) }
+
+// Parse the version and platform information.
+func (i DbInfo) Parse() (version, features, mode string, err error) {
+	matched := regexDBInfo.FindStringSubmatch(string(i))
+
+	if len(matched) != dbInfoMatches {
+		err = fmt.Errorf("database info `%s`, %w", i, ErrInvalid)
+	} else {
+		version = matched[1]
+		features = matched[2]
+		mode = matched[3]
+	}
+
+	return
+}
+
+// Version is the version for the supplied database.
+func (i DbInfo) Version() (string, error) {
+	version, _, _, err := i.Parse()
+
+	return version, err
+}
+
+// Mode is the scanning mode for the supplied database.
+func (i DbInfo) Mode() (ModeFlag, error) {
+	_, _, mode, err := i.Parse()
+	if err != nil {
+		return 0, err
+	}
+
+	return hyperscan.ParseModeFlag(mode) // nolint: wrapcheck
+}
 
 // Database is an immutable database that can be used by the Hyperscan scanning API.
 type Database interface {
@@ -50,13 +97,21 @@ type Database interface {
 	Close() error
 }
 
-type database struct {
+type database interface {
+	c() ch.Database
+}
+
+type baseDatabase struct {
 	db ch.Database
 }
 
-func (d *database) Size() (int, error) { return ch.DatabaseSize(d.db) } // nolint: wrapcheck
+func newDatabase(db ch.Database) *baseDatabase { return &baseDatabase{db} }
 
-func (d *database) Info() (DbInfo, error) {
+func (d *baseDatabase) c() ch.Database { return d.db }
+
+func (d *baseDatabase) Size() (int, error) { return ch.DatabaseSize(d.db) } // nolint: wrapcheck
+
+func (d *baseDatabase) Info() (DbInfo, error) {
 	i, err := ch.DatabaseInfo(d.db)
 	if err != nil {
 		return "", err //nolint: wrapcheck
@@ -65,7 +120,7 @@ func (d *database) Info() (DbInfo, error) {
 	return DbInfo(i), nil
 }
 
-func (d *database) Close() error { return ch.FreeDatabase(d.db) } // nolint: wrapcheck
+func (d *baseDatabase) Close() error { return ch.FreeDatabase(d.db) } // nolint: wrapcheck
 
 // Version identify this release version.
 //

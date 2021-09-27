@@ -1,15 +1,15 @@
-package hyperscan
+package chimera
 
 import (
 	"errors"
 
-	"github.com/flier/gohs/internal/hs"
+	"github.com/flier/gohs/internal/ch"
 )
 
 // BlockScanner is the block (non-streaming) regular expression scanner.
 type BlockScanner interface {
 	// This is the function call in which the actual pattern matching takes place for block-mode pattern databases.
-	Scan(data []byte, scratch *Scratch, handler MatchHandler, context interface{}) error
+	Scan(data []byte, scratch *Scratch, handler Handler, context interface{}) error
 }
 
 // BlockMatcher implements regular expression search.
@@ -70,8 +70,8 @@ type blockDatabase struct {
 	*blockMatcher
 }
 
-func newBlockDatabase(db hs.Database) *blockDatabase {
-	return &blockDatabase{newBlockMatcher(newBlockScanner(newBaseDatabase(db)))}
+func newBlockDatabase(db ch.Database) *blockDatabase {
+	return &blockDatabase{newBlockMatcher(newBlockScanner(newDatabase(db)))}
 }
 
 type blockScanner struct {
@@ -82,7 +82,7 @@ func newBlockScanner(bdb *baseDatabase) *blockScanner {
 	return &blockScanner{bdb}
 }
 
-func (bs *blockScanner) Scan(data []byte, s *Scratch, handler MatchHandler, context interface{}) (err error) {
+func (bs *blockScanner) Scan(data []byte, s *Scratch, h Handler, ctx interface{}) (err error) {
 	if s == nil {
 		s, err = NewScratch(bs)
 
@@ -95,12 +95,12 @@ func (bs *blockScanner) Scan(data []byte, s *Scratch, handler MatchHandler, cont
 		}()
 	}
 
-	return hs.Scan(bs.db, data, 0, s.s, handler, context) // nolint: wrapcheck
+	return ch.Scan(bs.db, data, 0, s.s, h.OnMatch, h.OnError, ctx) // nolint: wrapcheck
 }
 
 type blockMatcher struct {
 	*blockScanner
-	*hs.MatchRecorder
+	*ch.MatchRecorder
 	n int
 }
 
@@ -108,29 +108,27 @@ func newBlockMatcher(scanner *blockScanner) *blockMatcher {
 	return &blockMatcher{blockScanner: scanner}
 }
 
-func (m *blockMatcher) Handle(id uint, from, to uint64, flags uint, context interface{}) error {
-	err := m.MatchRecorder.Handle(id, from, to, flags, context)
-	if err != nil {
-		return err // nolint: wrapcheck
-	}
+func (m *blockMatcher) OnMatch(id uint, from, to uint64, flags uint,
+	captured []*Capture, context interface{}) (r Callback) {
+	r = m.MatchRecorder.OnMatch(id, from, to, flags, captured, context)
 
 	if m.n < 0 {
-		return nil
+		return Continue
 	}
 
 	if m.n < len(m.Events) {
 		m.Events = m.Events[:m.n]
 
-		return ErrTooManyMatches
+		return Terminate
 	}
 
-	return nil
+	return
 }
 
 func (m *blockMatcher) scan(data []byte) error {
-	m.MatchRecorder = &hs.MatchRecorder{}
+	m.MatchRecorder = &ch.MatchRecorder{}
 
-	return m.blockScanner.Scan(data, nil, m.Handle, nil)
+	return m.blockScanner.Scan(data, nil, m, nil)
 }
 
 const findIndexMatches = 2

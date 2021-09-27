@@ -2,15 +2,12 @@
 package hyperscan_test
 
 import (
-	"regexp"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
 
 	"github.com/flier/gohs/hyperscan"
 )
-
-var regexInfo = regexp.MustCompile(`^Version: (\d+\.\d+\.\d+) Features: ([\w\s]+)? Mode: (\w+)$`)
 
 func TestBaseDatabase(t *testing.T) {
 	Convey("Given a block database", t, func() {
@@ -34,7 +31,8 @@ func TestBaseDatabase(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(info, ShouldNotBeNil)
 
-			So(regexInfo.MatchString(info.String()), ShouldBeTrue)
+			_, _, _, err = info.Parse()
+			So(err, ShouldBeNil)
 
 			Convey("Then get version", func() {
 				ver, err := info.Version()
@@ -70,7 +68,8 @@ func TestBaseDatabase(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(info, ShouldNotBeNil)
 
-				So(regexInfo.MatchString(info.String()), ShouldBeTrue)
+				_, _, _, err = info.Parse()
+				So(err, ShouldBeNil)
 			})
 
 			Convey("Then deserialize database", func() {
@@ -85,7 +84,8 @@ func TestBaseDatabase(t *testing.T) {
 					So(err, ShouldBeNil)
 					So(info, ShouldNotBeNil)
 
-					So(regexInfo.MatchString(info.String()), ShouldBeTrue)
+					_, _, _, err = info.Parse()
+					So(err, ShouldBeNil)
 
 					Convey("Then get version", func() {
 						ver, err := info.Version()
@@ -107,7 +107,8 @@ func TestBaseDatabase(t *testing.T) {
 					So(err, ShouldBeNil)
 					So(info, ShouldNotBeNil)
 
-					So(regexInfo.MatchString(info.String()), ShouldBeTrue)
+					_, _, _, err = info.Parse()
+					So(err, ShouldBeNil)
 
 					Convey("Then get version", func() {
 						ver, err := info.Version()
@@ -136,7 +137,8 @@ func TestBlockDatabase(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(info, ShouldNotBeNil)
 
-			So(regexInfo.MatchString(info.String()), ShouldBeTrue)
+			_, _, _, err = info.Parse()
+			So(err, ShouldBeNil)
 
 			Convey("Then get mode", func() {
 				mode, err := info.Mode()
@@ -163,7 +165,8 @@ func TestVectoredDatabase(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(info, ShouldNotBeNil)
 
-			So(regexInfo.MatchString(info.String()), ShouldBeTrue)
+			_, _, _, err = info.Parse()
+			So(err, ShouldBeNil)
 
 			Convey("Then get mode", func() {
 				mode, err := info.Mode()
@@ -190,7 +193,8 @@ func TestStreamDatabase(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(info, ShouldNotBeNil)
 
-			So(regexInfo.MatchString(info.String()), ShouldBeTrue)
+			_, _, _, err = info.Parse()
+			So(err, ShouldBeNil)
 
 			Convey("Then get mode", func() {
 				mode, err := info.Mode()

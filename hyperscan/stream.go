@@ -63,6 +63,28 @@ type StreamCompressor interface {
 		handler MatchHandler, context interface{}) (Stream, error)
 }
 
+// StreamDatabase scan the target data to be scanned is a continuous stream,
+// not all of which is available at once;
+// blocks of data are scanned in sequence and matches may span multiple blocks in a stream.
+type StreamDatabase interface {
+	Database
+	StreamScanner
+	StreamMatcher
+	StreamCompressor
+
+	StreamSize() (int, error)
+}
+
+type streamDatabase struct {
+	*streamMatcher
+}
+
+func newStreamDatabase(db hs.Database) *streamDatabase {
+	return &streamDatabase{newStreamMatcher(newStreamScanner(newBaseDatabase(db)))}
+}
+
+func (db *streamDatabase) StreamSize() (int, error) { return hs.StreamSize(db.db) } // nolint: wrapcheck
+
 const bufSize = 4096
 
 type stream struct {

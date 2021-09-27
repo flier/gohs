@@ -1,21 +1,21 @@
-package hyperscan
+package chimera
 
 import (
 	"runtime"
 
-	"github.com/flier/gohs/internal/hs"
+	"github.com/flier/gohs/internal/ch"
 )
 
-// Scratch is a Hyperscan scratch space.
+// Scratch is a Chimera scratch space.
 type Scratch struct {
-	s hs.Scratch
+	s ch.Scratch
 }
 
-// NewScratch allocate a "scratch" space for use by Hyperscan.
+// NewScratch allocate a "scratch" space for use by Chimera.
 // This is required for runtime use, and one scratch space per thread,
 // or concurrent caller, is required.
 func NewScratch(db Database) (*Scratch, error) {
-	s, err := hs.AllocScratch(db.(database).c())
+	s, err := ch.AllocScratch(db.(database).c())
 	if err != nil {
 		return nil, err // nolint: wrapcheck
 	}
@@ -39,16 +39,16 @@ func NewManagedScratch(db Database) (*Scratch, error) {
 }
 
 // Size provides the size of the given scratch space.
-func (s *Scratch) Size() (int, error) { return hs.ScratchSize(s.s) } // nolint: wrapcheck
+func (s *Scratch) Size() (int, error) { return ch.ScratchSize(s.s) } // nolint: wrapcheck
 
 // Realloc reallocate the scratch for another database.
 func (s *Scratch) Realloc(db Database) error {
-	return hs.ReallocScratch(db.(database).c(), &s.s) // nolint: wrapcheck
+	return ch.ReallocScratch(db.(database).c(), &s.s) // nolint: wrapcheck
 }
 
 // Clone allocate a scratch space that is a clone of an existing scratch space.
 func (s *Scratch) Clone() (*Scratch, error) {
-	cloned, err := hs.CloneScratch(s.s)
+	cloned, err := ch.CloneScratch(s.s)
 	if err != nil {
 		return nil, err // nolint: wrapcheck
 	}
@@ -57,4 +57,4 @@ func (s *Scratch) Clone() (*Scratch, error) {
 }
 
 // Free a scratch block previously allocated.
-func (s *Scratch) Free() error { return hs.FreeScratch(s.s) } // nolint: wrapcheck
+func (s *Scratch) Free() error { return ch.FreeScratch(s.s) } // nolint: wrapcheck

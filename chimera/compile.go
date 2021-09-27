@@ -2,9 +2,11 @@ package chimera
 
 import (
 	"fmt"
+	"runtime"
 	"strconv"
 
 	"github.com/flier/gohs/internal/ch"
+	"github.com/flier/gohs/internal/hs"
 )
 
 // A type containing error details that is returned by the compile calls on failure.
@@ -65,6 +67,107 @@ const (
 	Groups CompileMode = ch.Groups
 )
 
+type Builder interface {
+	Build(mode CompileMode) (Database, error)
+
+	ForPlatform(mode CompileMode, platform Platform) (Database, error)
+}
+
+func (p *Pattern) Build(mode CompileMode) (Database, error) {
+	return p.ForPlatform(mode, nil)
+}
+
+func (p *Pattern) ForPlatform(mode CompileMode, platform Platform) (Database, error) {
+	b := DatabaseBuilder{Patterns: Patterns{p}, Mode: mode, Platform: platform}
+	return b.Build()
+}
+
+func (p Patterns) Build(mode CompileMode) (Database, error) {
+	return p.ForPlatform(mode, nil)
+}
+
+func (p Patterns) ForPlatform(mode CompileMode, platform Platform) (Database, error) {
+	b := DatabaseBuilder{Patterns: p, Mode: mode, Platform: platform}
+	return b.Build()
+}
+
+// DatabaseBuilder to help to build up a database.
+type DatabaseBuilder struct {
+	// Array of patterns to compile.
+	Patterns
+
+	// Compiler mode flags that affect the database as a whole. (Default: capturing groups mode)
+	Mode CompileMode
+
+	// If not nil, the platform structure is used to determine the target platform for the database.
+	// If nil, a database suitable for running on the current host platform is produced.
+	Platform
+
+	// A limit from pcre_extra on the amount of match function called in PCRE to limit backtracking that can take place.
+	MatchLimit uint
+
+	// A limit from pcre_extra on the recursion depth of match function in PCRE.
+	MatchLimitRecursion uint
+}
+
+// AddExpressions add more expressions to the database.
+func (b *DatabaseBuilder) AddExpressions(exprs ...Expression) *DatabaseBuilder {
+	for _, expr := range exprs {
+		b.Patterns = append(b.Patterns, &Pattern{Expression: expr, Id: len(b.Patterns) + 1})
+	}
+
+	return b
+}
+
+// AddExpressionWithFlags add more expressions with flags to the database.
+func (b *DatabaseBuilder) AddExpressionWithFlags(expr Expression, flags CompileFlag) *DatabaseBuilder {
+	b.Patterns = append(b.Patterns, &Pattern{Expression: expr, Flags: flags, Id: len(b.Patterns) + 1})
+
+	return b
+}
+
+// Build a database base on the expressions and platform.
+func (b *DatabaseBuilder) Build() (Database, error) {
+	if b.Patterns == nil {
+		return nil, ErrInvalid
+	}
+
+	platform, _ := b.Platform.(*hs.PlatformInfo)
+
+	db, err := ch.CompileExtMulti(b.Patterns, b.Mode, platform, b.MatchLimit, b.MatchLimitRecursion)
+	if err != nil {
+		return nil, err // nolint: wrapcheck
+	}
+
+	return newBlockDatabase(db), nil
+}
+
+// NewBlockDatabase compile expressions into a pattern database.
+func NewBlockDatabase(patterns ...*Pattern) (BlockDatabase, error) {
+	db, err := Patterns(patterns).Build(Groups)
+	if err != nil {
+		return nil, err
+	}
+
+	return db.(BlockDatabase), err
+}
+
+// NewManagedBlockDatabase is a wrapper for NewBlockDatabase that
+// sets a finalizer on the Scratch instance so that memory is
+// freed once the object is no longer in use.
+func NewManagedBlockDatabase(patterns ...*Pattern) (BlockDatabase, error) {
+	db, err := NewBlockDatabase(patterns...)
+	if err != nil {
+		return nil, err
+	}
+
+	runtime.SetFinalizer(db, func(obj BlockDatabase) {
+		_ = obj.Close()
+	})
+
+	return db, nil
+}
+
 // Compile a regular expression and returns, if successful,
 // a pattern database in the block mode that can be used to match against text.
 func Compile(expr string) (Database, error) {
@@ -73,7 +176,7 @@ func Compile(expr string) (Database, error) {
 		return nil, err // nolint: wrapcheck
 	}
 
-	return &database{db}, nil
+	return newBlockDatabase(db), nil
 }
 
 // MustCompile is like Compile but panics if the expression cannot be parsed.

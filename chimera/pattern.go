@@ -14,7 +14,7 @@ import (
 type Expression = ch.Expression
 
 // Pattern is a matching pattern.
-type Pattern = ch.Pattern
+type Pattern ch.Pattern
 
 // NewPattern returns a new pattern base on expression and compile flags.
 func NewPattern(expr string, flags CompileFlag) *Pattern {
@@ -64,6 +64,18 @@ func ParsePattern(s string) (*Pattern, error) {
 	return &p, nil
 }
 
+func (p *Pattern) String() string {
+	var b strings.Builder
+
+	if p.Id > 0 {
+		fmt.Fprintf(&b, "%d:", p.Id)
+	}
+
+	fmt.Fprintf(&b, "/%s/%s", p.Expression, p.Flags)
+
+	return b.String()
+}
+
 // Patterns is a set of matching patterns.
 type Patterns []*Pattern
 
@@ -92,5 +104,13 @@ func ParsePatterns(r io.Reader) (patterns Patterns, err error) {
 		patterns = append(patterns, p)
 	}
 
+	return
+}
+
+func (p Patterns) Patterns() (r []*ch.Pattern) {
+	r = make([]*ch.Pattern, len(p))
+	for i, pat := range p {
+		r[i] = (*ch.Pattern)(pat)
+	}
 	return
 }

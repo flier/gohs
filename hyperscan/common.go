@@ -56,63 +56,45 @@ type Database interface {
 	Unmarshal([]byte) error
 }
 
-// BlockDatabase scan the target data that is a discrete,
-// contiguous block which can be scanned in one call and does not require state to be retained.
-type BlockDatabase interface {
-	Database
-	BlockScanner
-	BlockMatcher
-}
-
-// StreamDatabase scan the target data to be scanned is a continuous stream,
-// not all of which is available at once;
-// blocks of data are scanned in sequence and matches may span multiple blocks in a stream.
-type StreamDatabase interface {
-	Database
-	StreamScanner
-	StreamMatcher
-	StreamCompressor
-
-	StreamSize() (int, error)
-}
-
-// VectoredDatabase scan the target data that consists of a list of non-contiguous blocks
-// that are available all at once.
-type VectoredDatabase interface {
-	Database
-	VectoredScanner
-	VectoredMatcher
-}
-
-const infoMatches = 4
-
-var regexInfo = regexp.MustCompile(`^Version: (\d+\.\d+\.\d+) Features: ([\w\s]+)? Mode: (\w+)$`)
-
 // DbInfo identify the version and platform information for the supplied database.
 type DbInfo string // nolint: stylecheck
 
 func (i DbInfo) String() string { return string(i) }
 
-// Version is the version for the supplied database.
-func (i DbInfo) Version() (string, error) {
-	matched := regexInfo.FindStringSubmatch(string(i))
+var regexDBInfo = regexp.MustCompile(`^Version: (\d+\.\d+\.\d+) Features: ([\w\s]+)? Mode: (\w+)$`)
 
-	if len(matched) != infoMatches {
-		return "", fmt.Errorf("database info, %w", ErrInvalid)
+const dbInfoMatches = 4
+
+// Parse the version and platform information.
+func (i DbInfo) Parse() (version, features, mode string, err error) {
+	matched := regexDBInfo.FindStringSubmatch(string(i))
+
+	if len(matched) != dbInfoMatches {
+		err = fmt.Errorf("database info `%s`, %w", i, ErrInvalid)
+	} else {
+		version = matched[1]
+		features = matched[2]
+		mode = matched[3]
 	}
 
-	return matched[1], nil
+	return
+}
+
+// Version is the version for the supplied database.
+func (i DbInfo) Version() (string, error) {
+	version, _, _, err := i.Parse()
+
+	return version, err
 }
 
 // Mode is the scanning mode for the supplied database.
 func (i DbInfo) Mode() (ModeFlag, error) {
-	matched := regexInfo.FindStringSubmatch(string(i))
-
-	if len(matched) != infoMatches {
-		return 0, fmt.Errorf("database info, %w", ErrInvalid)
+	_, _, mode, err := i.Parse()
+	if err != nil {
+		return 0, err
 	}
 
-	return ParseModeFlag(matched[3])
+	return ParseModeFlag(mode)
 }
 
 // Version identify this release version. The return version is a string
@@ -123,7 +105,7 @@ func Version() string { return hs.Version() }
 func ValidPlatform() error { return hs.ValidPlatform() } // nolint: wrapcheck
 
 type database interface {
-	Db() hs.Database
+	c() hs.Database
 }
 
 type baseDatabase struct {
@@ -184,7 +166,7 @@ func SerializedDatabaseInfo(data []byte) (DbInfo, error) {
 	return DbInfo(i), err
 }
 
-func (d *baseDatabase) Db() hs.Database { return d.db } // nolint: stylecheck
+func (d *baseDatabase) c() hs.Database { return d.db }
 
 func (d *baseDatabase) Size() (int, error) { return hs.DatabaseSize(d.db) } // nolint: wrapcheck
 
@@ -202,29 +184,3 @@ func (d *baseDatabase) Close() error { return hs.FreeDatabase(d.db) } // nolint:
 func (d *baseDatabase) Marshal() ([]byte, error) { return hs.SerializeDatabase(d.db) } // nolint: wrapcheck
 
 func (d *baseDatabase) Unmarshal(data []byte) error { return hs.DeserializeDatabaseAt(data, d.db) } // nolint: wrapcheck
-
-type blockDatabase struct {
-	*blockMatcher
-}
-
-func newBlockDatabase(db hs.Database) *blockDatabase {
-	return &blockDatabase{newBlockMatcher(newBlockScanner(newBaseDatabase(db)))}
-}
-
-type streamDatabase struct {
-	*streamMatcher
-}
-
-func newStreamDatabase(db hs.Database) *streamDatabase {
-	return &streamDatabase{newStreamMatcher(newStreamScanner(newBaseDatabase(db)))}
-}
-
-func (db *streamDatabase) StreamSize() (int, error) { return hs.StreamSize(db.db) } // nolint: wrapcheck
-
-type vectoredDatabase struct {
-	*vectoredMatcher
-}
-
-func newVectoredDatabase(db hs.Database) *vectoredDatabase {
-	return &vectoredDatabase{newVectoredMatcher(newVectoredScanner(newBaseDatabase(db)))}
-}

@@ -116,6 +116,10 @@ func SetAllocator(allocFunc AllocFunc, freeFunc FreeFunc) (err error) {
 	return
 }
 
+func ClearAllocator() error {
+	return SetAllocator(nil, nil)
+}
+
 //export chDbAlloc
 func chDbAlloc(size C.size_t) unsafe.Pointer {
 	return dbAllocator.Alloc(uint(size))
@@ -137,7 +141,7 @@ func SetDatabaseAllocator(allocFunc AllocFunc, freeFunc FreeFunc) (err error) {
 		ret = C.ch_set_database_allocator(nil, nil)
 	} else {
 		dbAllocator = Allocator{allocFunc, freeFunc}
-		ret = C.ch_set_database_allocator(C.ch_alloc_t(C.chDefaultAlloc), C.ch_free_t(C.chDefaultFree))
+		ret = C.ch_set_database_allocator(C.ch_alloc_t(C.chDbAlloc), C.ch_free_t(C.chDbFree))
 	}
 
 	if ret != C.CH_SUCCESS {
@@ -145,6 +149,10 @@ func SetDatabaseAllocator(allocFunc AllocFunc, freeFunc FreeFunc) (err error) {
 	}
 
 	return
+}
+
+func ClearDatabaseAllocator() error {
+	return SetDatabaseAllocator(nil, nil)
 }
 
 //export chMiscAlloc
@@ -167,7 +175,7 @@ func SetMiscAllocator(allocFunc AllocFunc, freeFunc FreeFunc) (err error) {
 		ret = C.ch_set_misc_allocator(nil, nil)
 	} else {
 		miscAllocator = Allocator{allocFunc, freeFunc}
-		ret = C.ch_set_misc_allocator(C.ch_alloc_t(C.chDefaultAlloc), C.ch_free_t(C.chDefaultFree))
+		ret = C.ch_set_misc_allocator(C.ch_alloc_t(C.chMiscAlloc), C.ch_free_t(C.chMiscFree))
 	}
 
 	if ret != C.CH_SUCCESS {
@@ -175,6 +183,10 @@ func SetMiscAllocator(allocFunc AllocFunc, freeFunc FreeFunc) (err error) {
 	}
 
 	return
+}
+
+func ClearMiscAllocator() error {
+	return SetMiscAllocator(nil, nil)
 }
 
 //export chScratchAlloc
@@ -189,7 +201,7 @@ func chScratchFree(ptr unsafe.Pointer) {
 
 // Set the allocate and free functions used by Chimera for allocating memory
 // for scratch space by @ref ch_alloc_scratch() and @ref ch_clone_scratch().
-func SetscratchAllocator(allocFunc AllocFunc, freeFunc FreeFunc) (err error) {
+func SetScratchAllocator(allocFunc AllocFunc, freeFunc FreeFunc) (err error) {
 	var ret C.ch_error_t
 
 	if allocFunc == nil || freeFunc == nil {
@@ -197,7 +209,7 @@ func SetscratchAllocator(allocFunc AllocFunc, freeFunc FreeFunc) (err error) {
 		ret = C.ch_set_scratch_allocator(nil, nil)
 	} else {
 		scratchAllocator = Allocator{allocFunc, freeFunc}
-		ret = C.ch_set_scratch_allocator(C.ch_alloc_t(C.chDefaultAlloc), C.ch_free_t(C.chDefaultFree))
+		ret = C.ch_set_scratch_allocator(C.ch_alloc_t(C.chScratchAlloc), C.ch_free_t(C.chScratchFree))
 	}
 
 	if ret != C.CH_SUCCESS {
@@ -205,4 +217,8 @@ func SetscratchAllocator(allocFunc AllocFunc, freeFunc FreeFunc) (err error) {
 	}
 
 	return
+}
+
+func ClearScratchAllocator() error {
+	return SetScratchAllocator(nil, nil)
 }

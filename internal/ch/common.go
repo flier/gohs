@@ -1,9 +1,11 @@
 package ch
 
+import (
+	"unsafe"
+)
+
 // #include <ch.h>
 import "C"
-
-import "unsafe"
 
 type Database *C.ch_database_t
 
