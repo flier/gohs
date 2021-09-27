@@ -6,6 +6,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	"github.com/flier/gohs/chimera"
+	"github.com/flier/gohs/hyperscan"
 )
 
 func TestChimera(t *testing.T) {
@@ -16,7 +17,7 @@ func TestChimera(t *testing.T) {
 
 func TestBaseDatabase(t *testing.T) {
 	Convey("Given a block database", t, func() {
-		So(chimera.ValidPlatform(), ShouldBeNil)
+		So(hyperscan.ValidPlatform(), ShouldBeNil)
 
 		bdb, err := chimera.NewBlockDatabase(&chimera.Pattern{Expression: "test"})
 
@@ -50,7 +51,7 @@ func TestBaseDatabase(t *testing.T) {
 				mode, err := info.Mode()
 
 				So(err, ShouldBeNil)
-				So(mode, ShouldEqual, chimera.BlockMode)
+				So(mode, ShouldEqual, hyperscan.BlockMode)
 			})
 		})
 
@@ -78,7 +79,7 @@ func TestBlockDatabase(t *testing.T) {
 				mode, err := info.Mode()
 
 				So(err, ShouldBeNil)
-				So(mode, ShouldEqual, chimera.BlockMode)
+				So(mode, ShouldEqual, hyperscan.BlockMode)
 			})
 		})
 

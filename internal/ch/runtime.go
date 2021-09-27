@@ -40,8 +40,9 @@ const (
 
 // Capture representing a captured subexpression within a match.
 type Capture struct {
-	From uint64 // offset at which this capture group begins.
-	To   uint64 // offset at which this capture group ends.
+	From  uint64 // offset at which this capture group begins.
+	To    uint64 // offset at which this capture group ends.
+	Bytes []byte // matches of the expression
 }
 
 // Definition of the match event callback function type.
@@ -72,13 +73,15 @@ func (e ErrorEvent) Error() string {
 type ErrorEventHandler func(event ErrorEvent, id uint, info, context interface{}) Callback
 
 type eventContext struct {
+	data    []byte
 	onEvent MatchEventHandler
 	onError ErrorEventHandler
 	context interface{}
 }
 
 //export matchEventCallback
-func matchEventCallback(id C.uint, from, to C.ulonglong, flags, size C.uint, cap *C.capture_t, data unsafe.Pointer) C.ch_callback_t {
+func matchEventCallback(id C.uint, from, to C.ulonglong, flags, size C.uint,
+	cap *C.capture_t, data unsafe.Pointer) C.ch_callback_t {
 	ctx, ok := handle.Handle(data).Value().(eventContext)
 	if !ok {
 		return C.CH_CALLBACK_TERMINATE
@@ -87,7 +90,7 @@ func matchEventCallback(id C.uint, from, to C.ulonglong, flags, size C.uint, cap
 	captured := make([]*Capture, size)
 	for i, c := range (*[1 << 30]C.capture_t)(unsafe.Pointer(cap))[:size:size] {
 		if c.flags == C.CH_CAPTURE_FLAG_ACTIVE {
-			captured[i] = &Capture{uint64(c.from), uint64(c.to)}
+			captured[i] = &Capture{uint64(c.from), uint64(c.to), ctx.data[c.from:c.to]}
 		}
 	}
 
@@ -114,7 +117,7 @@ func Scan(db Database, data []byte, flags ScanFlag, scratch Scratch,
 		return ErrInvalid
 	}
 
-	h := handle.New(eventContext{onEvent, onError, context})
+	h := handle.New(eventContext{data, onEvent, onError, context})
 	defer h.Delete()
 
 	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data)) // FIXME: Zero-copy access to go data

@@ -40,7 +40,7 @@ func ExampleBlockScanner() {
 
 	var matches []Match
 
-	handler := chimera.MatchHandlerFunc(func(id uint, from, to uint64, flags uint,
+	handler := chimera.HandlerFunc(func(id uint, from, to uint64, flags uint,
 		captured []*chimera.Capture, ctx interface{}) chimera.Callback {
 		matches = append(matches, Match{from, to})
 		return chimera.Continue

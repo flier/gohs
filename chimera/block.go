@@ -116,7 +116,7 @@ func (m *blockMatcher) OnMatch(id uint, from, to uint64, flags uint,
 		return Continue
 	}
 
-	if m.n < len(m.Events) {
+	if m.n <= len(m.Events) {
 		m.Events = m.Events[:m.n]
 
 		return Terminate

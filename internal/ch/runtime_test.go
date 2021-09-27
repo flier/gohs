@@ -30,7 +30,7 @@ func TestBlockScan(t *testing.T) {
 
 		Convey("Scan block with pattern", func() {
 			So(ch.Scan(db, []byte("abctestdef"), 0, s, h.OnMatch, h.OnError, nil), ShouldBeNil)
-			So(h.Events, ShouldResemble, []ch.MatchEvent{{0, 3, 7, 0, []*ch.Capture{{3, 7}}}})
+			So(h.Events, ShouldResemble, []ch.MatchEvent{{0, 3, 7, 0, []*ch.Capture{{3, 7, []byte("test")}}}})
 		})
 
 		Convey("Scan block without pattern", func() {
@@ -41,8 +41,8 @@ func TestBlockScan(t *testing.T) {
 		Convey("Scan block with multi pattern", func() {
 			So(ch.Scan(db, []byte("abctestdeftest"), 0, s, h.OnMatch, h.OnError, nil), ShouldBeNil)
 			So(h.Events, ShouldResemble, []ch.MatchEvent{
-				{0, 3, 7, 0, []*ch.Capture{{3, 7}}},
-				{0, 10, 14, 0, []*ch.Capture{{10, 14}}},
+				{0, 3, 7, 0, []*ch.Capture{{3, 7, []byte("test")}}},
+				{0, 10, 14, 0, []*ch.Capture{{10, 14, []byte("test")}}},
 			})
 		})
 

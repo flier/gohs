@@ -35,7 +35,7 @@ func TestBlockScanner(t *testing.T) {
 					return chimera.Continue
 				}
 
-				err = bdb.Scan([]byte("abc123def456"), nil, chimera.MatchHandlerFunc(matched), nil)
+				err = bdb.Scan([]byte("abc123def456"), nil, chimera.HandlerFunc(matched), nil)
 
 				So(err, ShouldBeNil)
 				So(matches, ShouldResemble, [][]uint64{{3, 6}, {9, 12}})

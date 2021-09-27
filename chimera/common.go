@@ -37,14 +37,9 @@ const (
 	ErrScratchInUse Error = ch.ErrScratchInUse
 )
 
-// ModeFlag represents the compile mode flags.
-type ModeFlag = hyperscan.ModeFlag
-
-// BlockMode for the block scan (non-streaming) database.
-const BlockMode = hyperscan.BlockMode
-
 // DbInfo identify the version and platform information for the supplied database.
-type DbInfo string // nolint: stylecheck
+// nolint: stylecheck
+type DbInfo string
 
 // parse `Chimera Version: 5.4.0 Features: AVX2 Mode: BLOCK`.
 var regexDBInfo = regexp.MustCompile(`^Chimera Version: (\d+\.\d+\.\d+) Features: ([\w\s]+)? Mode: (\w+)$`)
@@ -76,7 +71,7 @@ func (i DbInfo) Version() (string, error) {
 }
 
 // Mode is the scanning mode for the supplied database.
-func (i DbInfo) Mode() (ModeFlag, error) {
+func (i DbInfo) Mode() (hyperscan.ModeFlag, error) {
 	_, _, mode, err := i.Parse()
 	if err != nil {
 		return 0, err
@@ -85,7 +80,7 @@ func (i DbInfo) Mode() (ModeFlag, error) {
 	return hyperscan.ParseModeFlag(mode) // nolint: wrapcheck
 }
 
-// Database is an immutable database that can be used by the Hyperscan scanning API.
+// Database is an immutable database that can be used by the Chimera scanning API.
 type Database interface {
 	// Provides information about a database.
 	Info() (DbInfo, error)

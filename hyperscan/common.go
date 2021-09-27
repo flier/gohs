@@ -7,35 +7,39 @@ import (
 	"github.com/flier/gohs/internal/hs"
 )
 
-type HsError = hs.Error
+// HsError is the type type for errors returned by Hyperscan functions.
+type HsError = Error
+
+// Error is the type type for errors returned by Hyperscan functions.
+type Error = hs.Error
 
 const (
 	// ErrSuccess is the error returned if the engine completed normally.
-	ErrSuccess HsError = hs.ErrSuccess
+	ErrSuccess Error = hs.ErrSuccess
 	// ErrInvalid is the error returned if a parameter passed to this function was invalid.
-	ErrInvalid HsError = hs.ErrInvalid
+	ErrInvalid Error = hs.ErrInvalid
 	// ErrNoMemory is the error returned if a memory allocation failed.
-	ErrNoMemory HsError = hs.ErrNoMemory
+	ErrNoMemory Error = hs.ErrNoMemory
 	// ErrScanTerminated is the error returned if the engine was terminated by callback.
-	ErrScanTerminated HsError = hs.ErrScanTerminated
+	ErrScanTerminated Error = hs.ErrScanTerminated
 	// ErrCompileError is the error returned if the pattern compiler failed.
-	ErrCompileError HsError = hs.ErrCompileError
+	ErrCompileError Error = hs.ErrCompileError
 	// ErrDatabaseVersionError is the error returned if the given database was built for a different version of Hyperscan.
-	ErrDatabaseVersionError HsError = hs.ErrDatabaseVersionError
+	ErrDatabaseVersionError Error = hs.ErrDatabaseVersionError
 	// ErrDatabasePlatformError is the error returned if the given database was built for a different platform.
-	ErrDatabasePlatformError HsError = hs.ErrDatabasePlatformError
+	ErrDatabasePlatformError Error = hs.ErrDatabasePlatformError
 	// ErrDatabaseModeError is the error returned if the given database was built for a different mode of operation.
-	ErrDatabaseModeError HsError = hs.ErrDatabaseModeError
+	ErrDatabaseModeError Error = hs.ErrDatabaseModeError
 	// ErrBadAlign is the error returned if a parameter passed to this function was not correctly aligned.
-	ErrBadAlign HsError = hs.ErrBadAlign
+	ErrBadAlign Error = hs.ErrBadAlign
 	// ErrBadAlloc is the error returned if the memory allocator did not correctly return memory suitably aligned.
-	ErrBadAlloc HsError = hs.ErrBadAlloc
+	ErrBadAlloc Error = hs.ErrBadAlloc
 	// ErrScratchInUse is the error returned if the scratch region was already in use.
-	ErrScratchInUse HsError = hs.ErrScratchInUse
+	ErrScratchInUse Error = hs.ErrScratchInUse
 	// ErrArchError is the error returned if unsupported CPU architecture.
-	ErrArchError HsError = hs.ErrArchError
+	ErrArchError Error = hs.ErrArchError
 	// ErrInsufficientSpace is the error returned if provided buffer was too small.
-	ErrInsufficientSpace HsError = hs.ErrInsufficientSpace
+	ErrInsufficientSpace Error = hs.ErrInsufficientSpace
 )
 
 // Database is an immutable database that can be used by the Hyperscan scanning API.
@@ -57,7 +61,8 @@ type Database interface {
 }
 
 // DbInfo identify the version and platform information for the supplied database.
-type DbInfo string // nolint: stylecheck
+// nolint: stylecheck
+type DbInfo string
 
 func (i DbInfo) String() string { return string(i) }
 

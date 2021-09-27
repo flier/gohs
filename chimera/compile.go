@@ -5,6 +5,7 @@ import (
 	"runtime"
 	"strconv"
 
+	"github.com/flier/gohs/hyperscan"
 	"github.com/flier/gohs/internal/ch"
 	"github.com/flier/gohs/internal/hs"
 )
@@ -67,31 +68,38 @@ const (
 	Groups CompileMode = ch.Groups
 )
 
+// Builder creates a database with the given mode and target platform.
 type Builder interface {
+	// Build the database with the given mode.
 	Build(mode CompileMode) (Database, error)
 
-	ForPlatform(mode CompileMode, platform Platform) (Database, error)
+	// ForPlatform determine the target platform for the database
+	ForPlatform(mode CompileMode, platform hyperscan.Platform) (Database, error)
 }
 
+// Build the database with the given mode.
 func (p *Pattern) Build(mode CompileMode) (Database, error) {
 	return p.ForPlatform(mode, nil)
 }
 
-func (p *Pattern) ForPlatform(mode CompileMode, platform Platform) (Database, error) {
+// ForPlatform determine the target platform for the database.
+func (p *Pattern) ForPlatform(mode CompileMode, platform hyperscan.Platform) (Database, error) {
 	b := DatabaseBuilder{Patterns: Patterns{p}, Mode: mode, Platform: platform}
 	return b.Build()
 }
 
+// Build the database with the given mode.
 func (p Patterns) Build(mode CompileMode) (Database, error) {
 	return p.ForPlatform(mode, nil)
 }
 
-func (p Patterns) ForPlatform(mode CompileMode, platform Platform) (Database, error) {
+// ForPlatform determine the target platform for the database.
+func (p Patterns) ForPlatform(mode CompileMode, platform hyperscan.Platform) (Database, error) {
 	b := DatabaseBuilder{Patterns: p, Mode: mode, Platform: platform}
 	return b.Build()
 }
 
-// DatabaseBuilder to help to build up a database.
+// DatabaseBuilder creates a database that will be used to matching the patterns.
 type DatabaseBuilder struct {
 	// Array of patterns to compile.
 	Patterns
@@ -101,7 +109,7 @@ type DatabaseBuilder struct {
 
 	// If not nil, the platform structure is used to determine the target platform for the database.
 	// If nil, a database suitable for running on the current host platform is produced.
-	Platform
+	hyperscan.Platform
 
 	// A limit from pcre_extra on the amount of match function called in PCRE to limit backtracking that can take place.
 	MatchLimit uint

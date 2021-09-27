@@ -98,31 +98,38 @@ func ParseModeFlag(s string) (ModeFlag, error) {
 	return BlockMode, fmt.Errorf("database mode %s, %w", s, ErrInvalid)
 }
 
+// Builder creates a database with the given mode and target platform.
 type Builder interface {
+	// Build the database with the given mode.
 	Build(mode ModeFlag) (Database, error)
 
+	// ForPlatform determine the target platform for the database
 	ForPlatform(mode ModeFlag, platform Platform) (Database, error)
 }
 
+// Build the database with the given mode.
 func (p *Pattern) Build(mode ModeFlag) (Database, error) {
 	return p.ForPlatform(mode, nil)
 }
 
+// ForPlatform determine the target platform for the database.
 func (p *Pattern) ForPlatform(mode ModeFlag, platform Platform) (Database, error) {
 	b := DatabaseBuilder{Patterns: Patterns{p}, Mode: mode, Platform: platform}
 	return b.Build()
 }
 
+// Build the database with the given mode.
 func (p Patterns) Build(mode ModeFlag) (Database, error) {
 	return p.ForPlatform(mode, nil)
 }
 
+// ForPlatform determine the target platform for the database.
 func (p Patterns) ForPlatform(mode ModeFlag, platform Platform) (Database, error) {
 	b := DatabaseBuilder{Patterns: p, Mode: mode, Platform: platform}
 	return b.Build()
 }
 
-// DatabaseBuilder to help to build up a database.
+// DatabaseBuilder creates a database that will be used to matching the patterns.
 type DatabaseBuilder struct {
 	// Array of patterns to compile.
 	Patterns

@@ -65,7 +65,7 @@ func TestDatabaseBuilder(t *testing.T) {
 			mode, err := info.Mode()
 
 			So(err, ShouldBeNil)
-			So(mode, ShouldEqual, chimera.BlockMode)
+			So(mode, ShouldEqual, hyperscan.BlockMode)
 
 			So(db.Close(), ShouldBeNil)
 		})
