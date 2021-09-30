@@ -9,6 +9,8 @@ import (
 )
 
 /*
+#include <stdint.h>
+
 #include <hs.h>
 
 extern int hsMatchEventCallback(unsigned int id,

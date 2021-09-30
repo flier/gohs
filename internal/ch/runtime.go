@@ -10,6 +10,8 @@ import (
 )
 
 /*
+#include <stdint.h>
+
 #include <ch.h>
 
 typedef const ch_capture_t capture_t;
