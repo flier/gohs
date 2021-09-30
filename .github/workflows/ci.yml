@@ -54,11 +54,15 @@ jobs:
 
       - name: Test Hyperscan v4 API
         if: matrix.os == 'ubuntu-18.04'
-        run: go test -v -tags hyperscan_v4 ./internal/hs/... ./hyperscan/...
+        run: |
+          go test -v -tags hyperscan_v4 ./internal/hs/... ./hyperscan/...
+          go test -race -v -tags hyperscan_v4 ./internal/hs/... ./hyperscan/...
 
       - name: Test Hyperscan v5 API
         if: matrix.os != 'ubuntu-18.04'
-        run: go test -v ./internal/hs/... ./hyperscan/...
+        run: |
+          go test -v ./internal/hs/... ./hyperscan/...
+          go test -race -v ./internal/hs/... ./hyperscan/...
 
   build-and-test:
     strategy:
@@ -157,6 +161,7 @@ jobs:
           CGO_LDFLAGS: -L${{ github.workspace }}/dist/lib
         run: |
           go test -v ${{ matrix.build_tags }} ./internal/hs/... ./hyperscan/...
+          go test -race -v ${{ matrix.build_tags }} ./internal/hs/... ./hyperscan/...
 
       - name: Test Chimera API
         if: startsWith(matrix.hyperscan, '5.')
@@ -166,6 +171,7 @@ jobs:
           CGO_LDFLAGS: -L${{ github.workspace }}/dist/lib
         run: |
           go test -v ${{ matrix.build_tags }} ./internal/ch/... ./chimera/...
+          go test -trace -v ${{ matrix.build_tags }} ./internal/ch/... ./chimera/...
 
   golangci:
     name: lint
