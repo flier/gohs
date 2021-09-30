@@ -106,8 +106,6 @@ jobs:
           brew update
           brew install pkg-config libpcap ragel cmake boost ninja lzlib wget tree
 
-      - uses: actions/checkout@v2
-
       - name: Cache Hyperscan library
         id: cache-hyperscan
         uses: actions/cache@v2
@@ -158,6 +156,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - uses: actions/checkout@v2
+
       - name: Test Hyperscan API
         run: |
           go test -v ${{ matrix.build_tags }} ./internal/hs/... ./hyperscan/...
@@ -171,6 +171,8 @@ jobs:
 
       - name: Run and upload coverage to Codecov
         if: startsWith(matrix.hyperscan, '5.4.')
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: |
           go test -race -coverprofile=coverage.out -covermode=atomic ./...
           bash <(curl -s https://codecov.io/bash)
