@@ -1,10 +1,14 @@
-# gohs [![Continuous integration](https://github.com/flier/gohs/actions/workflows/ci.yml/badge.svg?)](https://github.com/flier/gohs/actions/workflows/ci.yml) [![Go Report Card](https://goreportcard.com/badge/github.com/flier/gohs?)](https://goreportcard.com/report/github.com/flier/gohs) [![Go Reference](https://pkg.go.dev/badge/github.com/flier/gohs/hyperscan.svg)](https://pkg.go.dev/github.com/flier/gohs/hyperscan) [![Apache](https://img.shields.io/badge/license-Apache-blue.svg)](https://github.com/flier/gohs/blob/master/LICENSE-APACHE) [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/flier/gohs/blob/master/LICENSE-MIT)
+# gohs [![Continuous integration](https://github.com/flier/gohs/actions/workflows/ci.yml/badge.svg?)](https://github.com/flier/gohs/actions/workflows/ci.yml) [![Go Report Card](https://goreportcard.com/badge/github.com/flier/gohs?)](https://goreportcard.com/report/github.com/flier/gohs) [![codecov](https://codecov.io/gh/flier/gohs/branch/master/graph/badge.svg?token=F5CLCxpJGM)](https://codecov.io/gh/flier/gohs)  [![Apache](https://img.shields.io/badge/license-Apache-blue.svg)](https://github.com/flier/gohs/blob/master/LICENSE-APACHE) [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/flier/gohs/blob/master/LICENSE-MIT)
 
 Golang binding for Intel's HyperScan regex matching library: [hyperscan.io](https://www.hyperscan.io/)
 
-## Build
+## Hyperscan [![Go Reference](https://pkg.go.dev/badge/github.com/flier/gohs/hyperscan.svg)](https://pkg.go.dev/github.com/flier/gohs/hyperscan)
 
-**Note:** `gohs` will use Hyperscan v5 API by default, you can also build for Hyperscan v4 with `hyperscan_v4` tag.
+Hyperscan is a software regular expression matching engine designed with high performance and flexibility in mind. It is implemented as a library that exposes a straightforward C API.
+
+### Build
+
+`gohs` will use Hyperscan v5 API by default, you can also build for Hyperscan v4 with `hyperscan_v4` tag.
 
 ```bash
 go get -u -tags hyperscan_v4 github.com/flier/gohs/hyperscan
@@ -13,6 +17,8 @@ go get -u -tags hyperscan_v4 github.com/flier/gohs/hyperscan
 ## Chimera [![Go Reference](https://pkg.go.dev/badge/github.com/flier/gohs/chimera.svg)](https://pkg.go.dev/github.com/flier/gohs/chimera)
 
 Chimera is a software regular expression matching engine that is a hybrid of Hyperscan and PCRE. The design goals of Chimera are to fully support PCRE syntax as well as to take advantage of the high performance nature of Hyperscan.
+
+### Build
 
 It is recommended to compile and link Chimera using static libraries.
 
