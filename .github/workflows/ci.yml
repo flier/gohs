@@ -71,21 +71,22 @@ jobs:
           - os: macos-latest
             hyperscan: 5.4.0
             pcre: 8.45
-            build_tags: -tags hyperscan_v54
+            build_flags: -tags hyperscan_v54
           - os: macos-latest
             hyperscan: 5.2.1
             pcre: 8.45
           - os: ubuntu-20.04
             hyperscan: 5.4.0
             pcre: 8.45
-            build_tags: -tags hyperscan_v54
+            build_flags: -tags hyperscan_v54
+            coverage: true
           - os: ubuntu-20.04
             hyperscan: 5.2.1
             pcre: 8.45
           - os: ubuntu-18.04
             hyperscan: 4.7.0
             pcre: 8.41
-            build_tags: -tags hyperscan_v4
+            build_flags: -tags hyperscan_v4
     name: Go ${{ matrix.go }} tests @ ${{ matrix.os }} for hyperscan ${{ matrix.hyperscan }}
     runs-on: ${{ matrix.os }}
     env:
@@ -105,6 +106,8 @@ jobs:
         run: |
           brew update
           brew install pkg-config libpcap ragel cmake boost ninja lzlib wget tree
+
+      - uses: actions/checkout@v2
 
       - name: Cache Hyperscan library
         id: cache-hyperscan
@@ -156,21 +159,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - uses: actions/checkout@v2
-
       - name: Test Hyperscan API
         run: |
-          go test -v ${{ matrix.build_tags }} ./internal/hs/... ./hyperscan/...
-          go test -race -v ${{ matrix.build_tags }} ./internal/hs/... ./hyperscan/...
+          go test -v ${{ matrix.build_flags }} ./internal/hs/... ./hyperscan/...
+          go test -race -v ${{ matrix.build_flags }} ./internal/hs/... ./hyperscan/...
 
       - name: Test Chimera API
-        if: startsWith(matrix.hyperscan, '5.')
+        if: matrix.coverage
         run: |
-          go test -v ${{ matrix.build_tags }} ./internal/ch/... ./chimera/...
-          go test -race -v ${{ matrix.build_tags }} ./internal/ch/... ./chimera/...
+          go test -v ${{ matrix.build_flags }} ./internal/ch/... ./chimera/...
+          go test -race -v ${{ matrix.build_flags }} ./internal/ch/... ./chimera/...
 
       - name: Run and upload coverage to Codecov
-        if: startsWith(matrix.hyperscan, '5.4.')
+        if: matrix.coverage
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: |
