@@ -88,6 +88,10 @@ jobs:
             build_tags: -tags hyperscan_v4
     name: Go ${{ matrix.go }} tests @ ${{ matrix.os }} for hyperscan ${{ matrix.hyperscan }}
     runs-on: ${{ matrix.os }}
+    env:
+      PKG_CONFIG_PATH: ${{ github.workspace }}/dist/lib/pkgconfig
+      CGO_CFLAGS: -I${{ github.workspace }}/dist/include/hs
+      CGO_LDFLAGS: -L${{ github.workspace }}/dist/lib
     steps:
       - name: Install Linux dependencies
         if: startsWith(matrix.os, 'ubuntu-')
@@ -155,23 +159,21 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Test Hyperscan API
-        env:
-          PKG_CONFIG_PATH: ${{ github.workspace }}/dist/lib/pkgconfig
-          CGO_CFLAGS: -I${{ github.workspace }}/dist/include/hs
-          CGO_LDFLAGS: -L${{ github.workspace }}/dist/lib
         run: |
           go test -v ${{ matrix.build_tags }} ./internal/hs/... ./hyperscan/...
           go test -race -v ${{ matrix.build_tags }} ./internal/hs/... ./hyperscan/...
 
       - name: Test Chimera API
         if: startsWith(matrix.hyperscan, '5.')
-        env:
-          PKG_CONFIG_PATH: ${{ github.workspace }}/dist/lib/pkgconfig
-          CGO_CFLAGS: -I${{ github.workspace }}/dist/include/hs
-          CGO_LDFLAGS: -L${{ github.workspace }}/dist/lib
         run: |
           go test -v ${{ matrix.build_tags }} ./internal/ch/... ./chimera/...
-          go test -trace -v ${{ matrix.build_tags }} ./internal/ch/... ./chimera/...
+          go test -race -v ${{ matrix.build_tags }} ./internal/ch/... ./chimera/...
+
+      - name: Run and upload coverage to Codecov
+        if: startsWith(matrix.hyperscan, '5.4.')
+        run: |
+          go test -race -coverprofile=coverage.out -covermode=atomic ./...
+          bash <(curl -s https://codecov.io/bash)
 
   golangci:
     name: lint
