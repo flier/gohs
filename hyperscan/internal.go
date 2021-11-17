@@ -59,6 +59,10 @@ DEFINE_ALLOCTOR(Scratch, scratch);
 DEFINE_ALLOCTOR(Stream, stream);
 
 extern int hsMatchEventCallback(unsigned int id, unsigned long long from, unsigned long long to, unsigned int flags, void *context);
+
+static inline hs_error_t safe_hs_scan(const hs_database_t *db, const char *data, unsigned int length, unsigned int flags, hs_scratch_t *scratch, match_event_handler onEvent, unsigned long context) {
+  return hs_scan(db, data, length, flags, scratch, onEvent, (void*)(context));
+}
 */
 import "C"
 
@@ -1037,13 +1041,13 @@ func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEve
 
 	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data)) // FIXME: Zero-copy access to go data
 
-	ret := C.hs_scan(db,
+	ret := C.safe_hs_scan(db,
 		(*C.char)(unsafe.Pointer(hdr.Data)),
 		C.uint(hdr.Len),
 		C.uint(flags),
 		scratch,
 		C.match_event_handler(C.hsMatchEventCallback),
-		unsafe.Pointer(h))
+		(C.ulong)(h))
 
 	// Ensure go data is alive before the C function returns
 	runtime.KeepAlive(data)
