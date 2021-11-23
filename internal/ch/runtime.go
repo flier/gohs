@@ -28,16 +28,6 @@ extern ch_callback_t errorEventCallback(ch_error_event_t error_type,
                                         unsigned int id,
 										void *info,
                                         void *ctx);
-
-static inline
-ch_error_t HS_CDECL _ch_scan(const ch_database_t *db, const char *data,
-                            unsigned int length, unsigned int flags,
-                            ch_scratch_t *scratch,
-                            ch_match_event_handler onEvent,
-                            ch_error_event_handler onError,
-                            uintptr_t context) {
-	return ch_scan(db, data, length, flags, scratch, onEvent, onError, (void *)context);
-}
 */
 import "C"
 
@@ -94,7 +84,8 @@ type eventContext struct {
 //export matchEventCallback
 func matchEventCallback(id C.uint, from, to C.ulonglong, flags, size C.uint,
 	cap *C.capture_t, data unsafe.Pointer) C.ch_callback_t {
-	ctx, ok := handle.Handle(data).Value().(eventContext)
+	h := (*handle.Handle)(data)
+	ctx, ok := h.Value().(eventContext)
 	if !ok {
 		return C.CH_CALLBACK_TERMINATE
 	}
@@ -111,7 +102,8 @@ func matchEventCallback(id C.uint, from, to C.ulonglong, flags, size C.uint,
 
 //export errorEventCallback
 func errorEventCallback(evt C.ch_error_event_t, id C.uint, info, data unsafe.Pointer) C.ch_callback_t {
-	ctx, ok := handle.Handle(data).Value().(eventContext)
+	h := (*handle.Handle)(data)
+	ctx, ok := h.Value().(eventContext)
 	if !ok {
 		return C.CH_CALLBACK_TERMINATE
 	}
@@ -134,14 +126,14 @@ func Scan(db Database, data []byte, flags ScanFlag, scratch Scratch,
 
 	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data)) // FIXME: Zero-copy access to go data
 
-	ret := C._ch_scan(db,
+	ret := C.ch_scan(db,
 		(*C.char)(unsafe.Pointer(hdr.Data)),
 		C.uint(hdr.Len),
 		C.uint(flags),
 		scratch,
 		C.ch_match_event_handler(C.matchEventCallback),
 		C.ch_error_event_handler(C.errorEventCallback),
-		C.uintptr_t(h))
+		unsafe.Pointer(&h))
 
 	// Ensure go data is alive before the C function returns
 	runtime.KeepAlive(data)
