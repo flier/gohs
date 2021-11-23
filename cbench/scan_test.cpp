@@ -28,11 +28,11 @@ enum benchCase
 };
 
 std::map<benchCase, std::string> benchData{
-    {Easy0, "ABCDEFGHIJKLMNOPQRSTUVWXYZ$"},
-    {Easy0i, "(?i)ABCDEFGHIJklmnopqrstuvwxyz$"},
-    {Easy1, "A[AB]B[BC]C[CD]D[DE]E[EF]F[FG]G[GH]H[HI]I[IJ]J$"},
-    {Medium, "[XYZ]ABCDEFGHIJKLMNOPQRSTUVWXYZ$"},
-    {Hard, "[ -~]*ABCDEFGHIJKLMNOPQRSTUVWXYZ$"},
+    {Easy0, "ABCDEFGHIJKLMNOPQRSTUVWXYZ"},
+    {Easy0i, "(?i)ABCDEFGHIJklmnopqrstuvwxyz"},
+    {Easy1, "A[AB]B[BC]C[CD]D[DE]E[EF]F[FG]G[GH]H[HI]I[IJ]J"},
+    {Medium, "[XYZ]ABCDEFGHIJKLMNOPQRSTUVWXYZ"},
+    {Hard, "[ -~]*ABCDEFGHIJKLMNOPQRSTUVWXYZ"},
     {Hard1, "ABCD|CDEF|EFGH|GHIJ|IJKL|KLMN|MNOP|OPQR|QRST|STUV|UVWX|WXYZ"},
 };
 
@@ -183,14 +183,14 @@ static void BM_RE2Match(benchmark::State &state)
 {
     auto expr = benchData[benchCase(state.range(0))];
 
-    RE2 pattern(expr);
+    RE2 pattern(expr, RE2::Latin1);
 
     auto data = make_text(state.range(1));
     auto text = StringPiece(data.data(), data.size());
 
     for (auto _ : state)
     {
-        if (RE2::FullMatch(text, pattern))
+        if (RE2::PartialMatch(text, pattern))
         {
             state.SkipWithError("scan failed");
         }
