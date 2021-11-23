@@ -4,6 +4,14 @@
 
 #include <hs/hs.h>
 
+#include "scan_test.h"
+
+#if HAVE_RE2
+#include <re2/re2.h>
+
+using namespace re2;
+#endif
+
 enum benchCase
 {
     Easy0,
@@ -163,5 +171,31 @@ static void BM_StreamScan(benchmark::State &state)
 }
 
 BENCHMARK(BM_StreamScan)->ArgsProduct(args)->ArgNames({"regex", "size"});
+
+#if HAVE_RE2
+
+static void BM_RE2Match(benchmark::State &state)
+{
+    auto expr = benchData[benchCase(state.range(0))];
+
+    RE2 pattern(expr);
+
+    auto data = make_text(state.range(1));
+    auto text = StringPiece(data.data(), data.size());
+
+    for (auto _ : state)
+    {
+        if (RE2::FullMatch(text, pattern))
+        {
+            state.SkipWithError("scan failed");
+        }
+    }
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(state.range(1)));
+}
+
+BENCHMARK(BM_RE2Match)->ArgsProduct(args)->ArgNames({"regex", "size"});
+
+#endif
 
 BENCHMARK_MAIN();
