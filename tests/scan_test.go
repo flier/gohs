@@ -93,6 +93,55 @@ func BenchmarkBlockScan(b *testing.B) {
 	}
 }
 
+const PageSize = 4096
+
+func BenchmarkStreamScan(b *testing.B) {
+	isRaceBuilder := strings.HasSuffix(testenv(), "-race")
+
+	for _, data := range benchData {
+		p := hyperscan.NewPattern(data.re, hyperscan.MultiLine)
+		db, err := hyperscan.NewStreamDatabase(p)
+		if err != nil {
+			b.Fatalf("compile pattern %s: `%s`, %s", data.name, data.re, err)
+		}
+
+		s, err := hyperscan.NewScratch(db)
+		if err != nil {
+			b.Fatalf("create scratch, %s", err)
+		}
+
+		m := func(id uint, from, to uint64, flags uint, context interface{}) error {
+			return hyperscan.ErrUnexpected
+		}
+
+		for _, size := range benchSizes {
+			if (isRaceBuilder || testing.Short()) && size.n > 1<<10 {
+				continue
+			}
+			t := makeText(size.n)
+			b.Run(data.name+"/"+size.name, func(b *testing.B) {
+				b.SetBytes(int64(len(t)))
+				for i := 0; i < b.N; i++ {
+					st, err := db.Open(0, s, m, nil)
+					if err != nil {
+						b.Fatalf("open stream, %s", err)
+					}
+					for i := 0; i < size.n; i += PageSize {
+						n := size.n - i
+						if n > PageSize {
+							n = PageSize
+						}
+						if err = st.Scan(t[i : i+n]); err != nil {
+							b.Fatalf("match, %s", err)
+						}
+					}
+					st.Close()
+				}
+			})
+		}
+	}
+}
+
 func BenchmarkMatch(b *testing.B) {
 	isRaceBuilder := strings.HasSuffix(testenv(), "-race")
 
