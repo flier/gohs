@@ -1009,7 +1009,8 @@ type hsMatchEventContext struct {
 
 //export hsMatchEventCallback
 func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, data unsafe.Pointer) C.int {
-	ctx, ok := handle.Handle(data).Value().(hsMatchEventContext)
+	h := (*handle.Handle)(data)
+	ctx, ok := h.Value().(hsMatchEventContext)
 	if !ok {
 		return C.HS_INVALID
 	}
@@ -1043,7 +1044,7 @@ func hsScan(db hsDatabase, data []byte, flags ScanFlag, scratch hsScratch, onEve
 		C.uint(flags),
 		scratch,
 		C.match_event_handler(C.hsMatchEventCallback),
-		unsafe.Pointer(h))
+		unsafe.Pointer(&h))
 
 	// Ensure go data is alive before the C function returns
 	runtime.KeepAlive(data)
@@ -1087,7 +1088,7 @@ func hsScanVector(db hsDatabase, data [][]byte, flags ScanFlag, scratch hsScratc
 		C.uint(flags),
 		scratch,
 		C.match_event_handler(C.hsMatchEventCallback),
-		unsafe.Pointer(h))
+		unsafe.Pointer(&h))
 
 	// Ensure go data is alive before the C function returns
 	runtime.KeepAlive(data)
@@ -1127,7 +1128,7 @@ func hsScanStream(stream hsStream, data []byte, flags ScanFlag, scratch hsScratc
 		C.uint(flags),
 		scratch,
 		C.match_event_handler(C.hsMatchEventCallback),
-		unsafe.Pointer(h))
+		unsafe.Pointer(&h))
 
 	// Ensure go data is alive before the C function returns
 	runtime.KeepAlive(data)
@@ -1146,7 +1147,7 @@ func hsCloseStream(stream hsStream, scratch hsScratch, onEvent hsMatchEventHandl
 	ret := C.hs_close_stream(stream,
 		scratch,
 		C.match_event_handler(C.hsMatchEventCallback),
-		unsafe.Pointer(h))
+		unsafe.Pointer(&h))
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
@@ -1163,7 +1164,7 @@ func hsResetStream(stream hsStream, flags ScanFlag, scratch hsScratch, onEvent h
 		C.uint(flags),
 		scratch,
 		C.match_event_handler(C.hsMatchEventCallback),
-		unsafe.Pointer(h))
+		unsafe.Pointer(&h))
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
@@ -1190,7 +1191,7 @@ func hsResetAndCopyStream(to, from hsStream, scratch hsScratch, onEvent hsMatchE
 		from,
 		scratch,
 		C.match_event_handler(C.hsMatchEventCallback),
-		unsafe.Pointer(h))
+		unsafe.Pointer(&h))
 
 	if ret != C.HS_SUCCESS {
 		return HsError(ret)
@@ -1238,7 +1239,7 @@ func hsResetAndExpandStream(stream hsStream, buf []byte, scratch hsScratch, onEv
 		C.size_t(len(buf)),
 		scratch,
 		C.match_event_handler(C.hsMatchEventCallback),
-		unsafe.Pointer(h))
+		unsafe.Pointer(&h))
 
 	runtime.KeepAlive(buf)
 
