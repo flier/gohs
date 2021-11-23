@@ -6,6 +6,7 @@ set (CMAKE_CXX_STANDARD 11)
 set (CMAKE_CXX_STANDARD_REQUIRED True)
 
 option (USE_RE2 "benchmark re2" ON)
+option (USE_PCRE "benchmark pcre" ON)
 
 find_package (benchmark REQUIRED)
 find_package (PkgConfig REQUIRED)
@@ -23,6 +24,18 @@ if (USE_RE2)
         set (HAVE_RE2 1)
     else ()
         message (FATAL_ERROR "re2 not found")
+    endif ()
+endif ()
+
+if (USE_PCRE)
+    pkg_check_modules (PCRE2 REQUIRED IMPORTED_TARGET libpcre2-8)
+
+    if (PCRE2_FOUND)
+        target_include_directories (scan_test PRIVATE ${PCRE2_INCLUDE_DIRS})
+        target_link_libraries (scan_test PkgConfig::PCRE2)
+        set (HAVE_PCRE2 1)
+    else ()
+        message (FATAL_ERROR "pcre2 not found")
     endif ()
 endif ()
 

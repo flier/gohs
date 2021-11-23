@@ -8,8 +8,13 @@
 
 #if HAVE_RE2
 #include <re2/re2.h>
-
 using namespace re2;
+#endif
+
+#if HAVE_PCRE2
+#define PCRE2_CODE_UNIT_WIDTH 8
+#define PCRE2_STATIC 1
+#include <pcre2.h>
 #endif
 
 enum benchCase
@@ -195,6 +200,49 @@ static void BM_RE2Match(benchmark::State &state)
 }
 
 BENCHMARK(BM_RE2Match)->ArgsProduct(args)->ArgNames({"regex", "size"});
+
+#endif
+
+#if HAVE_PCRE2
+
+static void BM_PCRE2Match(benchmark::State &state)
+{
+    auto expr = benchData[benchCase(state.range(0))];
+
+    int err = 0;
+    PCRE2_SIZE err_off = 0;
+
+    pcre2_code *code = pcre2_compile(
+        (PCRE2_SPTR)expr.c_str(),
+        (PCRE2_SIZE)expr.size(),
+        PCRE2_MULTILINE,
+        &err,
+        &err_off,
+        nullptr);
+    if (!code)
+    {
+        state.SkipWithError("compile failed");
+    }
+
+    pcre2_match_data *md = pcre2_match_data_create_from_pattern(code, nullptr);
+
+    auto text = make_text(state.range(1));
+
+    for (auto _ : state)
+    {
+        if (pcre2_match(code, (PCRE2_SPTR)text.data(), (PCRE2_SIZE)text.size(), 0, 0, md, nullptr) != PCRE2_ERROR_NOMATCH)
+        {
+            state.SkipWithError("scan failed");
+        }
+    }
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(state.range(1)));
+
+    pcre2_match_data_free(md);
+    pcre2_code_free(code);
+}
+
+BENCHMARK(BM_PCRE2Match)->ArgsProduct(args)->ArgNames({"regex", "size"});
 
 #endif
 
