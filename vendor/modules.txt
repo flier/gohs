@@ -3,7 +3,7 @@
 github.com/google/gopacket
 github.com/google/gopacket/layers
 github.com/google/gopacket/pcap
-# github.com/gopherjs/gopherjs v0.0.0-20210929192900-a930101f3d15
+# github.com/gopherjs/gopherjs v0.0.0-20211111143520-d0d5ecc1a356
 ## explicit
 github.com/gopherjs/gopherjs/js
 # github.com/jtolds/gls v4.20.0+incompatible
@@ -15,14 +15,14 @@ github.com/smartystreets/assertions
 github.com/smartystreets/assertions/internal/go-diff/diffmatchpatch
 github.com/smartystreets/assertions/internal/go-render/render
 github.com/smartystreets/assertions/internal/oglematchers
-# github.com/smartystreets/goconvey v1.6.4
+# github.com/smartystreets/goconvey v1.7.2
 ## explicit
 github.com/smartystreets/goconvey/convey
 github.com/smartystreets/goconvey/convey/gotest
 github.com/smartystreets/goconvey/convey/reporting
-# golang.org/x/net v0.0.0-20210929193557-e81a3d93ecf6
+# golang.org/x/net v0.0.0-20211123203042-d83791d6bcd9
 ## explicit
-# golang.org/x/sys v0.0.0-20210927094055-39ccf1dd6fa6
+# golang.org/x/sys v0.0.0-20211123173158-ef496fb156ab
 ## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/windows
