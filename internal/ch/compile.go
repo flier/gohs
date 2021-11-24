@@ -14,11 +14,10 @@ import (
 import "C"
 
 // Pattern is a matching pattern.
-// nolint: golint,revive,stylecheck
 type Pattern struct {
 	Expression string      // The expression to parse.
 	Flags      CompileFlag // Flags which modify the behaviour of the expression.
-	Id         int         // The ID number to be associated with the corresponding pattern
+	ID         int         // The ID number to be associated with the corresponding pattern
 }
 
 // NewPattern returns a new pattern base on expression and compile flags.
@@ -155,7 +154,7 @@ func CompileExtMulti(p Patterns, mode CompileMode, info *hs.PlatformInfo,
 	for i, pattern := range patterns {
 		exprs[i] = C.CString(pattern.Expression)
 		flags[i] = C.uint(pattern.Flags)
-		ids[i] = C.uint(pattern.Id)
+		ids[i] = C.uint(pattern.ID)
 	}
 
 	ret := C.ch_compile_ext_multi(cexprs, cflags, cids, C.uint(len(patterns)), C.uint(mode),

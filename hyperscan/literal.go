@@ -44,7 +44,7 @@ func (lit *Literal) IsValid() bool {
 // Provides information about a regular expression.
 func (lit *Literal) Info() (*ExprInfo, error) {
 	if lit.ExprInfo == nil {
-		info, err := hs.ExpressionInfo(string(lit.Expression), lit.Flags)
+		info, err := hs.ExpressionInfo(lit.Expression, lit.Flags)
 		if err != nil {
 			return nil, err // nolint: wrapcheck
 		}
@@ -115,7 +115,7 @@ func ParseLiteral(s string) (*Literal, error) {
 
 func (lit *Literal) Literal() *hs.Literal {
 	return &hs.Literal{
-		Expr:     string(lit.Expression),
+		Expr:     lit.Expression,
 		Flags:    lit.Flags,
 		ID:       lit.Id,
 		ExprInfo: lit.ExprInfo,
@@ -143,7 +143,7 @@ func (lit *Literal) ForPlatform(mode ModeFlag, platform Platform) (Database, err
 
 	p, _ := platform.(*hs.PlatformInfo)
 
-	db, err := hs.CompileLit(string(lit.Expression), lit.Flags, mode, p)
+	db, err := hs.CompileLit(lit.Expression, lit.Flags, mode, p)
 	if err != nil {
 		return nil, err // nolint: wrapcheck
 	}

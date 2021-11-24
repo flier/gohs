@@ -19,7 +19,7 @@ func TestPattern(t *testing.T) {
 			So(p.Expression, ShouldEqual, "test")
 			So(p.Flags, ShouldEqual, chimera.Caseless|chimera.MultiLine)
 
-			So(string(p.Expression), ShouldEqual, "test")
+			So(p.Expression, ShouldEqual, "test")
 			So(p.String(), ShouldEqual, `/test/im`)
 
 			Convey("When pattern contains forward slash", func() {
@@ -38,7 +38,7 @@ func TestPattern(t *testing.T) {
 			p, err := chimera.ParsePattern("3:/foobar/i8")
 
 			So(err, ShouldBeNil)
-			So(p.Id, ShouldEqual, 3)
+			So(p.ID, ShouldEqual, 3)
 			So(p.Expression, ShouldEqual, "foobar")
 			So(p.Flags, ShouldEqual, chimera.Caseless|chimera.Utf8Mode)
 		})

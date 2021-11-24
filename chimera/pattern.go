@@ -40,7 +40,7 @@ func ParsePattern(s string) (*Pattern, error) {
 			return nil, fmt.Errorf("pattern id `%s`, %w", s[:i], ErrInvalid)
 		}
 
-		p.Id = id
+		p.ID = id
 		s = s[i+1:]
 	}
 
@@ -64,8 +64,8 @@ func ParsePattern(s string) (*Pattern, error) {
 func (p *Pattern) String() string {
 	var b strings.Builder
 
-	if p.Id > 0 {
-		fmt.Fprintf(&b, "%d:", p.Id)
+	if p.ID > 0 {
+		fmt.Fprintf(&b, "%d:", p.ID)
 	}
 
 	fmt.Fprintf(&b, "/%s/%s", p.Expression, p.Flags)

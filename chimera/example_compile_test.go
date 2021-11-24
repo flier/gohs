@@ -29,7 +29,7 @@ func ExampleParsePattern() {
 	p, err := chimera.ParsePattern("3:/foobar/i8")
 
 	fmt.Println(err)
-	fmt.Println(p.Id)
+	fmt.Println(p.ID)
 	fmt.Println(p.Expression)
 	fmt.Println(p.Flags)
 

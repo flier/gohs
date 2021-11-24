@@ -51,7 +51,7 @@ type Capture struct {
 type MatchEventHandler func(id uint, from, to uint64, flags uint, captured []*Capture, context interface{}) Callback
 
 // Type used to differentiate the errors raised with the `ErrorEventHandler` callback.
-type ErrorEvent C.ch_error_event_t
+type ErrorEvent C.ch_error_event_t // nolint: errname
 
 const (
 	// PCRE hits its match limit and reports PCRE_ERROR_MATCHLIMIT.
@@ -83,7 +83,7 @@ type eventContext struct {
 
 //export matchEventCallback
 func matchEventCallback(id C.uint, from, to C.ulonglong, flags, size C.uint,
-	cap *C.capture_t, data unsafe.Pointer) C.ch_callback_t {
+	capture *C.capture_t, data unsafe.Pointer) C.ch_callback_t {
 	h := (*handle.Handle)(data)
 	ctx, ok := h.Value().(eventContext)
 	if !ok {
@@ -91,7 +91,7 @@ func matchEventCallback(id C.uint, from, to C.ulonglong, flags, size C.uint,
 	}
 
 	captured := make([]*Capture, size)
-	for i, c := range (*[1 << 30]C.capture_t)(unsafe.Pointer(cap))[:size:size] {
+	for i, c := range (*[1 << 30]C.capture_t)(unsafe.Pointer(capture))[:size:size] {
 		if c.flags == C.CH_CAPTURE_FLAG_ACTIVE {
 			captured[i] = &Capture{uint64(c.from), uint64(c.to), ctx.data[c.from:c.to]}
 		}
