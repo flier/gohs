@@ -57,7 +57,7 @@ func makeText(n int) []byte {
 	return text
 }
 
-func BenchmarkBlockScan(b *testing.B) {
+func BenchmarkHyperscanBlockScan(b *testing.B) {
 	isRaceBuilder := strings.HasSuffix(testenv(), "-race")
 
 	for _, data := range benchData {
@@ -95,7 +95,7 @@ func BenchmarkBlockScan(b *testing.B) {
 
 const PageSize = 4096
 
-func BenchmarkStreamScan(b *testing.B) {
+func BenchmarkHyperscanStreamScan(b *testing.B) {
 	isRaceBuilder := strings.HasSuffix(testenv(), "-race")
 
 	for _, data := range benchData {
@@ -142,7 +142,7 @@ func BenchmarkStreamScan(b *testing.B) {
 	}
 }
 
-func BenchmarkMatch(b *testing.B) {
+func BenchmarkRegexpMatch(b *testing.B) {
 	isRaceBuilder := strings.HasSuffix(testenv(), "-race")
 
 	for _, data := range benchData {

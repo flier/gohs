@@ -28,11 +28,11 @@ enum benchCase
 };
 
 std::map<benchCase, std::string> benchData{
-    {Easy0, "ABCDEFGHIJKLMNOPQRSTUVWXYZ"},
-    {Easy0i, "(?i)ABCDEFGHIJklmnopqrstuvwxyz"},
-    {Easy1, "A[AB]B[BC]C[CD]D[DE]E[EF]F[FG]G[GH]H[HI]I[IJ]J"},
-    {Medium, "[XYZ]ABCDEFGHIJKLMNOPQRSTUVWXYZ"},
-    {Hard, "[ -~]*ABCDEFGHIJKLMNOPQRSTUVWXYZ"},
+    {Easy0, "ABCDEFGHIJKLMNOPQRSTUVWXYZ$"},
+    {Easy0i, "(?i)ABCDEFGHIJklmnopqrstuvwxyz$"},
+    {Easy1, "A[AB]B[BC]C[CD]D[DE]E[EF]F[FG]G[GH]H[HI]I[IJ]J$"},
+    {Medium, "[XYZ]ABCDEFGHIJKLMNOPQRSTUVWXYZ$"},
+    {Hard, "[ -~]*ABCDEFGHIJKLMNOPQRSTUVWXYZ$"},
     {Hard1, "ABCD|CDEF|EFGH|GHIJ|IJKL|KLMN|MNOP|OPQR|QRST|STUV|UVWX|WXYZ"},
 };
 
@@ -86,7 +86,7 @@ int on_match_event(unsigned int id, unsigned long long from, unsigned long long 
     return 0;
 }
 
-static void BM_BlockScan(benchmark::State &state)
+static void BM_HS_BlockScan(benchmark::State &state)
 {
     hs_database_t *db = nullptr;
     hs_compile_error_t *compile_err = nullptr;
@@ -119,11 +119,11 @@ static void BM_BlockScan(benchmark::State &state)
     hs_free_scratch(s);
 }
 
-BENCHMARK(BM_BlockScan)->ArgsProduct(args)->ArgNames({"regex", "size"});
+BENCHMARK(BM_HS_BlockScan)->ArgsProduct(args)->ArgNames({"regex", "size"});
 
 const size_t page_size = 4096;
 
-static void BM_StreamScan(benchmark::State &state)
+static void BM_HS_StreamScan(benchmark::State &state)
 {
     hs_database_t *db = nullptr;
     hs_compile_error_t *compile_err = nullptr;
@@ -175,13 +175,19 @@ static void BM_StreamScan(benchmark::State &state)
     hs_free_scratch(s);
 }
 
-BENCHMARK(BM_StreamScan)->ArgsProduct(args)->ArgNames({"regex", "size"});
+BENCHMARK(BM_HS_StreamScan)->ArgsProduct(args)->ArgNames({"regex", "size"});
 
 #if HAVE_RE2
 
-static void BM_RE2Match(benchmark::State &state)
+static void BM_RE2_Match(benchmark::State &state)
 {
     auto expr = benchData[benchCase(state.range(0))];
+
+    if (expr.back() == '$')
+    {
+        // re2 will optimize for $-terminated patterns
+        expr.pop_back();
+    }
 
     RE2 pattern(expr, RE2::Latin1);
 
@@ -199,13 +205,13 @@ static void BM_RE2Match(benchmark::State &state)
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(state.range(1)));
 }
 
-BENCHMARK(BM_RE2Match)->ArgsProduct(args)->ArgNames({"regex", "size"});
+BENCHMARK(BM_RE2_Match)->ArgsProduct(args)->ArgNames({"regex", "size"});
 
 #endif
 
 #if HAVE_PCRE2
 
-static void BM_PCRE2Match(benchmark::State &state)
+static void BM_PCRE2_Match(benchmark::State &state)
 {
     auto expr = benchData[benchCase(state.range(0))];
 
@@ -242,7 +248,7 @@ static void BM_PCRE2Match(benchmark::State &state)
     pcre2_code_free(code);
 }
 
-BENCHMARK(BM_PCRE2Match)->ArgsProduct(args)->ArgNames({"regex", "size"});
+BENCHMARK(BM_PCRE2_Match)->ArgsProduct(args)->ArgNames({"regex", "size"});
 
 #endif
 
