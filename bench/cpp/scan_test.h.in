@@ -1,0 +1,5 @@
+#pragma once
+
+#cmakedefine01 HAVE_RE2
+
+#cmakedefine01 HAVE_PCRE2
