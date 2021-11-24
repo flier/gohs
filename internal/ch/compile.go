@@ -13,17 +13,20 @@ import (
 // #include <ch.h>
 import "C"
 
-// Expression of pattern.
-type Expression string
-
-func (e Expression) String() string { return string(e) }
-
 // Pattern is a matching pattern.
 // nolint: golint,revive,stylecheck
 type Pattern struct {
-	Expression             // The expression to parse.
+	Expression string      // The expression to parse.
 	Flags      CompileFlag // Flags which modify the behaviour of the expression.
 	Id         int         // The ID number to be associated with the corresponding pattern
+}
+
+// NewPattern returns a new pattern base on expression and compile flags.
+func NewPattern(expr string, flags CompileFlag) *Pattern {
+	return &Pattern{
+		Expression: expr,
+		Flags:      flags,
+	}
 }
 
 // A type containing error details that is returned by the compile calls on failure.
@@ -150,7 +153,7 @@ func CompileExtMulti(p Patterns, mode CompileMode, info *hs.PlatformInfo,
 	ids := (*[1 << 30]C.uint)(unsafe.Pointer(cids))[:len(patterns):len(patterns)]
 
 	for i, pattern := range patterns {
-		exprs[i] = C.CString(string(pattern.Expression))
+		exprs[i] = C.CString(pattern.Expression)
 		flags[i] = C.uint(pattern.Flags)
 		ids[i] = C.uint(pattern.Id)
 	}

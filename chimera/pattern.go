@@ -10,15 +10,12 @@ import (
 	"github.com/flier/gohs/internal/ch"
 )
 
-// Expression of pattern.
-type Expression = ch.Expression
-
 // Pattern is a matching pattern.
 type Pattern ch.Pattern
 
 // NewPattern returns a new pattern base on expression and compile flags.
 func NewPattern(expr string, flags CompileFlag) *Pattern {
-	return &Pattern{Expression: Expression(expr), Flags: flags}
+	return &Pattern{Expression: expr, Flags: flags}
 }
 
 /*
@@ -48,7 +45,7 @@ func ParsePattern(s string) (*Pattern, error) {
 	}
 
 	if n := strings.LastIndex(s, "/"); n > 1 && strings.HasPrefix(s, "/") {
-		p.Expression = Expression(s[1:n])
+		p.Expression = s[1:n]
 		s = s[n+1:]
 
 		flags, err := ParseCompileFlag(s)
@@ -58,7 +55,7 @@ func ParsePattern(s string) (*Pattern, error) {
 
 		p.Flags = flags
 	} else {
-		p.Expression = Expression(s)
+		p.Expression = s
 	}
 
 	return &p, nil

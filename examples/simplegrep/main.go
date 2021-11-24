@@ -104,7 +104,7 @@ func main() {
 		}
 	}
 
-	pattern := hyperscan.NewPattern(hyperscan.Expression(flag.Arg(0)), hyperscan.DotAll|hyperscan.SomLeftMost)
+	pattern := hyperscan.NewPattern(flag.Arg(0), hyperscan.DotAll|hyperscan.SomLeftMost)
 
 	/* First, we attempt to compile the pattern provided on the command line.
 	 * We assume 'DOTALL' semantics, meaning that the '.' meta-character will

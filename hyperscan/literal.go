@@ -19,12 +19,9 @@ type Literals []*Literal
 // No syntax association happens between any adjacent characters.
 // nolint: golint,revive,stylecheck
 type Literal struct {
-	// The expression to parse.
-	Expression
-	// Flags which modify the behaviour of the expression.
-	Flags CompileFlag
-	// The ID number to be associated with the corresponding pattern
-	Id int
+	Expression string      // The expression to parse.
+	Flags      CompileFlag // Flags which modify the behaviour of the expression.
+	Id         int         // The ID number to be associated with the corresponding pattern
 	*ExprInfo
 }
 
@@ -34,7 +31,7 @@ func NewLiteral(expr string, flags ...CompileFlag) *Literal {
 	for _, f := range flags {
 		v |= f
 	}
-	return &Literal{Expression: Expression(expr), Flags: v}
+	return &Literal{Expression: expr, Flags: v}
 }
 
 // IsValid validate the literal contains a pure literal.
@@ -95,7 +92,7 @@ func ParseLiteral(s string) (*Literal, error) {
 	}
 
 	if n := strings.LastIndex(s, "/"); n > 1 && strings.HasPrefix(s, "/") {
-		lit.Expression = Expression(s[1:n])
+		lit.Expression = s[1:n]
 		s = s[n+1:]
 
 		flags, err := ParseCompileFlag(s)
@@ -104,10 +101,10 @@ func ParseLiteral(s string) (*Literal, error) {
 		}
 		lit.Flags = flags
 	} else {
-		lit.Expression = Expression(s)
+		lit.Expression = s
 	}
 
-	info, err := hs.ExpressionInfo(string(lit.Expression), lit.Flags)
+	info, err := hs.ExpressionInfo(lit.Expression, lit.Flags)
 	if err != nil {
 		return nil, fmt.Errorf("invalid pattern `%s`, %w", lit.Expression, err)
 	}
