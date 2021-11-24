@@ -30,7 +30,7 @@ func (h *matchRecorder) Handle(id uint, from, to uint64, flags uint, context int
 	if len(h.matched) > 0 {
 		tail := &h.matched[len(h.matched)-1]
 
-		if tail.id == id && tail.from == from && tail.flags == ScanFlag(flags) && tail.to < to {
+		if tail.id == id && tail.from == from && tail.to < to {
 			tail.to = to
 
 			return h.err
