@@ -75,6 +75,8 @@ linters:
     - gochecknoinits
     - gocritic
     - godox
+    - ireturn
     - nlreturn
     - paralleltest
+    - varnamelen
     - wsl

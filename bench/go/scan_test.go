@@ -1,4 +1,4 @@
-package tests
+package scan_test
 
 import (
 	"os"
@@ -95,6 +95,7 @@ func BenchmarkHyperscanBlockScan(b *testing.B) {
 
 const PageSize = 4096
 
+// nolint: gocognit
 func BenchmarkHyperscanStreamScan(b *testing.B) {
 	isRaceBuilder := strings.HasSuffix(testenv(), "-race")
 
@@ -126,8 +127,8 @@ func BenchmarkHyperscanStreamScan(b *testing.B) {
 					if err != nil {
 						b.Fatalf("open stream, %s", err)
 					}
-					for i := 0; i < size.n; i += PageSize {
-						n := size.n - i
+					for i := 0; i < len(t); i += PageSize {
+						n := len(t) - i
 						if n > PageSize {
 							n = PageSize
 						}
@@ -153,7 +154,7 @@ func BenchmarkRegexpMatch(b *testing.B) {
 			}
 			t := makeText(size.n)
 			b.Run(data.name+"/"+size.name, func(b *testing.B) {
-				b.SetBytes(int64(size.n))
+				b.SetBytes(int64(len(t)))
 				for i := 0; i < b.N; i++ {
 					if r.Match(t) {
 						b.Fatal("match!")
