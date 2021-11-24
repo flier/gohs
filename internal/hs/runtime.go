@@ -144,7 +144,7 @@ func (h *MatchRecorder) Handle(id uint, from, to uint64, flags uint, context int
 	if len(h.Events) > 0 {
 		tail := &h.Events[len(h.Events)-1]
 
-		if tail.ID == id && tail.From == from && tail.ScanFlag == ScanFlag(flags) && tail.To < to {
+		if tail.ID == id && tail.From == from && tail.To < to {
 			tail.To = to
 
 			return h.Err
