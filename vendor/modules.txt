@@ -7,7 +7,6 @@ github.com/google/gopacket/pcap
 ## explicit
 github.com/gopherjs/gopherjs/js
 # github.com/jtolds/gls v4.20.0+incompatible
-## explicit
 github.com/jtolds/gls
 # github.com/smartystreets/assertions v1.2.1
 ## explicit
