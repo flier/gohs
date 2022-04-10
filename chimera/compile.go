@@ -122,17 +122,17 @@ type DatabaseBuilder struct {
 }
 
 // AddExpressions add more expressions to the database.
-func (b *DatabaseBuilder) AddExpressions(exprs ...Expression) *DatabaseBuilder {
+func (b *DatabaseBuilder) AddExpressions(exprs ...string) *DatabaseBuilder {
 	for _, expr := range exprs {
-		b.Patterns = append(b.Patterns, &Pattern{Expression: expr, Id: len(b.Patterns) + 1})
+		b.Patterns = append(b.Patterns, &Pattern{Expression: expr, ID: len(b.Patterns) + 1})
 	}
 
 	return b
 }
 
 // AddExpressionWithFlags add more expressions with flags to the database.
-func (b *DatabaseBuilder) AddExpressionWithFlags(expr Expression, flags CompileFlag) *DatabaseBuilder {
-	b.Patterns = append(b.Patterns, &Pattern{Expression: expr, Flags: flags, Id: len(b.Patterns) + 1})
+func (b *DatabaseBuilder) AddExpressionWithFlags(expr string, flags CompileFlag) *DatabaseBuilder {
+	b.Patterns = append(b.Patterns, &Pattern{Expression: expr, Flags: flags, ID: len(b.Patterns) + 1})
 
 	return b
 }

@@ -19,7 +19,7 @@ func TestPattern(t *testing.T) {
 			So(p.Expression, ShouldEqual, "test")
 			So(p.Flags, ShouldEqual, hyperscan.Caseless|hyperscan.MultiLine)
 
-			So(string(p.Expression), ShouldEqual, "test")
+			So(p.Expression, ShouldEqual, "test")
 			So(p.String(), ShouldEqual, `/test/im`)
 
 			Convey("When pattern contains forward slash", func() {

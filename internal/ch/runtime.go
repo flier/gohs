@@ -31,16 +31,6 @@ extern ch_callback_t errorEventCallback(ch_error_event_t error_type,
                                         unsigned int id,
 										void *info,
                                         void *ctx);
-
-static inline
-ch_error_t HS_CDECL _ch_scan(const ch_database_t *db, const char *data,
-                            unsigned int length, unsigned int flags,
-                            ch_scratch_t *scratch,
-                            ch_match_event_handler onEvent,
-                            ch_error_event_handler onError,
-                            uintptr_t context) {
-	return ch_scan(db, data, length, flags, scratch, onEvent, onError, (void *)context);
-}
 */
 import "C"
 
@@ -64,7 +54,7 @@ type Capture struct {
 type MatchEventHandler func(id uint, from, to uint64, flags uint, captured []*Capture, context interface{}) Callback
 
 // Type used to differentiate the errors raised with the `ErrorEventHandler` callback.
-type ErrorEvent C.ch_error_event_t
+type ErrorEvent C.ch_error_event_t // nolint: errname
 
 const (
 	// PCRE hits its match limit and reports PCRE_ERROR_MATCHLIMIT.
@@ -96,14 +86,15 @@ type eventContext struct {
 
 //export matchEventCallback
 func matchEventCallback(id C.uint, from, to C.ulonglong, flags, size C.uint,
-	cap *C.capture_t, data unsafe.Pointer) C.ch_callback_t {
-	ctx, ok := handle.Handle(data).Value().(eventContext)
+	capture *C.capture_t, data unsafe.Pointer) C.ch_callback_t {
+	h := (*handle.Handle)(data)
+	ctx, ok := h.Value().(eventContext)
 	if !ok {
 		return C.CH_CALLBACK_TERMINATE
 	}
 
 	captured := make([]*Capture, size)
-	for i, c := range (*[1 << 30]C.capture_t)(unsafe.Pointer(cap))[:size:size] {
+	for i, c := range (*[1 << 30]C.capture_t)(unsafe.Pointer(capture))[:size:size] {
 		if c.flags == C.CH_CAPTURE_FLAG_ACTIVE {
 			captured[i] = &Capture{uint64(c.from), uint64(c.to), ctx.data[c.from:c.to]}
 		}
@@ -114,7 +105,8 @@ func matchEventCallback(id C.uint, from, to C.ulonglong, flags, size C.uint,
 
 //export errorEventCallback
 func errorEventCallback(evt C.ch_error_event_t, id C.uint, info, data unsafe.Pointer) C.ch_callback_t {
-	ctx, ok := handle.Handle(data).Value().(eventContext)
+	h := (*handle.Handle)(data)
+	ctx, ok := h.Value().(eventContext)
 	if !ok {
 		return C.CH_CALLBACK_TERMINATE
 	}
@@ -137,14 +129,14 @@ func Scan(db Database, data []byte, flags ScanFlag, scratch Scratch,
 
 	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data)) // FIXME: Zero-copy access to go data
 
-	ret := C._ch_scan(db,
+	ret := C.ch_scan(db,
 		(*C.char)(unsafe.Pointer(hdr.Data)),
 		C.uint(hdr.Len),
 		C.uint(flags),
 		scratch,
 		C.ch_match_event_handler(C.matchEventCallback),
 		C.ch_error_event_handler(C.errorEventCallback),
-		C.uintptr_t(h))
+		unsafe.Pointer(&h))
 
 	// Ensure go data is alive before the C function returns
 	runtime.KeepAlive(data)

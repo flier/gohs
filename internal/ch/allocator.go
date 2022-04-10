@@ -40,7 +40,7 @@ extern void chMiscFree(void *ptr);
 extern void *chScratchAlloc(size_t size);
 extern void chScratchFree(void *ptr);
 */
-import "C" // nolint: typecheck
+import "C"
 
 type (
 	// The type of the callback function that will be used by Chimera to allocate more memory at runtime as required.

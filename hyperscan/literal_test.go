@@ -22,7 +22,7 @@ func TestLiteral(t *testing.T) {
 			So(p.Expression, ShouldEqual, "test")
 			So(p.Flags, ShouldEqual, hyperscan.Caseless|hyperscan.MultiLine)
 
-			So(string(p.Expression), ShouldEqual, "test")
+			So(p.Expression, ShouldEqual, "test")
 			So(p.String(), ShouldEqual, `/test/im`)
 
 			Convey("When literal contains regular grammar", func() {

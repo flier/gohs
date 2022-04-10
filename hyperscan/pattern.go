@@ -176,26 +176,18 @@ func ParseExprExt(s string) (ext *ExprExt, err error) {
 	return // nolint: nakedret
 }
 
-// Expression of pattern.
-type Expression string
-
-func (e Expression) String() string { return string(e) }
-
 // Pattern is a matching pattern.
 // nolint: golint,revive,stylecheck
 type Pattern struct {
-	// The expression to parse.
-	Expression
-	// Flags which modify the behaviour of the expression.
-	Flags CompileFlag
-	// The ID number to be associated with the corresponding pattern
-	Id   int
-	info *ExprInfo
-	ext  *ExprExt
+	Expression string      // The expression to parse.
+	Flags      CompileFlag // Flags which modify the behaviour of the expression.
+	Id         int         // The ID number to be associated with the corresponding pattern
+	info       *ExprInfo
+	ext        *ExprExt
 }
 
 // NewPattern returns a new pattern base on expression and compile flags.
-func NewPattern(expr Expression, flags CompileFlag, exts ...Ext) *Pattern {
+func NewPattern(expr string, flags CompileFlag, exts ...Ext) *Pattern {
 	return &Pattern{
 		Expression: expr,
 		Flags:      flags,
@@ -205,7 +197,7 @@ func NewPattern(expr Expression, flags CompileFlag, exts ...Ext) *Pattern {
 
 func (p *Pattern) Pattern() *hs.Pattern {
 	return &hs.Pattern{
-		Expr:  string(p.Expression),
+		Expr:  p.Expression,
 		Flags: p.Flags,
 		ID:    p.Id,
 		Ext:   (*hs.ExprExt)(p.ext),
@@ -226,7 +218,7 @@ func (p *Pattern) IsValid() bool {
 // Info provides information about a regular expression.
 func (p *Pattern) Info() (*ExprInfo, error) {
 	if p.info == nil {
-		info, err := hs.ExpressionInfo(string(p.Expression), p.Flags)
+		info, err := hs.ExpressionInfo(p.Expression, p.Flags)
 		if err != nil {
 			return nil, err // nolint: wrapcheck
 		}
@@ -251,7 +243,7 @@ func (p *Pattern) WithExt(exts ...Ext) *Pattern {
 // Ext provides additional parameters related to an expression.
 func (p *Pattern) Ext() (*ExprExt, error) {
 	if p.ext == nil {
-		ext, info, err := hs.ExpressionExt(string(p.Expression), p.Flags)
+		ext, info, err := hs.ExpressionExt(p.Expression, p.Flags)
 		if err != nil {
 			return nil, err // nolint: wrapcheck
 		}
@@ -306,7 +298,7 @@ func ParsePattern(s string) (*Pattern, error) {
 	}
 
 	if n := strings.LastIndex(s, "/"); n > 1 && strings.HasPrefix(s, "/") {
-		p.Expression = Expression(s[1:n])
+		p.Expression = s[1:n]
 		s = s[n+1:]
 
 		if n = strings.Index(s, "{"); n > 0 && strings.HasSuffix(s, "}") {
@@ -326,10 +318,10 @@ func ParsePattern(s string) (*Pattern, error) {
 
 		p.Flags = flags
 	} else {
-		p.Expression = Expression(s)
+		p.Expression = s
 	}
 
-	info, err := hs.ExpressionInfo(string(p.Expression), p.Flags)
+	info, err := hs.ExpressionInfo(p.Expression, p.Flags)
 	if err != nil {
 		return nil, fmt.Errorf("pattern `%s`, %w", p.Expression, err)
 	}
