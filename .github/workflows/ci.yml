@@ -76,6 +76,11 @@ jobs:
           - os: macos-latest
             hyperscan: 5.2.1
             pcre: 8.45
+            build_flags: -tags hyperscan_v52,chimera
+            chimera: true
+          - os: macos-latest
+            hyperscan: 5.1.1
+            pcre: 8.45
             build_flags: -tags chimera
             chimera: true
           - os: ubuntu-20.04
@@ -87,6 +92,12 @@ jobs:
           - os: ubuntu-20.04
             hyperscan: 5.2.1
             pcre: 8.45
+            build_flags: -tags hyperscan_v52,chimera
+            chimera: true
+          - os: ubuntu-20.04
+            hyperscan: 5.1.1
+            pcre: 8.45
+            chimera: true
           - os: ubuntu-18.04
             hyperscan: 4.7.0
             pcre: 8.41
