@@ -19,7 +19,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04, ubuntu-18.04, macos-latest]
-        go: [1.18.x 1.17.x, 1.16.x, 1.15.x]
+        go: [1.18.x, 1.17.x, 1.16.x, 1.15.x]
     name: Go ${{ matrix.go }} tests @ ${{ matrix.os }} for hyperscan ${{ matrix.hyperscan }}
     runs-on: ${{ matrix.os }}
     steps:
