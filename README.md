@@ -8,6 +8,12 @@ Hyperscan is a software regular expression matching engine designed with high pe
 
 ### Build
 
+`gohs` does not enable the latest api of Hyperscan v5.4 by default, if you want to use it please pass build tags `hyperscan_v54`.
+
+```bash
+go get -u -tags hyperscan_v54 github.com/flier/gohs/hyperscan
+```
+
 `gohs` will use Hyperscan v5 API by default, you can also build for Hyperscan v4 with `hyperscan_v4` tag.
 
 ```bash
@@ -26,6 +32,7 @@ It is recommended to compile and link Chimera using static libraries.
 $ mkdir build && cd build
 $ cmake .. -G Ninja -DBUILD_STATIC_LIBS=on
 $ ninja && ninja install
+$ go get -u -tags chimera github.com/flier/gohs/hyperscan
 ```
 
 ### Note
