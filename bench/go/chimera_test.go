@@ -26,7 +26,8 @@ func BenchmarkChimeraBlockScan(b *testing.B) {
 		}
 
 		m := chimera.HandlerFunc(func(id uint, from, to uint64, flags uint,
-			captured []*chimera.Capture, context interface{}) chimera.Callback {
+			captured []*chimera.Capture, context interface{},
+		) chimera.Callback {
 			return chimera.Terminate
 		})
 

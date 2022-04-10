@@ -86,7 +86,8 @@ type eventContext struct {
 
 //export matchEventCallback
 func matchEventCallback(id C.uint, from, to C.ulonglong, flags, size C.uint,
-	capture *C.capture_t, data unsafe.Pointer) C.ch_callback_t {
+	capture *C.capture_t, data unsafe.Pointer,
+) C.ch_callback_t {
 	h := (*handle.Handle)(data)
 	ctx, ok := h.Value().(eventContext)
 	if !ok {
@@ -119,7 +120,8 @@ type ScanFlag uint
 
 // The block regular expression scanner.
 func Scan(db Database, data []byte, flags ScanFlag, scratch Scratch,
-	onEvent MatchEventHandler, onError ErrorEventHandler, context interface{}) error {
+	onEvent MatchEventHandler, onError ErrorEventHandler, context interface{},
+) error {
 	if data == nil {
 		return ErrInvalid
 	}

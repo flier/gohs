@@ -142,6 +142,7 @@ func BenchmarkHyperscanStreamScan(b *testing.B) {
 		}
 	}
 }
+
 func BenchmarkRegexpMatch(b *testing.B) {
 	isRaceBuilder := strings.HasSuffix(testenv(), "-race")
 

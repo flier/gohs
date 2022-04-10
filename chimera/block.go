@@ -112,7 +112,8 @@ func newBlockMatcher(scanner *blockScanner) *blockMatcher {
 }
 
 func (m *blockMatcher) OnMatch(id uint, from, to uint64, flags uint,
-	captured []*Capture, context interface{}) (r Callback) {
+	captured []*Capture, context interface{},
+) (r Callback) {
 	r = m.MatchRecorder.OnMatch(id, from, to, flags, captured, context)
 
 	if m.n < 0 {

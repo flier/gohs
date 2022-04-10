@@ -32,7 +32,8 @@ func TestBlockScanner(t *testing.T) {
 				var matches [][]uint64
 
 				matched := func(id uint, from, to uint64, flags uint,
-					captured []*chimera.Capture, context interface{}) chimera.Callback {
+					captured []*chimera.Capture, context interface{},
+				) chimera.Callback {
 					matches = append(matches, []uint64{from, to})
 
 					return chimera.Continue

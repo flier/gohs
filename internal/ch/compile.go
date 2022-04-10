@@ -134,7 +134,8 @@ func CompileMulti(p Patterns, mode CompileMode, info *hs.PlatformInfo) (Database
 
 // The multiple regular expression compiler.
 func CompileExtMulti(p Patterns, mode CompileMode, info *hs.PlatformInfo,
-	matchLimit, matchLimitRecursion uint) (Database, error) {
+	matchLimit, matchLimitRecursion uint,
+) (Database, error) {
 	var db *C.ch_database_t
 	var err *C.ch_compile_error_t
 	var platform *C.hs_platform_info_t

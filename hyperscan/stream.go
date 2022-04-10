@@ -339,7 +339,8 @@ func (db *streamDatabase) Compress(s Stream) ([]byte, error) {
 }
 
 func (db *streamDatabase) Expand(buf []byte, flags ScanFlag, sc *Scratch,
-	handler MatchHandler, context interface{}) (Stream, error) {
+	handler MatchHandler, context interface{},
+) (Stream, error) {
 	var s hs.Stream
 
 	err := hs.ExpandStream(db.db, &s, buf)
@@ -362,7 +363,8 @@ func (db *streamDatabase) Expand(buf []byte, flags ScanFlag, sc *Scratch,
 }
 
 func (db *streamDatabase) ResetAndExpand(s Stream, buf []byte, flags ScanFlag, sc *Scratch,
-	handler MatchHandler, context interface{}) (Stream, error) {
+	handler MatchHandler, context interface{},
+) (Stream, error) {
 	ss, ok := s.(*stream)
 	if !ok {
 		return nil, fmt.Errorf("stream %v, %w", s, ErrInvalid)
