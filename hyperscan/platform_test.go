@@ -13,7 +13,7 @@ func TestPlatform(t *testing.T) {
 		p := hyperscan.PopulatePlatform()
 
 		So(p, ShouldNotBeNil)
-		So(p.Tune(), ShouldBeGreaterThan, hyperscan.Generic)
+		So(p.Tune(), ShouldBeGreaterThanOrEqualTo, hyperscan.Generic)
 		So(p.CpuFeatures(), ShouldBeGreaterThanOrEqualTo, 0)
 
 		So(p, ShouldResemble, hyperscan.NewPlatform(p.Tune(), p.CpuFeatures()))
