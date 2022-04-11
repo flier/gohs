@@ -1,0 +1,28 @@
+version: "3.9"
+services:
+  hyperscan-5.4:
+    build:
+      context: .
+      labels:
+        hyperscan: 5.4
+      args:
+        HYPERSCAN_VERSION: 5.4.0
+    command: test -tags hyperscan_v54 ./...
+  hyperscan-5.2:
+    build:
+      context: .
+      labels:
+        hyperscan: 5.2
+      args:
+        HYPERSCAN_VERSION: 5.2.1
+  hyperscan-4.7:
+    build:
+      context: .
+      labels:
+        hyperscan: 4.7
+      args:
+        UBUNTU_VERSION: 18.04
+        HYPERSCAN_VERSION: 4.7.0
+        PCRE_VERSION: 8.41
+        GO_BUILD_TAGS: -tags hyperscan_v4
+    command: test -tags hyperscan_v4 ./hyperscan/... ./internal/hs/...

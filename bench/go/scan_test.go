@@ -73,7 +73,7 @@ func BenchmarkHyperscanBlockScan(b *testing.B) {
 		}
 
 		m := func(id uint, from, to uint64, flags uint, context interface{}) error {
-			return hyperscan.ErrUnexpected
+			return hyperscan.ErrScanTerminated
 		}
 
 		for _, size := range benchSizes {
@@ -112,7 +112,7 @@ func BenchmarkHyperscanStreamScan(b *testing.B) {
 		}
 
 		m := func(id uint, from, to uint64, flags uint, context interface{}) error {
-			return hyperscan.ErrUnexpected
+			return hyperscan.ErrScanTerminated
 		}
 
 		for _, size := range benchSizes {

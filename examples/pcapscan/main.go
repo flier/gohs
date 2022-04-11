@@ -33,6 +33,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"path/filepath"
 	"runtime/pprof"
 	"strconv"
 	"strings"
@@ -412,7 +413,8 @@ func main() {
 	flag.Parse()
 
 	if flag.NArg() != 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %s [-n repeats] <pattern file> <pcap file>\n", os.Args[0])
+		_, prog := filepath.Split(os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s [-n repeats] <pattern file> <pcap file>\n", prog)
 		os.Exit(-1)
 	}
 
