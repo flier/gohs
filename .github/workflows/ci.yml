@@ -97,6 +97,7 @@ jobs:
           - os: ubuntu-20.04
             hyperscan: 5.1.1
             pcre: 8.45
+            build_flags: -tags chimera
             chimera: true
           - os: ubuntu-18.04
             hyperscan: 4.7.0
