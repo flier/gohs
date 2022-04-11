@@ -126,7 +126,6 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install Hyperscan ${{ matrix.hyperscan }} with PCRE ${{ matrix.pcre }}
-        if: steps.cache-hyperscan.outputs.cache-hit == false
         uses: flier/install-hyperscan@main
         with:
           hyperscan_version: ${{ matrix.hyperscan }}
@@ -135,19 +134,6 @@ jobs:
           src_dir: ${{ runner.temp }}/hyperscan/
           install_prefix: ${{ github.workspace }}/dist/
           cache_key: ${{ runner.os }}-build-hyperscan-${{ matrix.hyperscan }}-pcre-${{ matrix.pcre }}
-
-      - name: Upload Hyperscan ${{ matrix.hyperscan }}
-        if: steps.cache-hyperscan.outputs.cache-hit == false
-        uses: actions/upload-artifact@v2
-        with:
-          name: hyperscan-${{ matrix.hyperscan }}-pcre-${{ matrix.pcre }}
-          path: ${{ github.workspace }}/dist/
-          if-no-files-found: error
-
-      - name: Check cached Hyperscan ${{ matrix.hyperscan}} with PCRE ${{ matrix.pcre }}
-        if: steps.cache-hyperscan.outputs.cache-hit
-        run: |
-          tree ${{ github.workspace }}/dist
 
       - name: Install Golang ${{ matrix.go }}
         uses: actions/setup-go@v2
