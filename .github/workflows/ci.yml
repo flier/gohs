@@ -42,7 +42,7 @@ jobs:
           go-version: ${{ matrix.go }}
 
       - name: Cache Golang modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cache/go-build
@@ -126,7 +126,7 @@ jobs:
 
       - name: Cache Hyperscan library
         id: cache-hyperscan
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           cache-name: cache-hyperscan-library
         with:
@@ -164,7 +164,7 @@ jobs:
           go-version: ${{ matrix.go }}
 
       - name: Cache Golang modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cache/go-build
