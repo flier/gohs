@@ -43,7 +43,9 @@ func (s *Scratch) Size() (int, error) { return hs.ScratchSize(s.s) } // nolint: 
 
 // Realloc reallocate the scratch for another database.
 func (s *Scratch) Realloc(db Database) error {
-	return hs.ReallocScratch(db.(database).c(), &s.s) // nolint: wrapcheck
+	r, _ := db.(database)
+
+	return hs.ReallocScratch(r.c(), &s.s) // nolint: wrapcheck
 }
 
 // Clone allocate a scratch space that is a clone of an existing scratch space.
