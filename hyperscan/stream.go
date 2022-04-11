@@ -175,7 +175,7 @@ func (ss *streamScanner) Scan(reader io.Reader, scratch *Scratch, handler MatchH
 	for {
 		n, err := reader.Read(buf)
 
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return nil
 		}
 
@@ -232,7 +232,7 @@ func (m *streamMatcher) scan(reader io.Reader) error {
 	for {
 		n, err := reader.Read(buf)
 
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return nil
 		}
 

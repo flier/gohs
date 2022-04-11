@@ -202,13 +202,15 @@ func (b *DatabaseBuilder) Build() (Database, error) {
 }
 
 // NewBlockDatabase create a block database base on the patterns.
-func NewBlockDatabase(patterns ...*Pattern) (BlockDatabase, error) {
-	db, err := Patterns(patterns).Build(BlockMode)
+func NewBlockDatabase(patterns ...*Pattern) (bdb BlockDatabase, err error) {
+	var db Database
+	db, err = Patterns(patterns).Build(BlockMode)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	return db.(*blockDatabase), err
+	bdb, _ = db.(*blockDatabase)
+	return
 }
 
 // NewManagedBlockDatabase is a wrapper for NewBlockDatabase that
@@ -228,13 +230,15 @@ func NewManagedBlockDatabase(patterns ...*Pattern) (BlockDatabase, error) {
 }
 
 // NewStreamDatabase create a stream database base on the patterns.
-func NewStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
-	db, err := Patterns(patterns).Build(StreamMode)
+func NewStreamDatabase(patterns ...*Pattern) (sdb StreamDatabase, err error) {
+	var db Database
+	db, err = Patterns(patterns).Build(StreamMode)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	return db.(*streamDatabase), err
+	sdb, _ = db.(*streamDatabase)
+	return
 }
 
 // NewManagedStreamDatabase is a wrapper for NewStreamDatabase that
@@ -254,33 +258,39 @@ func NewManagedStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
 }
 
 // NewMediumStreamDatabase create a medium-sized stream database base on the patterns.
-func NewMediumStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
-	db, err := Patterns(patterns).Build(StreamMode | SomHorizonMediumMode)
+func NewMediumStreamDatabase(patterns ...*Pattern) (sdb StreamDatabase, err error) {
+	var db Database
+	db, err = Patterns(patterns).Build(StreamMode | SomHorizonMediumMode)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	return db.(*streamDatabase), err
+	sdb, _ = db.(*streamDatabase)
+	return
 }
 
 // NewLargeStreamDatabase create a large-sized stream database base on the patterns.
-func NewLargeStreamDatabase(patterns ...*Pattern) (StreamDatabase, error) {
-	db, err := Patterns(patterns).Build(StreamMode | SomHorizonLargeMode)
+func NewLargeStreamDatabase(patterns ...*Pattern) (sdb StreamDatabase, err error) {
+	var db Database
+	db, err = Patterns(patterns).Build(StreamMode | SomHorizonLargeMode)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	return db.(*streamDatabase), err
+	sdb, _ = db.(*streamDatabase)
+	return
 }
 
 // NewVectoredDatabase create a vectored database base on the patterns.
-func NewVectoredDatabase(patterns ...*Pattern) (VectoredDatabase, error) {
-	db, err := Patterns(patterns).Build(VectoredMode)
+func NewVectoredDatabase(patterns ...*Pattern) (vdb VectoredDatabase, err error) {
+	var db Database
+	db, err = Patterns(patterns).Build(VectoredMode)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	return db.(*vectoredDatabase), err
+	vdb, _ = db.(*vectoredDatabase)
+	return
 }
 
 // Compile a regular expression and returns, if successful,
