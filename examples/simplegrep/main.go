@@ -149,10 +149,9 @@ func main() {
 		for _, filename := range filenames {
 			filename := filename
 
-			go func() {
-				wg.Add(1)
-				defer wg.Done()
+			wg.Add(1)
 
+			go func() {
 				scratch, release := scratchAlloc()
 				defer release()
 
@@ -188,6 +187,8 @@ func main() {
 					os.Exit(-1)
 				}
 				fmt.Fprint(os.Stdout, buf.String())
+
+				wg.Done()
 			}()
 		}
 	}
