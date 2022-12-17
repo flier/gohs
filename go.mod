@@ -1,6 +1,6 @@
 module github.com/flier/gohs
 
-go 1.14
+go 1.15
 
 require (
 	github.com/google/gopacket v1.1.19
