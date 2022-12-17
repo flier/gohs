@@ -1,4 +1,3 @@
-//nolint:funlen
 package hyperscan_test
 
 import (
@@ -9,7 +8,7 @@ import (
 	"github.com/flier/gohs/hyperscan"
 )
 
-func TestBaseDatabase(t *testing.T) {
+func TestBaseDatabase(t *testing.T) { //nolint: funlen
 	Convey("Given a block database", t, func() {
 		So(hyperscan.ValidPlatform(), ShouldBeNil)
 

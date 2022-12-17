@@ -46,7 +46,7 @@ func (lit *Literal) Info() (*ExprInfo, error) {
 	if lit.ExprInfo == nil {
 		info, err := hs.ExpressionInfo(lit.Expression, lit.Flags)
 		if err != nil {
-			return nil, err // nolint: wrapcheck
+			return nil, err //nolint: wrapcheck
 		}
 
 		lit.ExprInfo = info
@@ -75,7 +75,6 @@ Parse literal from a formated string
 For example, the following literal will match `test` in the caseless and multi-lines mode
 
 	/test/im
-
 */
 func ParseLiteral(s string) (*Literal, error) {
 	var lit Literal
@@ -145,7 +144,7 @@ func (lit *Literal) ForPlatform(mode ModeFlag, platform Platform) (Database, err
 
 	db, err := hs.CompileLit(lit.Expression, lit.Flags, mode, p)
 	if err != nil {
-		return nil, err // nolint: wrapcheck
+		return nil, err //nolint: wrapcheck
 	}
 
 	switch mode & hs.ModeMask {
@@ -195,7 +194,7 @@ func (literals Literals) ForPlatform(mode ModeFlag, platform Platform) (Database
 
 	db, err := hs.CompileLitMulti(literals, mode, p)
 	if err != nil {
-		return nil, err // nolint: wrapcheck
+		return nil, err //nolint: wrapcheck
 	}
 
 	switch mode & hs.ModeMask {

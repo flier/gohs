@@ -68,15 +68,27 @@ linters-settings:
 linters:
   enable-all: true
   disable:
+    - deadcode
+    - dupword
     - exhaustive
     - exhaustivestruct
+    - exhaustruct
     - gci
     - gochecknoglobals
     - gochecknoinits
     - gocritic
     - godox
+    - golint
+    - ifshort
+    - interfacer
     - ireturn
+    - maligned
     - nlreturn
+    - nonamedreturns
+    - nosnakecase
     - paralleltest
+    - scopelint
+    - structcheck
+    - varcheck
     - varnamelen
     - wsl

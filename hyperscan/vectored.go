@@ -47,7 +47,7 @@ func (vs *vectoredScanner) Scan(data [][]byte, s *Scratch, handler MatchHandler,
 		}()
 	}
 
-	return hs.ScanVector(vs.db, data, 0, s.s, handler, context) // nolint: wrapcheck
+	return hs.ScanVector(vs.db, data, 0, s.s, handler, context) //nolint: wrapcheck
 }
 
 type vectoredMatcher struct {

@@ -186,7 +186,7 @@ func (b *DatabaseBuilder) Build() (Database, error) {
 
 	db, err := hs.CompileMulti(b.Patterns, mode, platform)
 	if err != nil {
-		return nil, err // nolint: wrapcheck
+		return nil, err //nolint: wrapcheck
 	}
 
 	switch mode & hs.ModeMask {
@@ -298,7 +298,7 @@ func NewVectoredDatabase(patterns ...*Pattern) (vdb VectoredDatabase, err error)
 func Compile(expr string) (Database, error) {
 	db, err := hs.Compile(expr, SomLeftMost, BlockMode, nil)
 	if err != nil {
-		return nil, err // nolint: wrapcheck
+		return nil, err //nolint: wrapcheck
 	}
 
 	return newBlockDatabase(db), nil

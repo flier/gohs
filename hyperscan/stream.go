@@ -83,7 +83,7 @@ func newStreamDatabase(db hs.Database) *streamDatabase {
 	return &streamDatabase{newStreamMatcher(newStreamScanner(newBaseDatabase(db)))}
 }
 
-func (db *streamDatabase) StreamSize() (int, error) { return hs.StreamSize(db.db) } // nolint: wrapcheck
+func (db *streamDatabase) StreamSize() (int, error) { return hs.StreamSize(db.db) } //nolint: wrapcheck
 
 const bufSize = 4096
 
@@ -97,7 +97,7 @@ type stream struct {
 }
 
 func (s *stream) Scan(data []byte) error {
-	return hs.ScanStream(s.stream, data, s.flags, s.scratch, s.handler, s.context) // nolint: wrapcheck
+	return hs.ScanStream(s.stream, data, s.flags, s.scratch, s.handler, s.context) //nolint: wrapcheck
 }
 
 func (s *stream) Close() error {
@@ -107,11 +107,11 @@ func (s *stream) Close() error {
 		_ = hs.FreeScratch(s.scratch)
 	}
 
-	return err // nolint: wrapcheck
+	return err //nolint: wrapcheck
 }
 
 func (s *stream) Reset() error {
-	return hs.ResetStream(s.stream, s.flags, s.scratch, s.handler, s.context) // nolint: wrapcheck
+	return hs.ResetStream(s.stream, s.flags, s.scratch, s.handler, s.context) //nolint: wrapcheck
 }
 
 func (s *stream) Clone() (Stream, error) {
@@ -184,7 +184,7 @@ func (ss *streamScanner) Scan(reader io.Reader, scratch *Scratch, handler MatchH
 		}
 
 		if err = stream.Scan(buf[:n]); err != nil {
-			return err // nolint: wrapcheck
+			return fmt.Errorf("scan stream, %w", err)
 		}
 	}
 }
@@ -202,7 +202,7 @@ func newStreamMatcher(scanner *streamScanner) *streamMatcher {
 func (m *streamMatcher) Handle(id uint, from, to uint64, flags uint, context interface{}) error {
 	err := m.MatchRecorder.Handle(id, from, to, flags, context)
 	if err != nil {
-		return err // nolint: wrapcheck
+		return err //nolint: wrapcheck
 	}
 
 	if m.n < 0 {
@@ -241,7 +241,7 @@ func (m *streamMatcher) scan(reader io.Reader) error {
 		}
 
 		if err = stream.Scan(buf[:n]); err != nil {
-			return err // nolint: wrapcheck
+			return fmt.Errorf("scan stream, %w", err)
 		}
 	}
 }

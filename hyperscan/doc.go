@@ -10,7 +10,7 @@
 // Hyperscan is typically used in a DPI library stack.
 // The Hyperscan API itself is composed of two major components:
 //
-// Compilation
+// # Compilation
 //
 // These functions take a group of regular expressions, along with identifiers and option flags,
 // and compile them into an immutable database that can be used by the Hyperscan scanning API.
@@ -24,7 +24,7 @@
 //
 // See Compiling Patterns for more detail. (http://intel.github.io/hyperscan/dev-reference/compilation.html)
 //
-// Scanning
+// # Scanning
 //
 // Once a Hyperscan database has been created, it can be used to scan data in memory.
 // Hyperscan provides several scanning modes, depending on whether the data to be scanned is available
@@ -55,7 +55,7 @@
 //
 // See Scanning for Patterns for more detail. (http://intel.github.io/hyperscan/dev-reference/runtime.html)
 //
-// Building a Database
+// # Building a Database
 //
 // The Hyperscan compiler API accepts regular expressions and converts them into a compiled pattern database
 // that can then be used to scan data.

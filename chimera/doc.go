@@ -9,7 +9,7 @@
 //
 // The Chimera API itself is composed of two major components:
 //
-// Compilation
+// # Compilation
 //
 // These functions take a group of regular expressions, along with identifiers and option flags,
 // and compile them into an immutable database that can be used by the Chimera scanning API.
@@ -18,7 +18,7 @@
 //
 // See Compiling Patterns for more details (https://intel.github.io/hyperscan/dev-reference/chimera.html#chcompile)
 //
-// Scanning
+// # Scanning
 //
 // Once a Chimera database has been created, it can be used to scan data in memory.
 // Chimera only supports block mode in which we scan a single contiguous block in memory.

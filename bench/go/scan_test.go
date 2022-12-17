@@ -95,8 +95,7 @@ func BenchmarkHyperscanBlockScan(b *testing.B) {
 
 const PageSize = 4096
 
-// nolint: gocognit
-func BenchmarkHyperscanStreamScan(b *testing.B) {
+func BenchmarkHyperscanStreamScan(b *testing.B) { //nolint: gocognit
 	isRaceBuilder := strings.HasSuffix(testenv(), "-race")
 
 	for _, data := range benchData {

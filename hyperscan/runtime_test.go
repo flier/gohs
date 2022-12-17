@@ -1,4 +1,3 @@
-//nolint:funlen
 package hyperscan_test
 
 import (
@@ -28,7 +27,7 @@ var streamDatabaseConstructors = map[string]StreamDatabaseConstructor{
 func TestBlockScanner(t *testing.T) {
 	for dbType, dbConstructor := range blockDatabaseConstructors {
 		Convey("Given a "+dbType+" block database", t, func() {
-			bdb, err := dbConstructor(hyperscan.NewPattern(`\d+`, hyperscan.SomLeftMost)) // nolint: scopelint
+			bdb, err := dbConstructor(hyperscan.NewPattern(`\d+`, hyperscan.SomLeftMost))
 
 			So(err, ShouldBeNil)
 			So(bdb, ShouldNotBeNil)
@@ -54,7 +53,7 @@ func TestBlockScanner(t *testing.T) {
 func TestBlockMatcher(t *testing.T) {
 	for dbType, dbConstructor := range blockDatabaseConstructors {
 		Convey("Given a "+dbType+" block database", t, func() {
-			bdb, err := dbConstructor(hyperscan.NewPattern(`\d+`, hyperscan.SomLeftMost)) // nolint: scopelint
+			bdb, err := dbConstructor(hyperscan.NewPattern(`\d+`, hyperscan.SomLeftMost))
 
 			So(err, ShouldBeNil)
 			So(bdb, ShouldNotBeNil)
@@ -100,7 +99,7 @@ func TestBlockMatcher(t *testing.T) {
 func TestStreamScanner(t *testing.T) {
 	for dbType, dbConstructor := range streamDatabaseConstructors {
 		Convey("Given a "+dbType+" streaming database", t, func() {
-			sdb, err := dbConstructor(hyperscan.NewPattern(`abc`, hyperscan.SomLeftMost)) // nolint: scopelint
+			sdb, err := dbConstructor(hyperscan.NewPattern(`abc`, hyperscan.SomLeftMost))
 
 			So(err, ShouldBeNil)
 			So(sdb, ShouldNotBeNil)
@@ -135,7 +134,7 @@ func TestStreamScanner(t *testing.T) {
 func TestStreamMatcher(t *testing.T) {
 	for dbType, dbConstructor := range streamDatabaseConstructors {
 		Convey("Given a "+dbType+" streaming database", t, func() {
-			sdb, err := dbConstructor(hyperscan.NewPattern(`\d+`, hyperscan.SomLeftMost)) // nolint: scopelint
+			sdb, err := dbConstructor(hyperscan.NewPattern(`\d+`, hyperscan.SomLeftMost))
 
 			So(err, ShouldBeNil)
 			So(sdb, ShouldNotBeNil)
@@ -191,10 +190,10 @@ func TestStreamMatcher(t *testing.T) {
 	}
 }
 
-func TestStreamCompressor(t *testing.T) {
+func TestStreamCompressor(t *testing.T) { //nolint:funlen
 	for dbType, dbConstructor := range streamDatabaseConstructors {
 		Convey("Given a "+dbType+" streaming database", t, func() {
-			sdb, err := dbConstructor(hyperscan.NewPattern(`abc`, hyperscan.SomLeftMost)) // nolint: scopelint
+			sdb, err := dbConstructor(hyperscan.NewPattern(`abc`, hyperscan.SomLeftMost))
 
 			So(err, ShouldBeNil)
 			So(sdb, ShouldNotBeNil)
@@ -202,7 +201,7 @@ func TestStreamCompressor(t *testing.T) {
 			Convey("When open a new stream", func() {
 				var matches [][]uint64
 
-				matched := func(id uint, from, to uint64, flags uint, context interface{}) error { // nolint: unparam
+				matched := func(id uint, from, to uint64, flags uint, context interface{}) error { //nolint: unparam
 					matches = append(matches, []uint64{from, to})
 					return nil
 				}

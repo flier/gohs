@@ -53,12 +53,12 @@ func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, data un
 	return C.HS_SUCCESS
 }
 
-func Scan(db Database, data []byte, flags ScanFlag, scratch Scratch, onEvent MatchEventHandler, context interface{}) error {
+func Scan(db Database, data []byte, flags ScanFlag, s Scratch, cb MatchEventHandler, ctx interface{}) error {
 	if data == nil {
 		return Error(C.HS_INVALID)
 	}
 
-	h := handle.New(MatchEventContext{onEvent, context})
+	h := handle.New(MatchEventContext{cb, ctx})
 	defer h.Delete()
 
 	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data)) // FIXME: Zero-copy access to go data
@@ -67,7 +67,7 @@ func Scan(db Database, data []byte, flags ScanFlag, scratch Scratch, onEvent Mat
 		(*C.char)(unsafe.Pointer(hdr.Data)),
 		C.uint(hdr.Len),
 		C.uint(flags),
-		scratch,
+		s,
 		C.match_event_handler(C.hsMatchEventCallback),
 		unsafe.Pointer(&h))
 
@@ -81,7 +81,7 @@ func Scan(db Database, data []byte, flags ScanFlag, scratch Scratch, onEvent Mat
 	return nil
 }
 
-func ScanVector(db Database, data [][]byte, flags ScanFlag, scratch Scratch, onEvent MatchEventHandler, context interface{}) error {
+func ScanVector(db Database, data [][]byte, flags ScanFlag, s Scratch, cb MatchEventHandler, ctx interface{}) error {
 	if data == nil {
 		return Error(C.HS_INVALID)
 	}
@@ -95,12 +95,12 @@ func ScanVector(db Database, data [][]byte, flags ScanFlag, scratch Scratch, onE
 		}
 
 		// FIXME: Zero-copy access to go data
-		hdr := (*reflect.SliceHeader)(unsafe.Pointer(&d)) // nolint: scopelint
+		hdr := (*reflect.SliceHeader)(unsafe.Pointer(&d)) //nolint: scopelint
 		cdata[i] = uintptr(unsafe.Pointer(hdr.Data))
 		clength[i] = C.uint(hdr.Len)
 	}
 
-	h := handle.New(MatchEventContext{onEvent, context})
+	h := handle.New(MatchEventContext{cb, ctx})
 	defer h.Delete()
 
 	cdataHdr := (*reflect.SliceHeader)(unsafe.Pointer(&cdata))     // FIXME: Zero-copy access to go data
@@ -111,7 +111,7 @@ func ScanVector(db Database, data [][]byte, flags ScanFlag, scratch Scratch, onE
 		(*C.uint)(unsafe.Pointer(clengthHdr.Data)),
 		C.uint(cdataHdr.Len),
 		C.uint(flags),
-		scratch,
+		s,
 		C.match_event_handler(C.hsMatchEventCallback),
 		unsafe.Pointer(&h))
 

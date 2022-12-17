@@ -33,12 +33,12 @@ func OpenStream(db Database, flags ScanFlag) (Stream, error) {
 	return stream, nil
 }
 
-func ScanStream(stream Stream, data []byte, flags ScanFlag, scratch Scratch, onEvent MatchEventHandler, context interface{}) error {
+func ScanStream(stream Stream, data []byte, flags ScanFlag, s Scratch, cb MatchEventHandler, ctx interface{}) error {
 	if data == nil {
 		return Error(C.HS_INVALID)
 	}
 
-	h := handle.New(MatchEventContext{onEvent, context})
+	h := handle.New(MatchEventContext{cb, ctx})
 	defer h.Delete()
 
 	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data)) // FIXME: Zero-copy access to go data
@@ -47,7 +47,7 @@ func ScanStream(stream Stream, data []byte, flags ScanFlag, scratch Scratch, onE
 		(*C.char)(unsafe.Pointer(hdr.Data)),
 		C.uint(hdr.Len),
 		C.uint(flags),
-		scratch,
+		s,
 		C.match_event_handler(C.hsMatchEventCallback),
 		unsafe.Pointer(&h))
 
@@ -65,12 +65,12 @@ func FreeStream(stream Stream) {
 	C.hs_close_stream(stream, nil, nil, nil)
 }
 
-func CloseStream(stream Stream, scratch Scratch, onEvent MatchEventHandler, context interface{}) error {
-	h := handle.New(MatchEventContext{onEvent, context})
+func CloseStream(stream Stream, s Scratch, cb MatchEventHandler, ctx interface{}) error {
+	h := handle.New(MatchEventContext{cb, ctx})
 	defer h.Delete()
 
 	ret := C.hs_close_stream(stream,
-		scratch,
+		s,
 		C.match_event_handler(C.hsMatchEventCallback),
 		unsafe.Pointer(&h))
 
@@ -81,13 +81,13 @@ func CloseStream(stream Stream, scratch Scratch, onEvent MatchEventHandler, cont
 	return nil
 }
 
-func ResetStream(stream Stream, flags ScanFlag, scratch Scratch, onEvent MatchEventHandler, context interface{}) error {
-	h := handle.New(MatchEventContext{onEvent, context})
+func ResetStream(stream Stream, flags ScanFlag, s Scratch, cb MatchEventHandler, ctx interface{}) error {
+	h := handle.New(MatchEventContext{cb, ctx})
 	defer h.Delete()
 
 	ret := C.hs_reset_stream(stream,
 		C.uint(flags),
-		scratch,
+		s,
 		C.match_event_handler(C.hsMatchEventCallback),
 		unsafe.Pointer(&h))
 
@@ -108,13 +108,13 @@ func CopyStream(stream Stream) (Stream, error) {
 	return copied, nil
 }
 
-func ResetAndCopyStream(to, from Stream, scratch Scratch, onEvent MatchEventHandler, context interface{}) error {
-	h := handle.New(MatchEventContext{onEvent, context})
+func ResetAndCopyStream(to, from Stream, s Scratch, cb MatchEventHandler, ctx interface{}) error {
+	h := handle.New(MatchEventContext{cb, ctx})
 	defer h.Delete()
 
 	ret := C.hs_reset_and_copy_stream(to,
 		from,
-		scratch,
+		s,
 		C.match_event_handler(C.hsMatchEventCallback),
 		unsafe.Pointer(&h))
 
@@ -155,14 +155,14 @@ func ExpandStream(db Database, stream *Stream, buf []byte) error {
 	return nil
 }
 
-func ResetAndExpandStream(stream Stream, buf []byte, scratch Scratch, onEvent MatchEventHandler, context interface{}) error {
-	h := handle.New(MatchEventContext{onEvent, context})
+func ResetAndExpandStream(stream Stream, buf []byte, s Scratch, cb MatchEventHandler, ctx interface{}) error {
+	h := handle.New(MatchEventContext{cb, ctx})
 	defer h.Delete()
 
 	ret := C.hs_reset_and_expand_stream(stream,
 		(*C.char)(unsafe.Pointer(&buf[0])),
 		C.size_t(len(buf)),
-		scratch,
+		s,
 		C.match_event_handler(C.hsMatchEventCallback),
 		unsafe.Pointer(&h))
 

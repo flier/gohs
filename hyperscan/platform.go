@@ -26,7 +26,7 @@ const (
 )
 
 // CpuFeature is the CPU feature support flags.
-type CpuFeature = hs.CpuFeature // nolint: golint,stylecheck,revive
+type CpuFeature = hs.CpuFeature //nolint: golint,stylecheck,revive
 
 const (
 	// AVX2 is a CPU features flag indicates that the target platform supports AVX2 instructions.

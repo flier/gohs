@@ -61,8 +61,7 @@ type Database interface {
 }
 
 // DbInfo identify the version and platform information for the supplied database.
-// nolint: stylecheck
-type DbInfo string
+type DbInfo string //nolint: stylecheck
 
 func (i DbInfo) String() string { return string(i) }
 
@@ -107,7 +106,7 @@ func (i DbInfo) Mode() (ModeFlag, error) {
 func Version() string { return hs.Version() }
 
 // ValidPlatform test the current system architecture.
-func ValidPlatform() error { return hs.ValidPlatform() } // nolint: wrapcheck
+func ValidPlatform() error { return hs.ValidPlatform() } //nolint: wrapcheck
 
 type database interface {
 	c() hs.Database
@@ -125,7 +124,7 @@ func newBaseDatabase(db hs.Database) *baseDatabase {
 func UnmarshalDatabase(data []byte) (Database, error) {
 	db, err := hs.DeserializeDatabase(data)
 	if err != nil {
-		return nil, err // nolint: wrapcheck
+		return nil, err //nolint: wrapcheck
 	}
 
 	return &baseDatabase{db}, nil
@@ -135,7 +134,7 @@ func UnmarshalDatabase(data []byte) (Database, error) {
 func UnmarshalBlockDatabase(data []byte) (BlockDatabase, error) {
 	db, err := hs.DeserializeDatabase(data)
 	if err != nil {
-		return nil, err // nolint: wrapcheck
+		return nil, err //nolint: wrapcheck
 	}
 
 	return newBlockDatabase(db), nil
@@ -145,7 +144,7 @@ func UnmarshalBlockDatabase(data []byte) (BlockDatabase, error) {
 func UnmarshalStreamDatabase(data []byte) (StreamDatabase, error) {
 	db, err := hs.DeserializeDatabase(data)
 	if err != nil {
-		return nil, err // nolint: wrapcheck
+		return nil, err //nolint: wrapcheck
 	}
 
 	return newStreamDatabase(db), nil
@@ -155,14 +154,14 @@ func UnmarshalStreamDatabase(data []byte) (StreamDatabase, error) {
 func UnmarshalVectoredDatabase(data []byte) (VectoredDatabase, error) {
 	db, err := hs.DeserializeDatabase(data)
 	if err != nil {
-		return nil, err // nolint: wrapcheck
+		return nil, err //nolint: wrapcheck
 	}
 
 	return newVectoredDatabase(db), nil
 }
 
 // SerializedDatabaseSize reports the size that would be required by a database if it were deserialized.
-func SerializedDatabaseSize(data []byte) (int, error) { return hs.SerializedDatabaseSize(data) } // nolint: wrapcheck
+func SerializedDatabaseSize(data []byte) (int, error) { return hs.SerializedDatabaseSize(data) } //nolint: wrapcheck
 
 // SerializedDatabaseInfo provides information about a serialized database.
 func SerializedDatabaseInfo(data []byte) (DbInfo, error) {
@@ -173,7 +172,7 @@ func SerializedDatabaseInfo(data []byte) (DbInfo, error) {
 
 func (d *baseDatabase) c() hs.Database { return d.db }
 
-func (d *baseDatabase) Size() (int, error) { return hs.DatabaseSize(d.db) } // nolint: wrapcheck
+func (d *baseDatabase) Size() (int, error) { return hs.DatabaseSize(d.db) } //nolint: wrapcheck
 
 func (d *baseDatabase) Info() (DbInfo, error) {
 	i, err := hs.DatabaseInfo(d.db)
@@ -184,8 +183,8 @@ func (d *baseDatabase) Info() (DbInfo, error) {
 	return DbInfo(i), nil
 }
 
-func (d *baseDatabase) Close() error { return hs.FreeDatabase(d.db) } // nolint: wrapcheck
+func (d *baseDatabase) Close() error { return hs.FreeDatabase(d.db) } //nolint: wrapcheck
 
-func (d *baseDatabase) Marshal() ([]byte, error) { return hs.SerializeDatabase(d.db) } // nolint: wrapcheck
+func (d *baseDatabase) Marshal() ([]byte, error) { return hs.SerializeDatabase(d.db) } //nolint: wrapcheck
 
-func (d *baseDatabase) Unmarshal(data []byte) error { return hs.DeserializeDatabaseAt(data, d.db) } // nolint: wrapcheck
+func (d *baseDatabase) Unmarshal(data []byte) error { return hs.DeserializeDatabaseAt(data, d.db) } //nolint: wrapcheck

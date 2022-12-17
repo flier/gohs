@@ -1,4 +1,3 @@
-//nolint:funlen
 package hyperscan_test
 
 import (
@@ -123,7 +122,7 @@ func ExampleVectoredScanner() {
 	// match [ 6 : 15 ] foobarbar
 }
 
-func ExampleStreamScanner() {
+func ExampleStreamScanner() { //nolint:funlen
 	// Pattern with `L` flag enable leftmost start of match reporting.
 	p, err := hyperscan.ParsePattern(`/foo(bar)+/L`)
 	if err != nil {

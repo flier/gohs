@@ -173,17 +173,17 @@ func ParseExprExt(s string) (ext *ExprExt, err error) {
 		}
 	}
 
-	return // nolint: nakedret
+	return //nolint: nakedret
 }
 
 // Pattern is a matching pattern.
-// nolint: golint,revive,stylecheck
 type Pattern struct {
 	Expression string      // The expression to parse.
 	Flags      CompileFlag // Flags which modify the behaviour of the expression.
-	Id         int         // The ID number to be associated with the corresponding pattern
-	info       *ExprInfo
-	ext        *ExprExt
+	// The ID number to be associated with the corresponding pattern
+	Id   int //nolint: revive,stylecheck
+	info *ExprInfo
+	ext  *ExprExt
 }
 
 // NewPattern returns a new pattern base on expression and compile flags.
@@ -220,7 +220,7 @@ func (p *Pattern) Info() (*ExprInfo, error) {
 	if p.info == nil {
 		info, err := hs.ExpressionInfo(p.Expression, p.Flags)
 		if err != nil {
-			return nil, err // nolint: wrapcheck
+			return nil, err //nolint: wrapcheck
 		}
 
 		p.info = info
@@ -245,7 +245,7 @@ func (p *Pattern) Ext() (*ExprExt, error) {
 	if p.ext == nil {
 		ext, info, err := hs.ExpressionExt(p.Expression, p.Flags)
 		if err != nil {
-			return nil, err // nolint: wrapcheck
+			return nil, err //nolint: wrapcheck
 		}
 
 		p.ext = (*ExprExt)(ext)
@@ -279,7 +279,6 @@ ParsePattern parse pattern from a formated string.
 For example, the following pattern will match `test` in the caseless and multi-lines mode
 
 	/test/im
-
 */
 func ParsePattern(s string) (*Pattern, error) {
 	var p Pattern

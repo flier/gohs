@@ -95,7 +95,7 @@ func (bs *blockScanner) Scan(data []byte, s *Scratch, handler MatchHandler, cont
 		}()
 	}
 
-	return hs.Scan(bs.db, data, 0, s.s, handler, context) // nolint: wrapcheck
+	return hs.Scan(bs.db, data, 0, s.s, handler, context) //nolint: wrapcheck
 }
 
 type blockMatcher struct {
@@ -111,7 +111,7 @@ func newBlockMatcher(scanner *blockScanner) *blockMatcher {
 func (m *blockMatcher) Handle(id uint, from, to uint64, flags uint, context interface{}) error {
 	err := m.MatchRecorder.Handle(id, from, to, flags, context)
 	if err != nil {
-		return err // nolint: wrapcheck
+		return err //nolint: wrapcheck
 	}
 
 	if m.n < 0 {

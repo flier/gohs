@@ -20,7 +20,7 @@ const (
 	ErrCompileError Error = C.HS_COMPILER_ERROR
 	// ErrDatabaseVersionError is the error returned if the given database was built for a different version of Hyperscan.
 	ErrDatabaseVersionError Error = C.HS_DB_VERSION_ERROR
-	// ErrDatabasePlatformError is the error returned if the given database was built for a different platform (i.e., CPU type).
+	// ErrDatabasePlatformError is the error returned if the given database was built for a different platform.
 	ErrDatabasePlatformError Error = C.HS_DB_PLATFORM_ERROR
 	// ErrDatabaseModeError is the error returned if the given database was built for a different mode of operation.
 	ErrDatabaseModeError Error = C.HS_DB_MODE_ERROR

@@ -34,7 +34,7 @@ func Match(pattern string, data []byte) (bool, error) {
 	h := &hs.MatchRecorder{}
 
 	if err = db.Scan(data, s, h.Handle, nil); err != nil {
-		return false, err // nolint: wrapcheck
+		return false, fmt.Errorf("match pattern, %w", err)
 	}
 
 	return h.Matched(), h.Err
@@ -67,7 +67,7 @@ func MatchReader(pattern string, reader io.Reader) (bool, error) {
 	h := &hs.MatchRecorder{}
 
 	if err = db.Scan(reader, s, h.Handle, nil); err != nil {
-		return false, err // nolint: wrapcheck
+		return false, fmt.Errorf("match pattern, %w", err)
 	}
 
 	return h.Matched(), h.Err

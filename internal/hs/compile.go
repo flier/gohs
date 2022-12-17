@@ -27,19 +27,22 @@ var (
 //
 // The caller may inspect the values returned in this type to determine the cause of failure.
 type CompileError struct {
-	Message    string // A human-readable error message describing the error.
-	Expression int    // The zero-based number of the expression that caused the error.
+	// A human-readable error message describing the error.
+	Message string
+	// The zero-based number of the expression that caused the error.
+	Expression int
 }
 
 func (e *CompileError) Error() string { return e.Message }
 
 // CpuFeature is the CPU feature support flags
-type CpuFeature int // nolint: golint,stylecheck
+type CpuFeature int //nolint: golint,stylecheck,revive
 
 const (
 	// AVX2 is a CPU features flag indicates that the target platform supports AVX2 instructions.
 	AVX2 CpuFeature = C.HS_CPU_FEATURES_AVX2
-	// AVX512 is a CPU features flag indicates that the target platform supports AVX512 instructions, specifically AVX-512BW. Using AVX512 implies the use of AVX2.
+	// AVX512 is a CPU features flag indicates that the target platform supports AVX512 instructions,
+	// specifically AVX-512BW. Using AVX512 implies the use of AVX2.
 	AVX512 CpuFeature = C.HS_CPU_FEATURES_AVX512
 )
 
@@ -75,7 +78,9 @@ type PlatformInfo struct {
 func (i *PlatformInfo) Tune() TuneFlag { return TuneFlag(i.Platform.tune) }
 
 // CpuFeatures returns the CPU features of the platform.
-func (i *PlatformInfo) CpuFeatures() CpuFeature { return CpuFeature(i.Platform.cpu_features) } // nolint: golint,stylecheck
+func (i *PlatformInfo) CpuFeatures() CpuFeature { //nolint: golint,stylecheck,revive
+	return CpuFeature(i.Platform.cpu_features)
+}
 
 func NewPlatformInfo(tune TuneFlag, cpu CpuFeature) *PlatformInfo {
 	var platform C.struct_hs_platform_info
@@ -98,11 +103,17 @@ func PopulatePlatform() (*PlatformInfo, error) {
 
 // ExprInfo containing information related to an expression
 type ExprInfo struct {
-	MinWidth        uint // The minimum length in bytes of a match for the pattern.
-	MaxWidth        uint // The maximum length in bytes of a match for the pattern.
-	ReturnUnordered bool // Whether this expression can produce matches that are not returned in order, such as those produced by assertions.
-	AtEndOfData     bool // Whether this expression can produce matches at end of data (EOD).
-	OnlyAtEndOfData bool // Whether this expression can *only* produce matches at end of data (EOD).
+	// The minimum length in bytes of a match for the pattern.
+	MinWidth uint
+	// The maximum length in bytes of a match for the pattern.
+	MaxWidth uint
+	// Whether this expression can produce matches that are not returned in order,
+	// such as those produced by assertions.
+	ReturnUnordered bool
+	// Whether this expression can produce matches at end of data (EOD).
+	AtEndOfData bool
+	// Whether this expression can *only* produce matches at end of data (EOD).
+	OnlyAtEndOfData bool
 }
 
 // UnboundedMaxWidth represents the pattern expression has an unbounded maximum width
@@ -136,12 +147,18 @@ const (
 
 // ExprExt is a structure containing additional parameters related to an expression.
 type ExprExt struct {
-	Flags           ExtFlag // Flags governing which parts of this structure are to be used by the compiler.
-	MinOffset       uint64  // The minimum end offset in the data stream at which this expression should match successfully.
-	MaxOffset       uint64  // The maximum end offset in the data stream at which this expression should match successfully.
-	MinLength       uint64  // The minimum match length (from start to end) required to successfully match this expression.
-	EditDistance    uint32  // Allow patterns to approximately match within this edit distance.
-	HammingDistance uint32  // Allow patterns to approximately match within this Hamming distance.
+	// Flags governing which parts of this structure are to be used by the compiler.
+	Flags ExtFlag
+	// The minimum end offset in the data stream at which this expression should match successfully.
+	MinOffset uint64
+	// The maximum end offset in the data stream at which this expression should match successfully.
+	MaxOffset uint64
+	// The minimum match length (from start to end) required to successfully match this expression.
+	MinLength uint64
+	// Allow patterns to approximately match within this edit distance.
+	EditDistance uint32
+	// Allow patterns to approximately match within this Hamming distance.
+	HammingDistance uint32
 }
 
 func (e *ExprExt) c() *C.hs_expr_ext_t {

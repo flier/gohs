@@ -29,7 +29,6 @@ ParsePattern parse pattern from a formated string.
 For example, the following pattern will match `test` in the caseless and multi-lines mode
 
 	/test/im
-
 */
 func ParsePattern(s string) (*Pattern, error) {
 	var p Pattern

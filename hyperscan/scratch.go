@@ -17,7 +17,7 @@ type Scratch struct {
 func NewScratch(db Database) (*Scratch, error) {
 	s, err := hs.AllocScratch(db.(database).c())
 	if err != nil {
-		return nil, err // nolint: wrapcheck
+		return nil, err //nolint: wrapcheck
 	}
 
 	return &Scratch{s}, nil
@@ -39,24 +39,24 @@ func NewManagedScratch(db Database) (*Scratch, error) {
 }
 
 // Size provides the size of the given scratch space.
-func (s *Scratch) Size() (int, error) { return hs.ScratchSize(s.s) } // nolint: wrapcheck
+func (s *Scratch) Size() (int, error) { return hs.ScratchSize(s.s) } //nolint: wrapcheck
 
 // Realloc reallocate the scratch for another database.
 func (s *Scratch) Realloc(db Database) error {
 	r, _ := db.(database)
 
-	return hs.ReallocScratch(r.c(), &s.s) // nolint: wrapcheck
+	return hs.ReallocScratch(r.c(), &s.s) //nolint: wrapcheck
 }
 
 // Clone allocate a scratch space that is a clone of an existing scratch space.
 func (s *Scratch) Clone() (*Scratch, error) {
 	cloned, err := hs.CloneScratch(s.s)
 	if err != nil {
-		return nil, err // nolint: wrapcheck
+		return nil, err //nolint: wrapcheck
 	}
 
 	return &Scratch{cloned}, nil
 }
 
 // Free a scratch block previously allocated.
-func (s *Scratch) Free() error { return hs.FreeScratch(s.s) } // nolint: wrapcheck
+func (s *Scratch) Free() error { return hs.FreeScratch(s.s) } //nolint: wrapcheck
