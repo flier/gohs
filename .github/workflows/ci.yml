@@ -141,7 +141,7 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: |
-          go test -race -coverprofile=coverage.out -covermode=atomic ./...
+          go test -v ${{ matrix.build_flags }} -race -coverprofile=coverage.out -covermode=atomic ./...
           bash <(curl -s https://codecov.io/bash)
 
   golangci:
