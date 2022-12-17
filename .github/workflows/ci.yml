@@ -59,37 +59,44 @@ jobs:
       matrix:
         include:
           - os: macos-latest
+            go: stable
             hyperscan: 5.4.0
             pcre: 8.45
             build_flags: -tags hyperscan_v54,chimera
             chimera: true
           - os: macos-latest
+            go: stable
             hyperscan: 5.2.1
             pcre: 8.45
             build_flags: -tags hyperscan_v52,chimera
             chimera: true
           - os: macos-latest
+            go: stable
             hyperscan: 5.1.1
             pcre: 8.45
             build_flags: -tags chimera
             chimera: true
           - os: ubuntu-20.04
+            go: stable
             hyperscan: 5.4.0
             pcre: 8.45
             build_flags: -tags hyperscan_v54,chimera
             chimera: true
             coverage: true
           - os: ubuntu-20.04
+            go: stable
             hyperscan: 5.2.1
             pcre: 8.45
             build_flags: -tags hyperscan_v52,chimera
             chimera: true
           - os: ubuntu-20.04
+            go: stable
             hyperscan: 5.1.1
             pcre: 8.45
             build_flags: -tags chimera
             chimera: true
           - os: ubuntu-18.04
+            go: stable
             hyperscan: 4.7.0
             pcre: 8.41
             build_flags: -tags hyperscan_v4
