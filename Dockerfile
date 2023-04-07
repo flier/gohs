@@ -43,10 +43,16 @@ ENV PATH=/usr/local/go/bin:${PATH}
 ENV HYPERSCAN_DIR=/hyperscan
 
 ADD https://github.com/intel/hyperscan/archive/refs/tags/v${HYPERSCAN_VERSION}.tar.gz /hyperscan-v${HYPERSCAN_VERSION}.tar.gz
-RUN tar xf /hyperscan-v${HYPERSCAN_VERSION}.tar.gz -C ${HYPERSCAN_DIR} --strip-components=1
+RUN <<EOT bash 
+    mkdir ${HYPERSCAN_DIR}
+    tar xf /hyperscan-v${HYPERSCAN_VERSION}.tar.gz -C ${HYPERSCAN_DIR} --strip-components=1
+EOT
 
 ADD https://sourceforge.net/projects/pcre/files/pcre/${PCRE_VERSION}/pcre-${PCRE_VERSION}.tar.gz/download /pcre-${PCRE_VERSION}.tar.gz
-RUN tar xf /pcre-${PCRE_VERSION}.tar.gz -C ${HYPERSCAN_DIR}/pcre --strip-components=1 
+RUN <<EOT bash  
+    mkdir ${HYPERSCAN_DIR}/pcre
+    tar xf /pcre-${PCRE_VERSION}.tar.gz -C ${HYPERSCAN_DIR}/pcre --strip-components=1 
+EOT
 
 # Install Hyperscan
 
