@@ -112,7 +112,7 @@ func (dmp *DiffMatchPatch) PatchAddContext(patch Patch, text string) Patch {
 }
 
 // PatchMake computes a list of patches.
-func (dmp *DiffMatchPatch) PatchMake(opt ...interface{}) []Patch {
+func (dmp *DiffMatchPatch) PatchMake(opt ...any) []Patch {
 	if len(opt) == 1 {
 		diffs, _ := opt[0].([]Diff)
 		text1 := dmp.DiffText1(diffs)
