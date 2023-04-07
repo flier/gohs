@@ -46,12 +46,14 @@ ADD https://github.com/intel/hyperscan/archive/refs/tags/v${HYPERSCAN_VERSION}.t
 RUN <<EOT bash 
     mkdir ${HYPERSCAN_DIR}
     tar xf /hyperscan-v${HYPERSCAN_VERSION}.tar.gz -C ${HYPERSCAN_DIR} --strip-components=1
+    rm /hyperscan-v${HYPERSCAN_VERSION}.tar.gz
 EOT
 
 ADD https://sourceforge.net/projects/pcre/files/pcre/${PCRE_VERSION}/pcre-${PCRE_VERSION}.tar.gz/download /pcre-${PCRE_VERSION}.tar.gz
 RUN <<EOT bash  
     mkdir ${HYPERSCAN_DIR}/pcre
     tar xf /pcre-${PCRE_VERSION}.tar.gz -C ${HYPERSCAN_DIR}/pcre --strip-components=1 
+    rm /pcre-${PCRE_VERSION}.tar.gz
 EOT
 
 # Install Hyperscan
@@ -75,4 +77,4 @@ ADD . /gohs/
 
 WORKDIR /gohs
 ENTRYPOINT ["/usr/local/go/bin/go"]
-CMD ["test", "./..."]
+CMD ["test", "-v", "./..."]
