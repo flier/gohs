@@ -10,12 +10,30 @@ on:
     paths-ignore:
       - "**.md"
 
-env:
-  LATEST_TAG: flier/gohs:latest
-
 jobs:
   docker:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - ubuntu_version: 22.04
+            hyperscan_version: 5.4.1
+            pcre_version: 8.45
+            build_flags: -tags hyperscan_v54,chimera
+          - ubuntu_version: 20.04
+            hyperscan_version: 5.2.1
+            pcre_version: 8.45
+            build_flags: -tags hyperscan_v52,chimera
+          - ubuntu_version: 20.04
+            hyperscan_version: 5.1.1
+            pcre_version: 8.45
+            build_flags: -tags chimera
+          - ubuntu_version: 18.04
+            hyperscan_version: 4.7.0
+            pcre_version: 8.42
+            build_flags: -tags hyperscan_v4
+    env:
+      LATEST_TAG: flier/gohs:${{ matrix.hyperscan_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -30,20 +48,12 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           load: true
+          build-args: |
+            UBUNTU_VERSION=${{ matrix.ubuntu_version }}
+            HYPERSCAN_VERSION=${{ matrix.hyperscan_version }}
+            PCRE_VERSION=${{ matrix.pcre_version }}
           tags: ${{ env.LATEST_TAG }}
 
       - name: Test
         run: |
-          docker run --rm ${{ env.LATEST_TAG }}
-
-  docker-test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        version: [hyperscan-5.4, hyperscan-5.2, hyperscan-4.7]
-    steps:
-      - uses: actions/checkout@v3
-      - uses: isbang/compose-action@v1.4.1
-        with:
-          compose-file: docker-compose.yml
-          services: ${{ matrix.version }}
+          docker run --rm ${{ env.LATEST_TAG }} test ${{ matrix.build_flags }} -v ./...
