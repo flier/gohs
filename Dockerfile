@@ -2,11 +2,7 @@
 
 ARG UBUNTU_VERSION=22.04
 
-FROM ubuntu:${UBUNTU_VERSION}
-
-ARG GO_VERSION=1.20.3
-ARG HYPERSCAN_VERSION=5.4.1
-ARG PCRE_VERSION=8.45
+FROM ubuntu:${UBUNTU_VERSION} as build
 
 # Install dependencies
 
@@ -31,19 +27,9 @@ RUN <<EOT bash
     rm -rf /var/lib/apt/lists/*
 EOT
 
-# Install golang
-
-ADD https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz /
-
-RUN <<EOT bash
-    rm -rf /usr/local/go
-    tar -C /usr/local -xzf /go${GO_VERSION}.linux-amd64.tar.gz
-    rm /go${GO_VERSION}.linux-amd64.tar.gz
-EOT
-
-ENV PATH="/usr/local/go/bin:${PATH}"
-
 # Download Hyperscan
+
+ARG HYPERSCAN_VERSION=5.4.1
 
 ENV HYPERSCAN_DIR=/hyperscan
 
@@ -54,6 +40,8 @@ RUN <<EOT bash
     tar xf /hyperscan-v${HYPERSCAN_VERSION}.tar.gz -C ${HYPERSCAN_DIR} --strip-components=1
     rm /hyperscan-v${HYPERSCAN_VERSION}.tar.gz
 EOT
+
+ARG PCRE_VERSION=8.45
 
 ADD https://sourceforge.net/projects/pcre/files/pcre/${PCRE_VERSION}/pcre-${PCRE_VERSION}.tar.gz/download /pcre-${PCRE_VERSION}.tar.gz
 
@@ -66,7 +54,7 @@ EOT
 
 # Install Hyperscan
 
-ENV INSTALL_DIR=/usr/local
+ENV INSTALL_DIR=/dist
 
 WORKDIR ${HYPERSCAN_DIR}/build
 
@@ -83,7 +71,41 @@ RUN <<EOT bash
     mv ${HYPERSCAN_DIR}/build/lib/lib*.a ${INSTALL_DIR}/lib/
 EOT
 
-ENV PKG_CONFIG_PATH="${INSTALL_DIR}/lib/pkgconfig"
+FROM ubuntu:${UBUNTU_VERSION}
+
+# Install dependencies
+
+ENV DEBIAN_FRONTEND noninteractive
+
+# hadolint ignore=DL3008
+RUN <<EOT bash
+    apt-get update
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        libpcap-dev \
+        pkg-config
+    rm -rf /var/lib/apt/lists/*
+EOT
+
+# Install golang
+
+ARG GO_VERSION=1.20.3
+
+ADD https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz /
+
+RUN <<EOT bash
+    tar -C /usr/local -xzf /go${GO_VERSION}.linux-amd64.tar.gz
+    rm /go${GO_VERSION}.linux-amd64.tar.gz
+EOT
+
+ENV PATH="/usr/local/go/bin:${PATH}"
+
+ENV INSTALL_DIR=/dist
+
+COPY --from=build ${INSTALL_DIR} ${INSTALL_DIR}
+
+ENV PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:${INSTALL_DIR}/lib/pkgconfig"
 
 # Add gohs code
 
