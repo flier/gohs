@@ -62,13 +62,13 @@ jobs:
             pcre_version: 8.45
             build_flags: -tags hyperscan_v54,chimera
             chimera: true
-          - os: macos-latest
+          - os: macos-12
             go: stable
             hyperscan_version: 5.2.1
             pcre_version: 8.45
             build_flags: -tags hyperscan_v52,chimera
             chimera: true
-          - os: macos-latest
+          - os: macos-11
             go: stable
             hyperscan_version: 5.1.1
             pcre_version: 8.45
@@ -87,17 +87,6 @@ jobs:
             pcre_version: 8.45
             build_flags: -tags hyperscan_v52,chimera
             chimera: true
-          - os: ubuntu-20.04
-            go: stable
-            hyperscan_version: 5.1.1
-            pcre_version: 8.45
-            build_flags: -tags chimera
-            chimera: true
-          - os: ubuntu-20.04
-            go: stable
-            hyperscan_version: 4.7.0
-            pcre_version: 8.41
-            build_flags: -tags hyperscan_v4
     name: Go ${{ matrix.go }} tests @ ${{ matrix.os }} for hyperscan ${{ matrix.hyperscan_version }}
     runs-on: ${{ matrix.os }}
     env:

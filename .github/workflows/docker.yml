@@ -35,3 +35,15 @@ jobs:
       - name: Test
         run: |
           docker run --rm ${{ env.LATEST_TAG }}
+
+  docker-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version: [hyperscan-5.4, hyperscan-5.2, hyperscan-4.7]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: isbang/compose-action@v1.4.1
+        with:
+          compose-file: "./docker-compose.yml"
+          services: ${{ matrix.version }}
