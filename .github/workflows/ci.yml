@@ -81,19 +81,19 @@ jobs:
             build_flags: -tags hyperscan_v54,chimera
             chimera: true
             coverage: true
-          - os: ubuntu-22.04
+          - os: ubuntu-20.04
             go: stable
             hyperscan_version: 5.2.1
             pcre_version: 8.45
             build_flags: -tags hyperscan_v52,chimera
             chimera: true
-          - os: ubuntu-22.04
+          - os: ubuntu-20.04
             go: stable
             hyperscan_version: 5.1.1
             pcre_version: 8.45
             build_flags: -tags chimera
             chimera: true
-          - os: ubuntu-22.04
+          - os: ubuntu-20.04
             go: stable
             hyperscan_version: 4.7.0
             pcre_version: 8.41
