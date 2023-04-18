@@ -20,7 +20,7 @@ jobs:
       matrix:
         os: [ubuntu-22.04, ubuntu-20.04, macos-12, macos-11]
         go: [stable, 1.20.x, 1.19.x, 1.18.x]
-    name: Go ${{ matrix.go }} tests @ ${{ matrix.os }} for hyperscan ${{ matrix.hyperscan }}
+    name: Go ${{ matrix.go }} tests @ ${{ matrix.os }} for hyperscan
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install Linux dependencies for testing libraries
@@ -43,13 +43,11 @@ jobs:
           cache: true
 
       - name: Test Hyperscan v4 API
-        if: matrix.os == 'ubuntu-18.04'
         run: |
           go test -v -tags hyperscan_v4 ./internal/hs/... ./hyperscan/...
           go test -race -v -tags hyperscan_v4 ./internal/hs/... ./hyperscan/...
 
       - name: Test Hyperscan v5 API
-        if: matrix.os != 'ubuntu-18.04'
         run: |
           go test -v ./internal/hs/... ./hyperscan/...
           go test -race -v ./internal/hs/... ./hyperscan/...
@@ -60,47 +58,47 @@ jobs:
         include:
           - os: macos-latest
             go: stable
-            hyperscan: 5.4.1
-            pcre: 8.45
+            hyperscan_version: 5.4.1
+            pcre_version: 8.45
             build_flags: -tags hyperscan_v54,chimera
             chimera: true
           - os: macos-latest
             go: stable
-            hyperscan: 5.2.1
-            pcre: 8.45
+            hyperscan_version: 5.2.1
+            pcre_version: 8.45
             build_flags: -tags hyperscan_v52,chimera
             chimera: true
           - os: macos-latest
             go: stable
-            hyperscan: 5.1.1
-            pcre: 8.45
+            hyperscan_version: 5.1.1
+            pcre_version: 8.45
             build_flags: -tags chimera
             chimera: true
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             go: stable
-            hyperscan: 5.4.1
-            pcre: 8.45
+            hyperscan_version: 5.4.1
+            pcre_version: 8.45
             build_flags: -tags hyperscan_v54,chimera
             chimera: true
             coverage: true
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             go: stable
-            hyperscan: 5.2.1
-            pcre: 8.45
+            hyperscan_version: 5.2.1
+            pcre_version: 8.45
             build_flags: -tags hyperscan_v52,chimera
             chimera: true
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             go: stable
-            hyperscan: 5.1.1
-            pcre: 8.45
+            hyperscan_version: 5.1.1
+            pcre_version: 8.45
             build_flags: -tags chimera
             chimera: true
-          - os: ubuntu-18.04
+          - os: ubuntu-22.04
             go: stable
-            hyperscan: 4.7.0
-            pcre: 8.41
+            hyperscan_version: 4.7.0
+            pcre_version: 8.41
             build_flags: -tags hyperscan_v4
-    name: Go ${{ matrix.go }} tests @ ${{ matrix.os }} for hyperscan ${{ matrix.hyperscan }}
+    name: Go ${{ matrix.go }} tests @ ${{ matrix.os }} for hyperscan ${{ matrix.hyperscan_version }}
     runs-on: ${{ matrix.os }}
     env:
       PKG_CONFIG_PATH: ${{ github.workspace }}/dist/lib/pkgconfig
@@ -109,15 +107,15 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install Hyperscan ${{ matrix.hyperscan }} with PCRE ${{ matrix.pcre }}
+      - name: Install Hyperscan ${{ matrix.hyperscan }} with PCRE ${{ matrix.pcre_version }}
         uses: flier/install-hyperscan@main
         with:
-          hyperscan_version: ${{ matrix.hyperscan }}
-          pcre_version: ${{ matrix.pcre }}
+          hyperscan_version: ${{ matrix.hyperscan_version }}
+          pcre_version: ${{ matrix.pcre_version }}
           build_static_lib: on
           src_dir: ${{ runner.temp }}/hyperscan/
           install_prefix: ${{ github.workspace }}/dist/
-          cache_key: ${{ runner.os }}-build-hyperscan-${{ matrix.hyperscan }}-pcre-${{ matrix.pcre }}
+          cache_key: ${{ runner.os }}-build-hyperscan-${{ matrix.hyperscan_version }}-pcre-${{ matrix.pcre_version }}
 
       - name: Install Golang ${{ matrix.go }}
         uses: actions/setup-go@v3
