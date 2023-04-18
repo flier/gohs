@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/google/gopacket v1.1.19
-	github.com/smartystreets/goconvey v1.7.2
+	github.com/smartystreets/goconvey v1.8.0
 )
 
 require (
