@@ -6,7 +6,7 @@ services:
       labels:
         hyperscan: 5.4
       args:
-        HYPERSCAN_VERSION: 5.4.0
+        HYPERSCAN_VERSION: 5.4.1
     command: test -tags hyperscan_v54 ./...
   hyperscan-5.2:
     build:

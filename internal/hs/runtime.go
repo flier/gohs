@@ -140,7 +140,7 @@ type MatchRecorder struct {
 
 func (h *MatchRecorder) Matched() bool { return len(h.Events) > 0 }
 
-func (h *MatchRecorder) Handle(id uint, from, to uint64, flags uint, context interface{}) error {
+func (h *MatchRecorder) Handle(id uint, from, to uint64, flags uint, _ interface{}) error {
 	if len(h.Events) > 0 {
 		tail := &h.Events[len(h.Events)-1]
 

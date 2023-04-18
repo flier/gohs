@@ -1,0 +1,65 @@
+name: docker
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - "**.md"
+  pull_request:
+    paths-ignore:
+      - "**.md"
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - ubuntu_version: 22.04
+            hyperscan_version: 5.4.1
+            pcre_version: 8.45
+            go_version: 1.20.3
+            build_flags: -tags hyperscan_v54,chimera
+          - ubuntu_version: 20.04
+            hyperscan_version: 5.2.1
+            pcre_version: 8.45
+            go_version: 1.19.8
+            build_flags: -tags hyperscan_v52,chimera
+          - ubuntu_version: 20.04
+            hyperscan_version: 5.1.1
+            pcre_version: 8.45
+            build_flags: -tags chimera
+            go_version: 1.18.10
+          - ubuntu_version: 18.04
+            hyperscan_version: 4.7.0
+            pcre_version: 8.42
+            go_version: 1.18.10
+            build_flags: -tags hyperscan_v4
+    name: tests @ ubuntu ${{ matrix.ubuntu_version }} for hyperscan ${{ matrix.hyperscan_version }} w/ ${{ matrix.build_flags }}
+    env:
+      LATEST_TAG: flier/gohs:${{ matrix.hyperscan_version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          load: true
+          build-args: |
+            UBUNTU_VERSION=${{ matrix.ubuntu_version }}
+            HYPERSCAN_VERSION=${{ matrix.hyperscan_version }}
+            PCRE_VERSION=${{ matrix.pcre_version }}
+            GO_VERSION=${{ matrix.go_version }}
+          tags: ${{ env.LATEST_TAG }}
+
+      - name: Test
+        run: |
+          docker run --rm ${{ env.LATEST_TAG }} test ${{ matrix.build_flags }} -v ./...

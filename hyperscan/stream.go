@@ -163,8 +163,8 @@ func (ss *streamScanner) Open(flags ScanFlag, sc *Scratch, handler MatchHandler,
 	return &stream{s, flags, sc.s, handler, context, ownedScratch}, nil
 }
 
-func (ss *streamScanner) Scan(reader io.Reader, scratch *Scratch, handler MatchHandler, context interface{}) error {
-	stream, err := ss.Open(0, nil, handler, context)
+func (ss *streamScanner) Scan(reader io.Reader, sc *Scratch, handler MatchHandler, context interface{}) error {
+	stream, err := ss.Open(0, sc, handler, context)
 	if err != nil {
 		return err
 	}
