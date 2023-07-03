@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/smartystreets/assertions/internal/go-render/render"
+	"github.com/smarty/assertions/internal/go-render/render"
 )
 
 type Serializer interface {
@@ -47,7 +47,7 @@ func newSerializer() *failureSerializer {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// FailureView is also declared in github.com/smartystreets/goconvey/convey/reporting.
+// FailureView is also declared in github.com/smarty/goconvey/convey/reporting.
 // The json struct tags should be equal in both declarations.
 type FailureView struct {
 	Message  string `json:"Message"`

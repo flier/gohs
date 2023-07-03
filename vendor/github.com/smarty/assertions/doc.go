@@ -1,11 +1,11 @@
 // Package assertions contains the implementations for all assertions which
 // are referenced in goconvey's `convey` package
-// (github.com/smartystreets/goconvey/convey) and gunit (github.com/smartystreets/gunit)
+// (github.com/smarty/goconvey/convey) and gunit (github.com/smarty/gunit)
 // for use with the So(...) method.
 // They can also be used in traditional Go test functions and even in
 // applications.
 //
-// https://smartystreets.com
+// https://smarty.com
 //
 // Many of the assertions lean heavily on work done by Aaron Jacobs in his excellent oglematchers library.
 // (https://github.com/jacobsa/oglematchers)
@@ -85,7 +85,7 @@ func (this *Assertion) So(actual any, assert SoFunc, expected ...any) bool {
 //	}
 //
 // For an alternative implementation of So (that provides more flexible return options)
-// see the `So` function in the package at github.com/smartystreets/assertions/assert.
+// see the `So` function in the package at github.com/smarty/assertions/assert.
 func So(actual any, assert SoFunc, expected ...any) (bool, string) {
 	if result := so(actual, assert, expected...); len(result) == 0 {
 		return true, result
