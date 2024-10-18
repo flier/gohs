@@ -3,6 +3,8 @@
 
 package handle
 
+import "unsafe"
+
 // Delete invalidates a handle. This method should only be called once
 // the program no longer needs to pass the handle to C and the C code
 // no longer has a copy of the handle value.
@@ -13,4 +15,9 @@ func (h Handle) Delete() {
 	if !ok {
 		panic("runtime/cgo: misuse of an invalid Handle")
 	}
+}
+
+// Pointer returns an unsafe.Pointer to the handle.
+func Pointer(h Handle) unsafe.Pointer {
+	return unsafe.Pointer(&h)
 }

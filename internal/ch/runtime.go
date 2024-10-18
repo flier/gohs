@@ -138,7 +138,7 @@ func Scan(db Database, data []byte, flags ScanFlag, scratch Scratch,
 		scratch,
 		C.ch_match_event_handler(C.matchEventCallback),
 		C.ch_error_event_handler(C.errorEventCallback),
-		unsafe.Pointer(&h))
+		handle.Pointer(h))
 
 	// Ensure go data is alive before the C function returns
 	runtime.KeepAlive(data)

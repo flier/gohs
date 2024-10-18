@@ -49,7 +49,7 @@ func ScanStream(stream Stream, data []byte, flags ScanFlag, s Scratch, cb MatchE
 		C.uint(flags),
 		s,
 		C.match_event_handler(C.hsMatchEventCallback),
-		unsafe.Pointer(&h))
+		handle.Pointer(h))
 
 	// Ensure go data is alive before the C function returns
 	runtime.KeepAlive(data)
@@ -72,7 +72,7 @@ func CloseStream(stream Stream, s Scratch, cb MatchEventHandler, ctx interface{}
 	ret := C.hs_close_stream(stream,
 		s,
 		C.match_event_handler(C.hsMatchEventCallback),
-		unsafe.Pointer(&h))
+		handle.Pointer(h))
 
 	if ret != C.HS_SUCCESS {
 		return Error(ret)
@@ -89,7 +89,7 @@ func ResetStream(stream Stream, flags ScanFlag, s Scratch, cb MatchEventHandler,
 		C.uint(flags),
 		s,
 		C.match_event_handler(C.hsMatchEventCallback),
-		unsafe.Pointer(&h))
+		handle.Pointer(h))
 
 	if ret != C.HS_SUCCESS {
 		return Error(ret)
@@ -116,7 +116,7 @@ func ResetAndCopyStream(to, from Stream, s Scratch, cb MatchEventHandler, ctx in
 		from,
 		s,
 		C.match_event_handler(C.hsMatchEventCallback),
-		unsafe.Pointer(&h))
+		handle.Pointer(h))
 
 	if ret != C.HS_SUCCESS {
 		return Error(ret)
@@ -164,7 +164,7 @@ func ResetAndExpandStream(stream Stream, buf []byte, s Scratch, cb MatchEventHan
 		C.size_t(len(buf)),
 		s,
 		C.match_event_handler(C.hsMatchEventCallback),
-		unsafe.Pointer(&h))
+		handle.Pointer(h))
 
 	runtime.KeepAlive(buf)
 

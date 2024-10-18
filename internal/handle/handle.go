@@ -9,6 +9,7 @@ package handle
 import (
 	"sync"
 	"sync/atomic"
+	"unsafe"
 )
 
 // Handle provides a way to pass values that contain Go pointers
@@ -97,3 +98,8 @@ var (
 	handles   = sync.Map{} // map[Handle]interface{}
 	handleIdx uintptr      // atomic
 )
+
+// Pointer returns an unsafe.Pointer to the handle.
+func Pointer(h Handle) unsafe.Pointer {
+	return unsafe.Pointer(&h)
+}

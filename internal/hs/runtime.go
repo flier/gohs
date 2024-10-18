@@ -69,7 +69,7 @@ func Scan(db Database, data []byte, flags ScanFlag, s Scratch, cb MatchEventHand
 		C.uint(flags),
 		s,
 		C.match_event_handler(C.hsMatchEventCallback),
-		unsafe.Pointer(&h))
+		handle.Pointer(h))
 
 	// Ensure go data is alive before the C function returns
 	runtime.KeepAlive(data)
@@ -113,7 +113,7 @@ func ScanVector(db Database, data [][]byte, flags ScanFlag, s Scratch, cb MatchE
 		C.uint(flags),
 		s,
 		C.match_event_handler(C.hsMatchEventCallback),
-		unsafe.Pointer(&h))
+		handle.Pointer(h))
 
 	// Ensure go data is alive before the C function returns
 	runtime.KeepAlive(data)
