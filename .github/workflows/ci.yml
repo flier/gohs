@@ -20,7 +20,7 @@ jobs:
   test:
     strategy:
       matrix:
-        os: [ubuntu-24.04, ubuntu-22.04, macos-15, macos-14]
+        os: [ubuntu-24.04, ubuntu-22.04, macos-15, macos-14-large, macos-14]
         go: [stable, 1.23.x, 1.22.x, 1.21.x]
     name: Go ${{ matrix.go }} tests @ ${{ matrix.os }} for hyperscan
     runs-on: ${{ matrix.os }}
@@ -32,9 +32,14 @@ jobs:
           sudo apt-get install -yq libhyperscan-dev libpcap-dev
 
       - name: Install MacOS dependencies for testing libraries
-        if: startsWith(matrix.os, 'macos-')
+        if: startsWith(matrix.os, 'macos-') && endsWith(matrix.os, '-large')
         run: |
-          brew install hyperscan pkg-config libpcap
+          brew install hyperscan libpcap
+
+      - name: Install MacOS dependencies for testing libraries
+        if: startsWith(matrix.os, 'macos-') && !endsWith(matrix.os, '-large')
+        run: |
+          brew install vectorscan libpcap
 
       - uses: actions/checkout@v4
 
@@ -57,23 +62,24 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: macos-latest
+          - os: macos-14-large
+            go: stable
+            hyperscan_version: 5.4.11
+            pcre_version: 8.45
+            build_flags: -tags hyperscan_v54,chimera
+            chimera: true
+            vectorscan: true
+          - os: macos-14-large
             go: stable
             hyperscan_version: 5.4.2
             pcre_version: 8.45
             build_flags: -tags hyperscan_v54,chimera
             chimera: true
-          - os: macos-14
+          - os: macos-13-large
             go: stable
             hyperscan_version: 5.2.1
             pcre_version: 8.45
             build_flags: -tags hyperscan_v52,chimera
-            chimera: true
-          - os: macos-13
-            go: stable
-            hyperscan_version: 5.1.1
-            pcre_version: 8.45
-            build_flags: -tags chimera
             chimera: true
           - os: ubuntu-24.04
             go: stable
@@ -102,10 +108,11 @@ jobs:
         with:
           hyperscan_version: ${{ matrix.hyperscan_version }}
           pcre_version: ${{ matrix.pcre_version }}
+          vectorscan: ${{ matrix.vectorscan }}
           build_static_lib: on
           src_dir: ${{ runner.temp }}/hyperscan/
           install_prefix: ${{ github.workspace }}/dist/
-          cache_key: ${{ runner.os }}-build-hyperscan-${{ matrix.hyperscan_version }}-pcre-${{ matrix.pcre_version }}
+          cache_key: ${{ runner.os }}-build-hyperscan-${{ matrix.vectorscan }}-${{ matrix.hyperscan_version }}-pcre-${{ matrix.pcre_version }}
 
       - name: Install Golang ${{ matrix.go }}
         uses: actions/setup-go@v5
