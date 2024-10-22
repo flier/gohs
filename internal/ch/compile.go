@@ -128,12 +128,12 @@ type Patterns interface {
 }
 
 // The multiple regular expression compiler.
-func CompileMulti(p Patterns, mode CompileMode, info *hs.PlatformInfo) (Database, error) {
-	return CompileExtMulti(p, mode, info, 0, 0)
+func CompileMulti(input Patterns, mode CompileMode, info *hs.PlatformInfo) (Database, error) {
+	return CompileExtMulti(input, mode, info, 0, 0)
 }
 
 // The multiple regular expression compiler.
-func CompileExtMulti(p Patterns, mode CompileMode, info *hs.PlatformInfo,
+func CompileExtMulti(input Patterns, mode CompileMode, info *hs.PlatformInfo,
 	matchLimit, matchLimitRecursion uint,
 ) (Database, error) {
 	var db *C.ch_database_t
@@ -144,19 +144,26 @@ func CompileExtMulti(p Patterns, mode CompileMode, info *hs.PlatformInfo,
 		platform = (*C.struct_hs_platform_info)(unsafe.Pointer(&info.Platform))
 	}
 
-	patterns := p.Patterns()
+	var p runtime.Pinner
+	defer p.Unpin()
 
-	cexprs := (**C.char)(C.calloc(C.size_t(len(patterns)), C.size_t(unsafe.Sizeof(uintptr(0)))))
-	exprs := (*[1 << 30]*C.char)(unsafe.Pointer(cexprs))[:len(patterns):len(patterns)]
+	patterns := input.Patterns()
+	n := len(patterns)
 
-	cflags := (*C.uint)(C.calloc(C.size_t(len(patterns)), C.size_t(unsafe.Sizeof(C.uint(0)))))
-	flags := (*[1 << 30]C.uint)(unsafe.Pointer(cflags))[:len(patterns):len(patterns)]
+	exprs := make([]*C.char, n)
+	cexprs := unsafe.SliceData(exprs)
+	p.Pin(cexprs)
 
-	cids := (*C.uint)(C.calloc(C.size_t(len(patterns)), C.size_t(unsafe.Sizeof(C.uint(0)))))
-	ids := (*[1 << 30]C.uint)(unsafe.Pointer(cids))[:len(patterns):len(patterns)]
+	flags := make([]C.uint, n)
+	cflags := unsafe.SliceData(flags)
+	p.Pin(cflags)
+
+	ids := make([]C.uint, n)
+	cids := unsafe.SliceData(ids)
+	p.Pin(cids)
 
 	for i, pattern := range patterns {
-		exprs[i] = C.CString(pattern.Expression)
+		exprs[i] = C.CString(pattern.Expr)
 		flags[i] = C.uint(pattern.Flags)
 		ids[i] = C.uint(pattern.ID)
 	}
@@ -167,12 +174,6 @@ func CompileExtMulti(p Patterns, mode CompileMode, info *hs.PlatformInfo,
 	for _, expr := range exprs {
 		C.free(unsafe.Pointer(expr))
 	}
-
-	C.free(unsafe.Pointer(cexprs))
-	C.free(unsafe.Pointer(cflags))
-	C.free(unsafe.Pointer(cids))
-
-	runtime.KeepAlive(patterns)
 
 	if err != nil {
 		defer C.ch_free_compile_error(err)

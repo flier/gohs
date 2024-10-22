@@ -5,11 +5,9 @@ package ch
 
 import (
 	"fmt"
-	"reflect"
 	"runtime"
+	"runtime/cgo"
 	"unsafe"
-
-	"github.com/flier/gohs/internal/handle"
 )
 
 /*
@@ -88,7 +86,7 @@ type eventContext struct {
 func matchEventCallback(id C.uint, from, to C.ulonglong, flags, size C.uint,
 	capture *C.capture_t, data unsafe.Pointer,
 ) C.ch_callback_t {
-	h := (*handle.Handle)(data)
+	h := cgo.Handle(data)
 	ctx, ok := h.Value().(eventContext)
 	if !ok {
 		return C.CH_CALLBACK_TERMINATE
@@ -106,7 +104,7 @@ func matchEventCallback(id C.uint, from, to C.ulonglong, flags, size C.uint,
 
 //export errorEventCallback
 func errorEventCallback(evt C.ch_error_event_t, id C.uint, info, data unsafe.Pointer) C.ch_callback_t {
-	h := (*handle.Handle)(data)
+	h := cgo.Handle(data)
 	ctx, ok := h.Value().(eventContext)
 	if !ok {
 		return C.CH_CALLBACK_TERMINATE
@@ -126,22 +124,23 @@ func Scan(db Database, data []byte, flags ScanFlag, scratch Scratch,
 		return ErrInvalid
 	}
 
-	h := handle.New(eventContext{data, onEvent, onError, context})
+	h := cgo.NewHandle(eventContext{data, onEvent, onError, context})
 	defer h.Delete()
 
-	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data)) // FIXME: Zero-copy access to go data
+	var p runtime.Pinner
+	defer p.Unpin()
+
+	buf := unsafe.SliceData(data)
+	p.Pin(buf)
 
 	ret := C.ch_scan(db,
-		(*C.char)(unsafe.Pointer(hdr.Data)),
-		C.uint(hdr.Len),
+		(*C.char)(unsafe.Pointer(buf)),
+		C.uint(len(data)),
 		C.uint(flags),
 		scratch,
 		C.ch_match_event_handler(C.matchEventCallback),
 		C.ch_error_event_handler(C.errorEventCallback),
-		unsafe.Pointer(&h))
-
-	// Ensure go data is alive before the C function returns
-	runtime.KeepAlive(data)
+		unsafe.Pointer(h))
 
 	if ret != C.HS_SUCCESS {
 		return Error(ret)

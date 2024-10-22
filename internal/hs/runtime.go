@@ -2,11 +2,9 @@ package hs
 
 import (
 	"errors"
-	"reflect"
 	"runtime"
+	"runtime/cgo"
 	"unsafe"
-
-	"github.com/flier/gohs/internal/handle"
 )
 
 /*
@@ -34,7 +32,7 @@ type MatchEventContext struct {
 
 //export hsMatchEventCallback
 func hsMatchEventCallback(id C.uint, from, to C.ulonglong, flags C.uint, data unsafe.Pointer) C.int {
-	h := (*handle.Handle)(data)
+	h := cgo.Handle(data)
 	ctx, ok := h.Value().(MatchEventContext)
 	if !ok {
 		return C.HS_INVALID
@@ -58,21 +56,22 @@ func Scan(db Database, data []byte, flags ScanFlag, s Scratch, cb MatchEventHand
 		return Error(C.HS_INVALID)
 	}
 
-	h := handle.New(MatchEventContext{cb, ctx})
+	var p runtime.Pinner
+	defer p.Unpin()
+
+	buf := unsafe.SliceData(data)
+	p.Pin(buf)
+
+	h := cgo.NewHandle(MatchEventContext{cb, ctx})
 	defer h.Delete()
 
-	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data)) // FIXME: Zero-copy access to go data
-
 	ret := C.hs_scan(db,
-		(*C.char)(unsafe.Pointer(hdr.Data)),
-		C.uint(hdr.Len),
+		(*C.char)(unsafe.Pointer(buf)),
+		C.uint(len(data)),
 		C.uint(flags),
 		s,
 		C.match_event_handler(C.hsMatchEventCallback),
-		unsafe.Pointer(&h))
-
-	// Ensure go data is alive before the C function returns
-	runtime.KeepAlive(data)
+		unsafe.Pointer(h))
 
 	if ret != C.HS_SUCCESS {
 		return Error(ret)
@@ -86,6 +85,9 @@ func ScanVector(db Database, data [][]byte, flags ScanFlag, s Scratch, cb MatchE
 		return Error(C.HS_INVALID)
 	}
 
+	var p runtime.Pinner
+	defer p.Unpin()
+
 	cdata := make([]uintptr, len(data))
 	clength := make([]C.uint, len(data))
 
@@ -94,31 +96,30 @@ func ScanVector(db Database, data [][]byte, flags ScanFlag, s Scratch, cb MatchE
 			return Error(C.HS_INVALID)
 		}
 
-		// FIXME: Zero-copy access to go data
-		hdr := (*reflect.SliceHeader)(unsafe.Pointer(&d)) //nolint: scopelint
-		cdata[i] = uintptr(unsafe.Pointer(hdr.Data))
-		clength[i] = C.uint(hdr.Len)
+		buf := unsafe.SliceData(d)
+		p.Pin(buf)
+
+		cdata[i] = uintptr(unsafe.Pointer(buf))
+		clength[i] = C.uint(len(d))
 	}
 
-	h := handle.New(MatchEventContext{cb, ctx})
+	cdataBuf := unsafe.SliceData(cdata)
+	p.Pin(cdataBuf)
+
+	clengthBuf := unsafe.SliceData(clength)
+	p.Pin(clengthBuf)
+
+	h := cgo.NewHandle(MatchEventContext{cb, ctx})
 	defer h.Delete()
 
-	cdataHdr := (*reflect.SliceHeader)(unsafe.Pointer(&cdata))     // FIXME: Zero-copy access to go data
-	clengthHdr := (*reflect.SliceHeader)(unsafe.Pointer(&clength)) // FIXME: Zero-copy access to go data
-
 	ret := C.hs_scan_vector(db,
-		(**C.char)(unsafe.Pointer(cdataHdr.Data)),
-		(*C.uint)(unsafe.Pointer(clengthHdr.Data)),
-		C.uint(cdataHdr.Len),
+		(**C.char)(unsafe.Pointer(cdataBuf)),
+		(*C.uint)(unsafe.Pointer(clengthBuf)),
+		C.uint(len(cdata)),
 		C.uint(flags),
 		s,
 		C.match_event_handler(C.hsMatchEventCallback),
-		unsafe.Pointer(&h))
-
-	// Ensure go data is alive before the C function returns
-	runtime.KeepAlive(data)
-	runtime.KeepAlive(cdata)
-	runtime.KeepAlive(clength)
+		unsafe.Pointer(h))
 
 	if ret != C.HS_SUCCESS {
 		return Error(ret)

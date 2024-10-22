@@ -391,6 +391,22 @@ type Patterns interface {
 	Patterns() []*Pattern
 }
 
+// CompileMulti compiles multiple patterns into a single database. It takes a Patterns
+// interface, the compilation mode, and platform information. It returns the compiled
+// database and any errors that occurred during compilation.
+//
+// The Patterns interface provides the patterns to be compiled. Each pattern has an
+// expression, compile flags, a unique ID, and optional extended expression information.
+//
+// The mode parameter specifies the compilation mode, which can be either StreamMode or
+// VectoredMode.
+//
+// The info parameter provides platform-specific information that may be used during
+// compilation.
+//
+// If compilation is successful, the function returns the compiled database. If there
+// are any compiler errors, the function returns a CompileError with the error message
+// and the expression index where the error occurred.
 func CompileMulti(input Patterns, mode ModeFlag, info *PlatformInfo) (Database, error) {
 	var db *C.hs_database_t
 	var err *C.hs_compile_error_t
@@ -400,40 +416,42 @@ func CompileMulti(input Patterns, mode ModeFlag, info *PlatformInfo) (Database, 
 		platform = (*C.struct_hs_platform_info)(unsafe.Pointer(&info.Platform))
 	}
 
+	var p runtime.Pinner
+	defer p.Unpin()
+
 	patterns := input.Patterns()
-	count := len(patterns)
+	n := len(patterns)
 
-	cexprs := (**C.char)(C.calloc(C.size_t(count), C.size_t(unsafe.Sizeof(uintptr(0)))))
-	exprs := (*[1 << 30]*C.char)(unsafe.Pointer(cexprs))[:count:count]
+	exprs := make([]*C.char, n)
+	cexprs := unsafe.SliceData(exprs)
+	p.Pin(cexprs)
 
-	cflags := (*C.uint)(C.calloc(C.size_t(count), C.size_t(unsafe.Sizeof(C.uint(0)))))
-	flags := (*[1 << 30]C.uint)(unsafe.Pointer(cflags))[:count:count]
+	flags := make([]C.uint, n)
+	cflags := unsafe.SliceData(flags)
+	p.Pin(cflags)
 
-	cids := (*C.uint)(C.calloc(C.size_t(count), C.size_t(unsafe.Sizeof(C.uint(0)))))
-	ids := (*[1 << 30]C.uint)(unsafe.Pointer(cids))[:count:count]
+	ids := make([]C.uint, n)
+	cids := unsafe.SliceData(ids)
+	p.Pin(cids)
 
-	cexts := (**C.hs_expr_ext_t)(C.calloc(C.size_t(count), C.size_t(unsafe.Sizeof(uintptr(0)))))
-	exts := (*[1 << 30]*C.hs_expr_ext_t)(unsafe.Pointer(cexts))[:count:count]
+	exts := make([]*C.hs_expr_ext_t, n)
+	cexts := unsafe.SliceData(exts)
+	p.Pin(cexts)
 
 	for i, pattern := range patterns {
 		exprs[i] = C.CString(pattern.Expr)
 		flags[i] = C.uint(pattern.Flags)
 		ids[i] = C.uint(pattern.ID)
 		exts[i] = pattern.Ext.c()
+
+		p.Pin(exts[i])
 	}
 
-	ret := C.hs_compile_ext_multi(cexprs, cflags, cids, cexts, C.uint(count), C.uint(mode), platform, &db, &err)
+	ret := C.hs_compile_ext_multi(cexprs, cflags, cids, cexts, C.uint(n), C.uint(mode), platform, &db, &err)
 
 	for _, expr := range exprs {
 		C.free(unsafe.Pointer(expr))
 	}
-
-	C.free(unsafe.Pointer(cexprs))
-	C.free(unsafe.Pointer(cflags))
-	C.free(unsafe.Pointer(cexts))
-	C.free(unsafe.Pointer(cids))
-
-	runtime.KeepAlive(patterns)
 
 	if err != nil {
 		defer C.hs_free_compile_error(err)

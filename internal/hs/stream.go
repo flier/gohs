@@ -1,11 +1,9 @@
 package hs
 
 import (
-	"reflect"
 	"runtime"
+	"runtime/cgo"
 	"unsafe"
-
-	"github.com/flier/gohs/internal/handle"
 )
 
 /*
@@ -38,21 +36,22 @@ func ScanStream(stream Stream, data []byte, flags ScanFlag, s Scratch, cb MatchE
 		return Error(C.HS_INVALID)
 	}
 
-	h := handle.New(MatchEventContext{cb, ctx})
+	var p runtime.Pinner
+	defer p.Unpin()
+
+	buf := unsafe.SliceData(data)
+	p.Pin(buf)
+
+	h := cgo.NewHandle(MatchEventContext{cb, ctx})
 	defer h.Delete()
 
-	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&data)) // FIXME: Zero-copy access to go data
-
 	ret := C.hs_scan_stream(stream,
-		(*C.char)(unsafe.Pointer(hdr.Data)),
-		C.uint(hdr.Len),
+		(*C.char)(unsafe.Pointer(buf)),
+		C.uint(len(data)),
 		C.uint(flags),
 		s,
 		C.match_event_handler(C.hsMatchEventCallback),
-		unsafe.Pointer(&h))
-
-	// Ensure go data is alive before the C function returns
-	runtime.KeepAlive(data)
+		unsafe.Pointer(h))
 
 	if ret != C.HS_SUCCESS {
 		return Error(ret)
@@ -66,13 +65,13 @@ func FreeStream(stream Stream) {
 }
 
 func CloseStream(stream Stream, s Scratch, cb MatchEventHandler, ctx interface{}) error {
-	h := handle.New(MatchEventContext{cb, ctx})
+	h := cgo.NewHandle(MatchEventContext{cb, ctx})
 	defer h.Delete()
 
 	ret := C.hs_close_stream(stream,
 		s,
 		C.match_event_handler(C.hsMatchEventCallback),
-		unsafe.Pointer(&h))
+		unsafe.Pointer(h))
 
 	if ret != C.HS_SUCCESS {
 		return Error(ret)
@@ -82,14 +81,14 @@ func CloseStream(stream Stream, s Scratch, cb MatchEventHandler, ctx interface{}
 }
 
 func ResetStream(stream Stream, flags ScanFlag, s Scratch, cb MatchEventHandler, ctx interface{}) error {
-	h := handle.New(MatchEventContext{cb, ctx})
+	h := cgo.NewHandle(MatchEventContext{cb, ctx})
 	defer h.Delete()
 
 	ret := C.hs_reset_stream(stream,
 		C.uint(flags),
 		s,
 		C.match_event_handler(C.hsMatchEventCallback),
-		unsafe.Pointer(&h))
+		unsafe.Pointer(h))
 
 	if ret != C.HS_SUCCESS {
 		return Error(ret)
@@ -109,14 +108,14 @@ func CopyStream(stream Stream) (Stream, error) {
 }
 
 func ResetAndCopyStream(to, from Stream, s Scratch, cb MatchEventHandler, ctx interface{}) error {
-	h := handle.New(MatchEventContext{cb, ctx})
+	h := cgo.NewHandle(MatchEventContext{cb, ctx})
 	defer h.Delete()
 
 	ret := C.hs_reset_and_copy_stream(to,
 		from,
 		s,
 		C.match_event_handler(C.hsMatchEventCallback),
-		unsafe.Pointer(&h))
+		unsafe.Pointer(h))
 
 	if ret != C.HS_SUCCESS {
 		return Error(ret)
@@ -125,29 +124,40 @@ func ResetAndCopyStream(to, from Stream, s Scratch, cb MatchEventHandler, ctx in
 	return nil
 }
 
-func CompressStream(stream Stream, buf []byte) ([]byte, error) {
+func CompressStream(stream Stream, b []byte) ([]byte, error) {
+	var p runtime.Pinner
+	defer p.Unpin()
+
+	buf := unsafe.SliceData(b)
+	p.Pin(buf)
+
 	var size C.size_t
 
-	ret := C.hs_compress_stream(stream, (*C.char)(unsafe.Pointer(&buf[0])), C.size_t(len(buf)), &size)
-
+	ret := C.hs_compress_stream(stream, (*C.char)(unsafe.Pointer(buf)), C.size_t(len(b)), &size)
 	if ret == C.HS_INSUFFICIENT_SPACE {
-		buf = make([]byte, size)
+		b = make([]byte, size)
 
-		ret = C.hs_compress_stream(stream, (*C.char)(unsafe.Pointer(&buf[0])), C.size_t(len(buf)), &size)
+		buf = unsafe.SliceData(b)
+		p.Pin(buf)
+
+		ret = C.hs_compress_stream(stream, (*C.char)(unsafe.Pointer(buf)), C.size_t(len(b)), &size)
 	}
 
 	if ret != C.HS_SUCCESS {
 		return nil, Error(ret)
 	}
 
-	return buf[:size], nil
+	return b[:size], nil
 }
 
-func ExpandStream(db Database, stream *Stream, buf []byte) error {
-	ret := C.hs_expand_stream(db, (**C.hs_stream_t)(stream), (*C.char)(unsafe.Pointer(&buf[0])), C.size_t(len(buf)))
+func ExpandStream(db Database, stream *Stream, b []byte) error {
+	var p runtime.Pinner
+	defer p.Unpin()
 
-	runtime.KeepAlive(buf)
+	buf := unsafe.SliceData(b)
+	p.Pin(buf)
 
+	ret := C.hs_expand_stream(db, (**C.hs_stream_t)(stream), (*C.char)(unsafe.Pointer(buf)), C.size_t(len(b)))
 	if ret != C.HS_SUCCESS {
 		return Error(ret)
 	}
@@ -155,18 +165,22 @@ func ExpandStream(db Database, stream *Stream, buf []byte) error {
 	return nil
 }
 
-func ResetAndExpandStream(stream Stream, buf []byte, s Scratch, cb MatchEventHandler, ctx interface{}) error {
-	h := handle.New(MatchEventContext{cb, ctx})
+func ResetAndExpandStream(stream Stream, b []byte, s Scratch, cb MatchEventHandler, ctx interface{}) error {
+	var p runtime.Pinner
+	defer p.Unpin()
+
+	buf := unsafe.SliceData(b)
+	p.Pin(buf)
+
+	h := cgo.NewHandle(MatchEventContext{cb, ctx})
 	defer h.Delete()
 
 	ret := C.hs_reset_and_expand_stream(stream,
-		(*C.char)(unsafe.Pointer(&buf[0])),
-		C.size_t(len(buf)),
+		(*C.char)(unsafe.Pointer(buf)),
+		C.size_t(len(b)),
 		s,
 		C.match_event_handler(C.hsMatchEventCallback),
-		unsafe.Pointer(&h))
-
-	runtime.KeepAlive(buf)
+		unsafe.Pointer(h))
 
 	if ret != C.HS_SUCCESS {
 		return Error(ret)

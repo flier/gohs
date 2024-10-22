@@ -47,12 +47,15 @@ func SerializeDatabase(db Database) (b []byte, err error) {
 }
 
 func DeserializeDatabase(data []byte) (Database, error) {
+	var p runtime.Pinner
+	defer p.Unpin()
+
+	buf := unsafe.SliceData(data)
+	p.Pin(buf)
+
 	var db *C.hs_database_t
 
-	ret := C.hs_deserialize_database((*C.char)(unsafe.Pointer(&data[0])), C.size_t(len(data)), &db)
-
-	runtime.KeepAlive(data)
-
+	ret := C.hs_deserialize_database((*C.char)(unsafe.Pointer(buf)), C.size_t(len(data)), &db)
 	if ret != C.HS_SUCCESS {
 		return nil, Error(ret)
 	}
@@ -61,10 +64,13 @@ func DeserializeDatabase(data []byte) (Database, error) {
 }
 
 func DeserializeDatabaseAt(data []byte, db Database) error {
-	ret := C.hs_deserialize_database_at((*C.char)(unsafe.Pointer(&data[0])), C.size_t(len(data)), db)
+	var p runtime.Pinner
+	defer p.Unpin()
 
-	runtime.KeepAlive(data)
+	buf := unsafe.SliceData(data)
+	p.Pin(buf)
 
+	ret := C.hs_deserialize_database_at((*C.char)(unsafe.Pointer(buf)), C.size_t(len(data)), db)
 	if ret != C.HS_SUCCESS {
 		return Error(ret)
 	}
@@ -93,12 +99,15 @@ func DatabaseSize(db Database) (int, error) {
 }
 
 func SerializedDatabaseSize(data []byte) (int, error) {
+	var p runtime.Pinner
+	defer p.Unpin()
+
+	buf := unsafe.SliceData(data)
+	p.Pin(buf)
+
 	var size C.size_t
 
-	ret := C.hs_serialized_database_size((*C.char)(unsafe.Pointer(&data[0])), C.size_t(len(data)), &size)
-
-	runtime.KeepAlive(data)
-
+	ret := C.hs_serialized_database_size((*C.char)(unsafe.Pointer(buf)), C.size_t(len(data)), &size)
 	if ret != C.HS_SUCCESS {
 		return 0, Error(ret)
 	}
@@ -119,12 +128,15 @@ func DatabaseInfo(db Database) (string, error) {
 }
 
 func SerializedDatabaseInfo(data []byte) (string, error) {
+	var p runtime.Pinner
+	defer p.Unpin()
+
+	buf := unsafe.SliceData(data)
+	p.Pin(buf)
+
 	var info *C.char
 
-	ret := C.hs_serialized_database_info((*C.char)(unsafe.Pointer(&data[0])), C.size_t(len(data)), &info)
-
-	runtime.KeepAlive(data)
-
+	ret := C.hs_serialized_database_info((*C.char)(unsafe.Pointer(buf)), C.size_t(len(data)), &info)
 	if ret != C.HS_SUCCESS {
 		return "", Error(ret)
 	}
