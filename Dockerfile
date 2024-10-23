@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG UBUNTU_VERSION=22.04
+ARG UBUNTU_VERSION=24.04
 
 FROM ubuntu:${UBUNTU_VERSION} as build
 
@@ -29,7 +29,7 @@ EOT
 
 # Download Hyperscan
 
-ARG HYPERSCAN_VERSION=5.4.1
+ARG HYPERSCAN_VERSION=5.4.2
 
 ENV HYPERSCAN_DIR=/hyperscan
 
