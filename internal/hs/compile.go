@@ -443,8 +443,6 @@ func CompileMulti(input Patterns, mode ModeFlag, info *PlatformInfo) (Database, 
 		flags[i] = C.uint(pattern.Flags)
 		ids[i] = C.uint(pattern.ID)
 		exts[i] = pattern.Ext.c()
-
-		p.Pin(exts[i])
 	}
 
 	ret := C.hs_compile_ext_multi(cexprs, cflags, cids, cexts, C.uint(n), C.uint(mode), platform, &db, &err)
