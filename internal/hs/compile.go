@@ -161,12 +161,12 @@ type ExprExt struct {
 	HammingDistance uint32
 }
 
-func (e *ExprExt) c() *C.hs_expr_ext_t {
+func (e *ExprExt) c() (ext *C.hs_expr_ext_t) {
 	if e == nil {
 		return nil
 	}
 
-	var ext C.hs_expr_ext_t
+	ext = (*C.hs_expr_ext_t)(C.malloc(C.sizeof_hs_expr_ext_t))
 
 	if e.Flags&ExtMinOffset != 0 {
 		ext.flags |= C.HS_EXT_FLAG_MIN_OFFSET
@@ -189,7 +189,7 @@ func (e *ExprExt) c() *C.hs_expr_ext_t {
 		ext.hamming_distance = C.uint(e.HammingDistance)
 	}
 
-	return &ext
+	return
 }
 
 func ExpressionInfo(expression string, flags CompileFlag) (*ExprInfo, error) {
@@ -443,12 +443,18 @@ func CompileMulti(input Patterns, mode ModeFlag, info *PlatformInfo) (Database, 
 		flags[i] = C.uint(pattern.Flags)
 		ids[i] = C.uint(pattern.ID)
 		exts[i] = pattern.Ext.c()
+
+		p.Pin(exts[i])
 	}
 
 	ret := C.hs_compile_ext_multi(cexprs, cflags, cids, cexts, C.uint(n), C.uint(mode), platform, &db, &err)
 
 	for _, expr := range exprs {
 		C.free(unsafe.Pointer(expr))
+	}
+
+	for _, ext := range exts {
+		C.free(unsafe.Pointer(ext))
 	}
 
 	if err != nil {
