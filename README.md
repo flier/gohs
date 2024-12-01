@@ -32,7 +32,7 @@ It is recommended to compile and link Chimera using static libraries.
 $ mkdir build && cd build
 $ cmake .. -G Ninja -DBUILD_STATIC_LIBS=on
 $ ninja && ninja install
-$ go get -u -tags chimera github.com/flier/gohs/hyperscan
+$ go get -u github.com/flier/gohs/hyperscan
 ```
 
 ### Note

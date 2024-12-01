@@ -60,32 +60,32 @@ jobs:
             go: stable
             hyperscan_version: 5.4.1
             pcre_version: 8.45
-            build_flags: -tags hyperscan_v54,chimera
+            build_flags: -tags hyperscan_v54
             chimera: true
           - os: macos-12
             go: stable
             hyperscan_version: 5.2.1
             pcre_version: 8.45
-            build_flags: -tags hyperscan_v52,chimera
+            build_flags: -tags hyperscan_v52
             chimera: true
           - os: macos-11
             go: stable
             hyperscan_version: 5.1.1
             pcre_version: 8.45
-            build_flags: -tags chimera
+            build_flags:
             chimera: true
           - os: ubuntu-22.04
             go: stable
             hyperscan_version: 5.4.1
             pcre_version: 8.45
-            build_flags: -tags hyperscan_v54,chimera
+            build_flags: -tags hyperscan_v54
             chimera: true
             coverage: true
           - os: ubuntu-20.04
             go: stable
             hyperscan_version: 5.2.1
             pcre_version: 8.45
-            build_flags: -tags hyperscan_v52,chimera
+            build_flags: -tags hyperscan_v52
             chimera: true
     name: Go ${{ matrix.go }} tests @ ${{ matrix.os }} for hyperscan ${{ matrix.hyperscan_version }}
     runs-on: ${{ matrix.os }}
@@ -107,7 +107,7 @@ jobs:
           cache_key: ${{ runner.os }}-build-hyperscan-${{ matrix.hyperscan_version }}-pcre-${{ matrix.pcre_version }}
 
       - name: Install Golang ${{ matrix.go }}
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go }}
           cache: true
@@ -133,19 +133,19 @@ jobs:
 
   golangci:
     name: lint
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -yq libhyperscan-dev libpcap-dev
 
-      - uses: actions/setup-go@v3
-
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-go@v5
+
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v6
         with:
           version: latest
           working-directory: hyperscan
