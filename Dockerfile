@@ -20,7 +20,7 @@ RUN <<EOT bash
         libpcap-dev \
         ninja-build \
         pkg-config \
-        python2.7 \
+        python3 \
         ragel \
         wget \
         zlib1g-dev
