@@ -20,7 +20,7 @@ var blockDatabaseConstructors = map[string]BlockDatabaseConstructor{
 func TestBlockScanner(t *testing.T) {
 	for dbType, dbConstructor := range blockDatabaseConstructors {
 		Convey("Given a "+dbType+" block database", t, func() {
-			bdb, err := dbConstructor(chimera.NewPattern(`\d+`, 0)) // nolint: scopelint
+			bdb, err := dbConstructor(chimera.NewPattern(`\d+`, 0)) //nolint: scopelint
 
 			So(err, ShouldBeNil)
 			So(bdb, ShouldNotBeNil)
@@ -48,7 +48,7 @@ func TestBlockScanner(t *testing.T) {
 func TestBlockMatcher(t *testing.T) {
 	for dbType, dbConstructor := range blockDatabaseConstructors {
 		Convey("Given a "+dbType+" block database", t, func() {
-			bdb, err := dbConstructor(chimera.NewPattern(`\d+`, 0)) // nolint: scopelint
+			bdb, err := dbConstructor(chimera.NewPattern(`\d+`, 0)) //nolint: scopelint
 
 			So(err, ShouldBeNil)
 			So(bdb, ShouldNotBeNil)

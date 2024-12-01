@@ -38,8 +38,7 @@ const (
 )
 
 // DbInfo identify the version and platform information for the supplied database.
-// nolint: stylecheck
-type DbInfo string
+type DbInfo string //nolint: stylecheck
 
 // parse `Chimera Version: 5.4.0 Features: AVX2 Mode: BLOCK`.
 var regexDBInfo = regexp.MustCompile(`^Chimera Version: (\d+\.\d+\.\d+) Features: ([\w\s]+)? Mode: (\w+)$`)
@@ -77,7 +76,7 @@ func (i DbInfo) Mode() (hyperscan.ModeFlag, error) {
 		return 0, err
 	}
 
-	return hyperscan.ParseModeFlag(mode) // nolint: wrapcheck
+	return hyperscan.ParseModeFlag(mode) //nolint: wrapcheck
 }
 
 // Database is an immutable database that can be used by the Chimera scanning API.
@@ -104,7 +103,7 @@ func newDatabase(db ch.Database) *baseDatabase { return &baseDatabase{db} }
 
 func (d *baseDatabase) c() ch.Database { return d.db }
 
-func (d *baseDatabase) Size() (int, error) { return ch.DatabaseSize(d.db) } // nolint: wrapcheck
+func (d *baseDatabase) Size() (int, error) { return ch.DatabaseSize(d.db) } //nolint: wrapcheck
 
 func (d *baseDatabase) Info() (DbInfo, error) {
 	i, err := ch.DatabaseInfo(d.db)
@@ -115,7 +114,7 @@ func (d *baseDatabase) Info() (DbInfo, error) {
 	return DbInfo(i), nil
 }
 
-func (d *baseDatabase) Close() error { return ch.FreeDatabase(d.db) } // nolint: wrapcheck
+func (d *baseDatabase) Close() error { return ch.FreeDatabase(d.db) } //nolint: wrapcheck
 
 // Version identify this release version.
 //

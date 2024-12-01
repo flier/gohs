@@ -17,7 +17,7 @@ const (
 type Capture = ch.Capture
 
 // Type used to differentiate the errors raised with the `ErrorEventHandler` callback.
-type ErrorEvent = ch.ErrorEvent
+type ErrorEvent = ch.ErrorEvent //nolint: errname
 
 const (
 	// PCRE hits its match limit and reports PCRE_ERROR_MATCHLIMIT.

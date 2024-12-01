@@ -57,7 +57,7 @@ type Database interface {
 	Marshal() ([]byte, error)
 
 	// Reconstruct a pattern database from a stream of bytes at a given memory location.
-	Unmarshal([]byte) error
+	Unmarshal(b []byte) error
 }
 
 // DbInfo identify the version and platform information for the supplied database.

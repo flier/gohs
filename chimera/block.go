@@ -95,7 +95,7 @@ func (bs *blockScanner) Scan(data []byte, s *Scratch, h Handler, ctx interface{}
 		}()
 	}
 
-	return ch.Scan(bs.db, data, 0, s.s, h.OnMatch, h.OnError, ctx) // nolint: wrapcheck
+	return ch.Scan(bs.db, data, 0, s.s, h.OnMatch, h.OnError, ctx) //nolint: wrapcheck
 }
 
 type blockMatcher struct {
