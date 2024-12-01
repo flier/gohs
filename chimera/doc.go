@@ -1,6 +1,3 @@
-//go:build chimera
-// +build chimera
-
 // Chimera is a software regular expression matching engine that is a hybrid of Hyperscan and PCRE.
 // The design goals of Chimera are to fully support PCRE syntax as well as to
 // take advantage of the high performance nature of Hyperscan.

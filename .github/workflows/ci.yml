@@ -19,7 +19,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-22.04, ubuntu-20.04, macos-12, macos-11]
-        go: [stable, 1.20.x, 1.19.x, 1.18.x]
+        go: [stable, 1.22.x, 1.18.x]
     name: Go ${{ matrix.go }} tests @ ${{ matrix.os }} for hyperscan
     runs-on: ${{ matrix.os }}
     steps:
@@ -34,7 +34,7 @@ jobs:
         run: |
           brew install hyperscan pkg-config libpcap
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Golang ${{ matrix.go }}
         uses: actions/setup-go@v4
@@ -94,7 +94,7 @@ jobs:
       CGO_CFLAGS: -I${{ github.workspace }}/dist/include/hs
       CGO_LDFLAGS: -L${{ github.workspace }}/dist/lib
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Hyperscan ${{ matrix.hyperscan }} with PCRE ${{ matrix.pcre_version }}
         uses: flier/install-hyperscan@main
@@ -142,7 +142,7 @@ jobs:
 
       - uses: actions/setup-go@v3
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
