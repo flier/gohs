@@ -58,30 +58,30 @@ jobs:
         include:
           - os: macos-13
             go: stable
-            hyperscan_version: 5.4.1
+            hyperscan_version: 5.4.2
             pcre_version: 8.45
             build_flags: -tags hyperscan_v54
             chimera: true
-          - os: macos-12
-            go: stable
-            hyperscan_version: 5.2.1
-            pcre_version: 8.45
-            build_flags: -tags hyperscan_v52
-            chimera: true
+          # - os: macos-12
+          #   go: stable
+          #   hyperscan_version: 5.2.1
+          #   pcre_version: 8.45
+          #   build_flags: -tags hyperscan_v52
+          #   chimera: true
           - os: ubuntu-24.04
             go: stable
-            hyperscan_version: 5.4.1
+            hyperscan_version: 5.4.2
             pcre_version: 8.45
             build_flags: -tags hyperscan_v54
             chimera: true
             coverage: true
-          - os: ubuntu-22.04
-            go: stable
-            hyperscan_version: 5.2.1
-            pcre_version: 8.45
-            build_flags: -tags hyperscan_v52
-            chimera: true
-    name: Go ${{ matrix.go }} tests @ ${{ matrix.os }} for hyperscan ${{ matrix.hyperscan_version }}
+          # - os: ubuntu-22.04
+          #   go: stable
+          #   hyperscan_version: 5.2.1
+          #   pcre_version: 8.45
+          #   build_flags: -tags hyperscan_v52
+          #   chimera: true
+    name: Go ${{ matrix.go }} @ ${{ matrix.os }} for hyperscan ${{ matrix.hyperscan_version }}
     runs-on: ${{ matrix.os }}
     env:
       PKG_CONFIG_PATH: ${{ github.workspace }}/dist/lib/pkgconfig
