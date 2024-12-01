@@ -17,8 +17,8 @@
 // mocking framework. These matchers are inspired by and mostly compatible with
 // Google Test for C++ and Google JS Test.
 //
-// This package is used by github.com/smartystreets/assertions/internal/ogletest and
-// github.com/smartystreets/assertions/internal/oglemock, which may be more directly useful if you're not
+// This package is used by github.com/smarty/assertions/internal/ogletest and
+// github.com/smarty/assertions/internal/oglemock, which may be more directly useful if you're not
 // writing your own testing package or defining your own matchers.
 package oglematchers
 

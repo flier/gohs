@@ -8,49 +8,38 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/smartystreets/assertions/internal/go-render/render"
-	"github.com/smartystreets/assertions/internal/oglematchers"
+	"github.com/smarty/assertions/internal/go-render/render"
 )
 
 // ShouldEqual receives exactly two parameters and does an equality check
 // using the following semantics:
-// 1. If the expected and actual values implement an Equal method in the form
-// `func (this T) Equal(that T) bool` then call the method. If true, they are equal.
-// 2. The expected and actual values are judged equal or not by oglematchers.Equals.
+// It uses reflect.DeepEqual in most cases, but also compares numerics
+// regardless of specific type and compares time.Time values using the
+// time.Equal method.
 func ShouldEqual(actual any, expected ...any) string {
 	if message := need(1, expected); message != success {
 		return message
 	}
 	return shouldEqual(actual, expected[0])
 }
-func shouldEqual(actual, expected any) (message string) {
-	defer func() {
-		if r := recover(); r != nil {
-			message = serializer.serialize(expected, actual, composeEqualityMismatchMessage(expected, actual))
+func shouldEqual(actual, expected any) string {
+	for _, spec := range equalitySpecs {
+		if !spec.assertable(actual, expected) {
+			continue
 		}
-	}()
-
-	if spec := newEqualityMethodSpecification(expected, actual); spec.IsSatisfied() && spec.AreEqual() {
-		return success
-	} else if matchError := oglematchers.Equals(expected).Matches(actual); matchError == nil {
-		return success
+		if spec.passes(actual, expected) {
+			return success
+		}
+		break
 	}
-
-	return serializer.serialize(expected, actual, composeEqualityMismatchMessage(expected, actual))
-}
-func composeEqualityMismatchMessage(expected, actual any) string {
-	var (
-		renderedExpected = fmt.Sprintf("%v", expected)
-		renderedActual   = fmt.Sprintf("%v", actual)
-	)
-
-	if renderedExpected != renderedActual {
-		return fmt.Sprintf(shouldHaveBeenEqual+composePrettyDiff(renderedExpected, renderedActual), expected, actual)
-	} else if reflect.TypeOf(expected) != reflect.TypeOf(actual) {
-		return fmt.Sprintf(shouldHaveBeenEqualTypeMismatch, expected, expected, actual, actual)
-	} else {
-		return fmt.Sprintf(shouldHaveBeenEqualNoResemblance, renderedExpected)
+	renderedExpected, renderedActual := render.Render(expected), render.Render(actual)
+	if renderedActual == renderedExpected {
+		message := fmt.Sprintf(shouldHaveResembledButTypeDiff, renderedExpected, renderedActual)
+		return serializer.serializeDetailed(expected, actual, message)
 	}
+	message := fmt.Sprintf(shouldHaveResembled, renderedExpected, renderedActual) +
+		composePrettyDiff(renderedExpected, renderedActual)
+	return serializer.serializeDetailed(expected, actual, message)
 }
 
 // ShouldNotEqual receives exactly two parameters and does an inequality check.
@@ -179,34 +168,14 @@ func remarshal(value string) (string, error) {
 	return string(canonical), nil
 }
 
-// ShouldResemble receives exactly two parameters and does a deep equal check (see reflect.DeepEqual)
+// ShouldResemble is an alias for ShouldEqual.
 func ShouldResemble(actual any, expected ...any) string {
-	if message := need(1, expected); message != success {
-		return message
-	}
-
-	if matchError := oglematchers.DeepEquals(expected[0]).Matches(actual); matchError != nil {
-		renderedExpected, renderedActual := render.Render(expected[0]), render.Render(actual)
-		if renderedActual == renderedExpected {
-			message := fmt.Sprintf(shouldHaveResembledButTypeDiff, renderedExpected, renderedActual)
-			return serializer.serializeDetailed(expected[0], actual, message)
-		}
-		message := fmt.Sprintf(shouldHaveResembled, renderedExpected, renderedActual) +
-			composePrettyDiff(renderedExpected, renderedActual)
-		return serializer.serializeDetailed(expected[0], actual, message)
-	}
-
-	return success
+	return ShouldEqual(actual, expected...)
 }
 
-// ShouldNotResemble receives exactly two parameters and does an inverse deep equal check (see reflect.DeepEqual)
+// ShouldNotResemble is an alias for ShouldNotEqual.
 func ShouldNotResemble(actual any, expected ...any) string {
-	if message := need(1, expected); message != success {
-		return message
-	} else if ShouldResemble(actual, expected[0]) == success {
-		return fmt.Sprintf(shouldNotHaveResembled, render.Render(actual), render.Render(expected[0]))
-	}
-	return success
+	return ShouldNotEqual(actual, expected...)
 }
 
 // ShouldPointTo receives exactly two parameters and checks to see that they point to the same address.

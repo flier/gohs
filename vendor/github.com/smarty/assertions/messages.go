@@ -9,8 +9,8 @@ const (
 	shouldHaveBeenAlmostEqual    = "Expected '%v' to almost equal '%v' (but it didn't)!"
 	shouldHaveNotBeenAlmostEqual = "Expected '%v' to NOT almost equal '%v' (but it did)!"
 
-	shouldHaveResembled            = "Expected: '%s'\nActual:   '%s'\n(Should resemble)!"
-	shouldHaveResembledButTypeDiff = "Expected: '%s'\nActual:   '%s'\n(Should resemble, but there is a type difference within the two)!"
+	shouldHaveResembled            = "Expected: %s\nActual:   %s\n(Should equal)!"
+	shouldHaveResembledButTypeDiff = "Expected: %s\nActual:   %s\n(Should equal, but there is a type difference within the two)!"
 	shouldNotHaveResembled         = "Expected        '%#v'\nto NOT resemble '%#v'\n(but it did)!"
 
 	shouldBePointers            = "Both arguments should be pointers "
