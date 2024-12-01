@@ -1,6 +1,3 @@
-//go:build chimera
-// +build chimera
-
 package ch
 
 import (
@@ -54,7 +51,7 @@ type Capture struct {
 type MatchEventHandler func(id uint, from, to uint64, flags uint, captured []*Capture, context interface{}) Callback
 
 // Type used to differentiate the errors raised with the `ErrorEventHandler` callback.
-type ErrorEvent C.ch_error_event_t // nolint: errname
+type ErrorEvent C.ch_error_event_t //nolint: errname
 
 const (
 	// PCRE hits its match limit and reports PCRE_ERROR_MATCHLIMIT.

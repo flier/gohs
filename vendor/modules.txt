@@ -9,13 +9,13 @@ github.com/gopherjs/gopherjs/js
 # github.com/jtolds/gls v4.20.0+incompatible
 ## explicit
 github.com/jtolds/gls
-# github.com/smartystreets/assertions v1.13.1
+# github.com/smarty/assertions v1.15.0
 ## explicit; go 1.18
-github.com/smartystreets/assertions
-github.com/smartystreets/assertions/internal/go-diff/diffmatchpatch
-github.com/smartystreets/assertions/internal/go-render/render
-github.com/smartystreets/assertions/internal/oglematchers
-# github.com/smartystreets/goconvey v1.8.0
+github.com/smarty/assertions
+github.com/smarty/assertions/internal/go-diff/diffmatchpatch
+github.com/smarty/assertions/internal/go-render/render
+github.com/smarty/assertions/internal/oglematchers
+# github.com/smartystreets/goconvey v1.8.1
 ## explicit; go 1.18
 github.com/smartystreets/goconvey/convey
 github.com/smartystreets/goconvey/convey/gotest

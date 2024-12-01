@@ -32,14 +32,14 @@ It is recommended to compile and link Chimera using static libraries.
 $ mkdir build && cd build
 $ cmake .. -G Ninja -DBUILD_STATIC_LIBS=on
 $ ninja && ninja install
-$ go get -u -tags chimera github.com/flier/gohs/hyperscan
+$ go get -u github.com/flier/gohs/hyperscan
 ```
 
 ### Note
 
 You need to download the PCRE library source code to build Chimera, see [Chimera Requirements](https://intel.github.io/hyperscan/dev-reference/chimera.html#requirements) for more details
 
-### Vectorscan
+## Vectorscan
 
 The Intel's Hyperscan relies on the SSE/AVX instruction set for x86 platform. If you need to use it on other platforms such as ARM, you can install [Vectorscan](https://github.com/VectorCamp/vectorscan) which is a portable fork of Hyperscan that supports the ARM NEON/ASIMD and Power VSX.
 

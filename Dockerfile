@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG UBUNTU_VERSION=22.04
+ARG UBUNTU_VERSION=24.04
 
 FROM ubuntu:${UBUNTU_VERSION} as build
 
@@ -20,7 +20,7 @@ RUN <<EOT bash
         libpcap-dev \
         ninja-build \
         pkg-config \
-        python2.7 \
+        python3 \
         ragel \
         wget \
         zlib1g-dev
@@ -29,7 +29,7 @@ EOT
 
 # Download Hyperscan
 
-ARG HYPERSCAN_VERSION=5.4.1
+ARG HYPERSCAN_VERSION=5.4.2
 
 ENV HYPERSCAN_DIR=/hyperscan
 
@@ -65,6 +65,7 @@ RUN <<EOT bash
         -DBUILD_STATIC_LIBS=ON \
         -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} \
         -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR} \
+        -DFAT_RUNTIME=off \
         ..
     ninja
     ninja install
@@ -90,7 +91,7 @@ EOT
 
 # Install golang
 
-ARG GO_VERSION=1.20.3
+ARG GO_VERSION=1.23.3
 
 ADD https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz /
 
