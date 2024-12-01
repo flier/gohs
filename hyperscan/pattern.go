@@ -147,7 +147,7 @@ func ParseExprExt(s string) (ext *ExprExt, err error) {
 		var n int
 
 		if n, err = strconv.Atoi(value); err != nil {
-			return
+			return ext, fmt.Errorf("parse value, %w", err)
 		}
 
 		switch key {

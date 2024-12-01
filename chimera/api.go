@@ -1,6 +1,3 @@
-//go:build chimera
-// +build chimera
-
 package chimera
 
 import (
@@ -36,7 +33,7 @@ func Match(pattern string, data []byte) (bool, error) {
 	h := &ch.MatchRecorder{}
 
 	if err = db.Scan(data, s, h, nil); err != nil {
-		return false, err // nolint: wrapcheck
+		return false, err //nolint: wrapcheck
 	}
 
 	return h.Matched(), h.Err

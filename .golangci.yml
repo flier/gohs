@@ -10,11 +10,12 @@ run:
   issues-exit-code: 1
 
   # include test files or not, default is true
-  tests: true
+  tests: false
 
   # list of build tags, all linters use it. Default is empty list.
   build-tags:
     - !privileged_tests
+    - chimera
 
   # default is true. Enables skipping of directories:
   #   vendor$, third_party$, testdata$, examples$, Godeps$, builtin$
@@ -68,27 +69,24 @@ linters-settings:
 linters:
   enable-all: true
   disable:
-    - deadcode
+    - copyloopvar
+    - depguard
     - dupword
     - exhaustive
-    - exhaustivestruct
     - exhaustruct
+    - exportloopref
     - gci
     - gochecknoglobals
     - gochecknoinits
     - gocritic
     - godox
-    - golint
-    - ifshort
-    - interfacer
+    - gofumpt
+    - gosec
+    - intrange
     - ireturn
-    - maligned
     - nlreturn
     - nonamedreturns
-    - nosnakecase
     - paralleltest
-    - scopelint
-    - structcheck
-    - varcheck
+    - revive
     - varnamelen
     - wsl

@@ -1,5 +1,5 @@
-//go:build hyperscan_v54 && chimera
-// +build hyperscan_v54,chimera
+//go:build hyperscan_v54
+// +build hyperscan_v54
 
 package ch
 

@@ -1,6 +1,3 @@
-//go:build chimera
-// +build chimera
-
 package chimera
 
 import (
@@ -147,20 +144,22 @@ func (b *DatabaseBuilder) Build() (Database, error) {
 
 	db, err := ch.CompileExtMulti(b.Patterns, b.Mode, platform, b.MatchLimit, b.MatchLimitRecursion)
 	if err != nil {
-		return nil, err // nolint: wrapcheck
+		return nil, err //nolint: wrapcheck
 	}
 
 	return newBlockDatabase(db), nil
 }
 
 // NewBlockDatabase compile expressions into a pattern database.
-func NewBlockDatabase(patterns ...*Pattern) (BlockDatabase, error) {
-	db, err := Patterns(patterns).Build(Groups)
+func NewBlockDatabase(patterns ...*Pattern) (bdb BlockDatabase, err error) {
+	var db Database
+	db, err = Patterns(patterns).Build(Groups)
 	if err != nil {
 		return nil, err
 	}
 
-	return db.(BlockDatabase), err
+	bdb, _ = db.(*blockDatabase)
+	return
 }
 
 // NewManagedBlockDatabase is a wrapper for NewBlockDatabase that
@@ -184,7 +183,7 @@ func NewManagedBlockDatabase(patterns ...*Pattern) (BlockDatabase, error) {
 func Compile(expr string) (Database, error) {
 	db, err := ch.Compile(expr, 0, ch.Groups, nil)
 	if err != nil {
-		return nil, err // nolint: wrapcheck
+		return nil, err //nolint: wrapcheck
 	}
 
 	return newBlockDatabase(db), nil

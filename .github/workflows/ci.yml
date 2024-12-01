@@ -18,8 +18,8 @@ jobs:
   test:
     strategy:
       matrix:
-        os: [ubuntu-22.04, ubuntu-20.04, macos-12, macos-11]
-        go: [stable, 1.20.x, 1.19.x, 1.18.x]
+        os: [ubuntu-24.04, ubuntu-22.04, macos-13, macos-12]
+        go: [stable, 1.22.x, 1.18.x]
     name: Go ${{ matrix.go }} tests @ ${{ matrix.os }} for hyperscan
     runs-on: ${{ matrix.os }}
     steps:
@@ -34,10 +34,10 @@ jobs:
         run: |
           brew install hyperscan pkg-config libpcap
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Golang ${{ matrix.go }}
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go }}
           cache: true
@@ -56,36 +56,30 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: macos-latest
+          - os: macos-13
             go: stable
             hyperscan_version: 5.4.1
             pcre_version: 8.45
-            build_flags: -tags hyperscan_v54,chimera
+            build_flags: -tags hyperscan_v54
             chimera: true
           - os: macos-12
             go: stable
             hyperscan_version: 5.2.1
             pcre_version: 8.45
-            build_flags: -tags hyperscan_v52,chimera
+            build_flags: -tags hyperscan_v52
             chimera: true
-          - os: macos-11
-            go: stable
-            hyperscan_version: 5.1.1
-            pcre_version: 8.45
-            build_flags: -tags chimera
-            chimera: true
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             go: stable
             hyperscan_version: 5.4.1
             pcre_version: 8.45
-            build_flags: -tags hyperscan_v54,chimera
+            build_flags: -tags hyperscan_v54
             chimera: true
             coverage: true
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             go: stable
             hyperscan_version: 5.2.1
             pcre_version: 8.45
-            build_flags: -tags hyperscan_v52,chimera
+            build_flags: -tags hyperscan_v52
             chimera: true
     name: Go ${{ matrix.go }} tests @ ${{ matrix.os }} for hyperscan ${{ matrix.hyperscan_version }}
     runs-on: ${{ matrix.os }}
@@ -94,7 +88,7 @@ jobs:
       CGO_CFLAGS: -I${{ github.workspace }}/dist/include/hs
       CGO_LDFLAGS: -L${{ github.workspace }}/dist/lib
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Hyperscan ${{ matrix.hyperscan }} with PCRE ${{ matrix.pcre_version }}
         uses: flier/install-hyperscan@main
@@ -107,7 +101,7 @@ jobs:
           cache_key: ${{ runner.os }}-build-hyperscan-${{ matrix.hyperscan_version }}-pcre-${{ matrix.pcre_version }}
 
       - name: Install Golang ${{ matrix.go }}
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go }}
           cache: true
@@ -133,19 +127,19 @@ jobs:
 
   golangci:
     name: lint
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -yq libhyperscan-dev libpcap-dev
 
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v4
 
-      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v5
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v6
         with:
           version: latest
           working-directory: hyperscan

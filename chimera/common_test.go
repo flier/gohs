@@ -1,6 +1,3 @@
-//go:build chimera
-// +build chimera
-
 package chimera_test
 
 import (
