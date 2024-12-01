@@ -1,12 +1,11 @@
-//go:build !go1.17
-// +build !go1.17
-
 // Copyright 2021 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 package handle
 
 import (
+	"runtime"
+	"strconv"
 	"sync"
 	"sync/atomic"
 )
@@ -78,7 +77,8 @@ func New(v interface{}) Handle {
 		panic("runtime/cgo: ran out of handle space")
 	}
 
-	handles.Store(h, v)
+	handles(Handle(h)).Store(h, v)
+
 	return Handle(h)
 }
 
@@ -86,14 +86,40 @@ func New(v interface{}) Handle {
 //
 // The method panics if the handle is invalid.
 func (h Handle) Value() interface{} {
-	v, ok := handles.Load(uintptr(h))
+	v, ok := handles(h).Load(uintptr(h))
 	if !ok {
 		panic("runtime/cgo: misuse of an invalid Handle")
 	}
 	return v
 }
 
+// Delete invalidates a handle.
+// This method should only be called once the program no longer needs to pass the handle to C
+// and the C code no longer has a copy of the handle value.
+//
+// The method panics if the handle is invalid.
+func (h Handle) Delete() {
+	_, ok := handles(h).LoadAndDelete(uintptr(h))
+	if !ok {
+		panic("runtime/cgo: misuse of an invalid Handle")
+	}
+}
+
+func handles(h Handle) *sync.Map {
+	return &handleMap[uintptr(h)%uintptr(len(handleMap))]
+}
+
 var (
-	handles   = sync.Map{} // map[Handle]interface{}
-	handleIdx uintptr      // atomic
+	mapSize   = ""             // --ldflags="-X 'github.com/flier/gohs/internal/handle.mapSize=64'"
+	handleMap = newHandleMap() // []map[Handle]interface{}
+	handleIdx uintptr          // atomic
 )
+
+func newHandleMap() []sync.Map {
+	n, err := strconv.Atoi(mapSize)
+	if err != nil {
+		n = runtime.NumCPU() * 2
+	}
+
+	return make([]sync.Map, n)
+}
