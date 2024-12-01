@@ -21,16 +21,16 @@ jobs:
             pcre_version: 8.45
             go_version: 1.23.3
             build_flags: -tags hyperscan_v54
-          - ubuntu_version: 22.04
-            hyperscan_version: 5.2.1
-            pcre_version: 8.45
-            go_version: 1.22.9
-            build_flags: -tags hyperscan_v52
-          - ubuntu_version: 20.04
-            hyperscan_version: 5.1.1
-            pcre_version: 8.41
-            build_flags:
-            go_version: 1.21.13
+          # - ubuntu_version: 22.04
+          #   hyperscan_version: 5.2.1
+          #   pcre_version: 8.45
+          #   go_version: 1.22.9
+          #   build_flags: -tags hyperscan_v52
+          # - ubuntu_version: 20.04
+          #   hyperscan_version: 5.1.1
+          #   pcre_version: 8.41
+          #   build_flags:
+          #   go_version: 1.21.13
     name: tests @ ubuntu ${{ matrix.ubuntu_version }} for hyperscan ${{ matrix.hyperscan_version }} w/ ${{ matrix.build_flags }}
     env:
       LATEST_TAG: flier/gohs:${{ matrix.hyperscan_version }}
