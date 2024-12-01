@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - ubuntu_version: 22.04
+          - ubuntu_version: 24.04
             hyperscan_version: 5.4.2
             pcre_version: 8.45
             go_version: 1.23.3
