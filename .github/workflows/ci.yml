@@ -18,7 +18,7 @@ jobs:
   test:
     strategy:
       matrix:
-        os: [ubuntu-22.04, ubuntu-20.04, macos-13, macos-12]
+        os: [ubuntu-24.04, ubuntu-22.04, macos-13, macos-12]
         go: [stable, 1.22.x, 1.18.x]
     name: Go ${{ matrix.go }} tests @ ${{ matrix.os }} for hyperscan
     runs-on: ${{ matrix.os }}
@@ -68,20 +68,14 @@ jobs:
             pcre_version: 8.45
             build_flags: -tags hyperscan_v52
             chimera: true
-          - os: macos-11
-            go: stable
-            hyperscan_version: 5.1.1
-            pcre_version: 8.45
-            build_flags:
-            chimera: true
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             go: stable
             hyperscan_version: 5.4.1
             pcre_version: 8.45
             build_flags: -tags hyperscan_v54
             chimera: true
             coverage: true
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             go: stable
             hyperscan_version: 5.2.1
             pcre_version: 8.45
