@@ -56,7 +56,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: macos-latest
+          - os: macos-13
             go: stable
             hyperscan_version: 5.4.1
             pcre_version: 8.45
